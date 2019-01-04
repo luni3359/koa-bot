@@ -1,3 +1,5 @@
 .vscode
-koa.token
 bot-info.json
+config.ini
+config_create.py
+testjson.json.txt

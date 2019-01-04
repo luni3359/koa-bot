@@ -1,17 +1,20 @@
-import os
 import re
+import random
 import tweepy
 import discord
 import asyncio
+from configparser import ConfigParser
 from discord.ext import commands
 from discord.ext.commands import Bot
 
-# Tweepy
-# tweepy_auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+config = ConfigParser()
+config.read("config.ini")
 
-PROJECTPATH = os.path.dirname(__file__)
-TOKENPATH = os.path.join(PROJECTPATH, "koa.token")
-TOKEN = open(TOKENPATH, 'r').readline().strip()
+auth = tweepy.OAuthHandler(config.get(
+    "twitter", "consumer"), config.get("twitter", "consumer_secret"))
+auth.set_access_token(config.get("twitter", "token"),
+                      config.get("twitter", "token_secret"))
+twitter_api = tweepy.API(auth)
 
 client = discord.Client()
 
@@ -22,9 +25,29 @@ async def on_ready():
 
 
 @client.event
+async def on_message_delete(message):
+    if message.author.bot:
+        return
+
+    channel = message.channel
+
+    deleted_quotes = [
+        "{} said something. Nobody was there to listen...".format(
+            message.author.mention),
+        "I faintly heard {} whisper something. I wonder what they said...?".format(
+            message.author.mention),
+        "Is that you... {}? I think you need to be heard...".format(
+            message.author.mention),
+        "Mistakes always happen, but remember that not letting it out is dangerous, {}.".format(
+            message.author.mention)
+    ]
+
+    await channel.send(random.choice(deleted_quotes))
+
+
+@client.event
 async def on_message(message):
-    if message.channel.name != "koa-bot" or message.author == client.user:
-        # print("This is me!")
+    if message.author.bot:
         return
 
     urls = get_urls(message.content)
@@ -35,6 +58,9 @@ async def on_message(message):
             if "twitter" in domain:
                 await get_twitter_gallery(message, urls[i])
 
+    if message.channel.name != "koa-bot":
+        return
+
 
 async def get_twitter_gallery(message, url):
     channel = message.channel
@@ -43,7 +69,7 @@ async def get_twitter_gallery(message, url):
     id = url.split("/status/")
     if len(id) == 2:
         id = id[1].split('?')[0]
-        question = await channel.send("Contains twitter image. Tweet ID is " + id + ". Would you like to see this gallery as a whole?")
+        question = await channel.send("Contains twitter image. Tweet ID is {}.\nWould you like to see this image gallery as a whole?".format(id))
         await question.add_reaction('\U00002b55')  # :o:
         await question.add_reaction('\U0000274c')  # :x:
 
@@ -59,10 +85,25 @@ async def get_twitter_gallery(message, url):
 
             # if user accepts
             if user_reaction_response == '\U00002b55':
-                await channel.send("Good, now pretend I'm helping you!")
+                search = twitter_api.statuses_lookup([id])
+                gallery_pics = []
+                for tweet in search:
+                    if not hasattr(tweet, "extended_entities") or len(tweet.extended_entities["media"]) <= 1:
+                        print("Preview gallery not applicable.")
+                        await channel.send("S-sorry, this tweet isn't really a gallery...")
+                        continue
+
+                    for content in tweet.extended_entities["media"][1:]:
+                        gallery_pics.append(
+                            content["media_url_https"] + ":orig")
+
+                if len(gallery_pics) > 0:
+                    await channel.send('\n'.join(gallery_pics))
             # if user rejects
             else:
                 await channel.send("Okay, not doing it")
+
+        await question.clear_reactions()
 
 
 def get_urls(string):
@@ -83,4 +124,4 @@ def get_domains(array):
     return domains
 
 
-client.run(TOKEN)
+client.run(config.get("discord", "token"))

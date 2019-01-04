@@ -1,3 +1,4 @@
+import os
 import re
 import random
 import tweepy
@@ -7,8 +8,10 @@ from configparser import ConfigParser
 from discord.ext import commands
 from discord.ext.commands import Bot
 
+SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
+
 config = ConfigParser()
-config.read("config.ini")
+config.read(os.path.join(SOURCE_DIR, "config.ini"))
 
 auth = tweepy.OAuthHandler(config.get(
     "twitter", "consumer"), config.get("twitter", "consumer_secret"))

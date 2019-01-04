@@ -50,9 +50,11 @@ async def on_message_delete(message):
 
 @client.event
 async def on_message(message):
+    # Prevent bot from spamming itself
     if message.author.bot:
         return
 
+    # Test for image urls
     urls = get_urls(message.content)
     if len(urls) > 0:
         domains = get_domains(urls)
@@ -61,52 +63,52 @@ async def on_message(message):
             if "twitter" in domain:
                 await get_twitter_gallery(message, urls[i])
 
+    # Features under testing, only allowed under this channel
     if message.channel.name != "koa-bot":
+        # None, currently
         return
 
 
 async def get_twitter_gallery(message, url):
     channel = message.channel
 
-    # checking whether or not it contains an id
+    # Checking whether or not it contains an id
     id = url.split("/status/")
     if len(id) == 2:
         id = id[1].split('?')[0]
-        question = await channel.send("Contains twitter image. Tweet ID is {}.\nWould you like to see this image gallery as a whole?".format(id))
-        await question.add_reaction('\U00002b55')  # :o:
-        await question.add_reaction('\U0000274c')  # :x:
+        tweet = twitter_api.get_status(id, tweet_mode="extended")
 
-        def check(reaction, user):
-            return user == message.author and (str(reaction.emoji) == '\U00002b55' or str(reaction.emoji) == '\U0000274c') and reaction.message.id == question.id
+        if not hasattr(tweet, "extended_entities") or len(tweet.extended_entities["media"]) <= 1:
+            print("Preview gallery not applicable.")
+            return
 
-        try:
-            reaction, user = await client.wait_for("reaction_add", timeout=60.0, check=check)
-        except asyncio.TimeoutError:
-            await channel.send("D-don't ignore me!")
-        else:
-            user_reaction_response = str(reaction.emoji)
+        gallery_pics = []
+        for picture in tweet.extended_entities["media"][1:]:
+            if picture["type"] != "photo":
+                return
 
-            # if user accepts
-            if user_reaction_response == '\U00002b55':
-                search = twitter_api.statuses_lookup([id])
-                gallery_pics = []
-                for tweet in search:
-                    if not hasattr(tweet, "extended_entities") or len(tweet.extended_entities["media"]) <= 1:
-                        print("Preview gallery not applicable.")
-                        await channel.send("S-sorry, this tweet isn't really a gallery...")
-                        continue
+            gallery_pics.append(picture["media_url_https"] + ":orig")
 
-                    for content in tweet.extended_entities["media"][1:]:
-                        gallery_pics.append(
-                            content["media_url_https"] + ":orig")
+        gallery_pics_total = len(gallery_pics)
+        for picture in gallery_pics:
+            gallery_pics_total -= 1
 
-                if len(gallery_pics) > 0:
-                    await channel.send('\n'.join(gallery_pics))
-            # if user rejects
-            else:
-                await channel.send("Okay, not doing it")
+            embed = discord.Embed()
+            embed.set_author(
+                name="{} (@{})".format(tweet.author.name,
+                                       tweet.author.screen_name),
+                url="https://twitter.com/{}".format(tweet.author.screen_name),
+                icon_url=tweet.author.profile_image_url_https
+            )
+            embed.set_image(url=picture)
 
-        await question.clear_reactions()
+            # If it's the last picture to show, add a brand footer
+            if gallery_pics_total <= 0:
+                embed.set_footer(
+                    text="Twitter", icon_url="https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png"
+                )
+
+            await channel.send(embed=embed)
 
 
 def get_urls(string):

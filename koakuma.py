@@ -13,10 +13,8 @@ SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 config = ConfigParser()
 config.read(os.path.join(SOURCE_DIR, "config.ini"))
 
-auth = tweepy.OAuthHandler(config.get(
-    "twitter", "consumer"), config.get("twitter", "consumer_secret"))
-auth.set_access_token(config.get("twitter", "token"),
-                      config.get("twitter", "token_secret"))
+auth = tweepy.OAuthHandler(config.get("twitter", "consumer"), config.get("twitter", "consumer_secret"))
+auth.set_access_token(config.get("twitter", "token"), config.get("twitter", "token_secret"))
 twitter_api = tweepy.API(auth)
 
 client = discord.Client()
@@ -35,14 +33,10 @@ async def on_message_delete(message):
     channel = message.channel
 
     deleted_quotes = [
-        "{} said something. Nobody was there to listen...".format(
-            message.author.mention),
-        "I faintly heard {} whisper something. I wonder what they said...?".format(
-            message.author.mention),
-        "Is that you... {}? I think you need to be heard...".format(
-            message.author.mention),
-        "Mistakes always happen, but remember that not letting it out is dangerous, {}.".format(
-            message.author.mention)
+        "{} said something. Nobody was there to listen...".format(message.author.mention),
+        "I faintly heard {} whisper something. I wonder what they said...?".format(message.author.mention),
+        "Is that you... {}? I think you need to be heard...".format(message.author.mention),
+        "Mistakes always happen, but remember that not letting it out is dangerous, {}.".format(message.author.mention)
     ]
 
     await channel.send(random.choice(deleted_quotes))
@@ -56,7 +50,7 @@ async def on_message(message):
 
     # Test for image urls
     urls = get_urls(message.content)
-    if len(urls) > 0:
+    if len(urls) > 0 and len(message.embeds) > 0:
         domains = get_domains(urls)
         for i in range(len(domains)):
             domain = domains[i]
@@ -95,8 +89,7 @@ async def get_twitter_gallery(message, url):
 
             embed = discord.Embed()
             embed.set_author(
-                name="{} (@{})".format(tweet.author.name,
-                                       tweet.author.screen_name),
+                name="{} (@{})".format(tweet.author.name, tweet.author.screen_name),
                 url="https://twitter.com/{}".format(tweet.author.screen_name),
                 icon_url=tweet.author.profile_image_url_https
             )
@@ -114,8 +107,7 @@ async def get_twitter_gallery(message, url):
 def get_urls(string):
     # findall() has been used
     # with valid conditions for urls in string
-    url = re.findall(
-        "http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", string)
+    url = re.findall("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", string)
     return url
 
 

@@ -59,11 +59,6 @@ async def avatar(ctx):
     await ctx.send(embed=embed)
 
 
-@bot.command()
-async def ci(ctx):
-    await ctx.send(ctx.channel.id)
-
-
 @bot.event
 async def on_ready():
     print("ready!")

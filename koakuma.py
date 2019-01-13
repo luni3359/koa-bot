@@ -2,11 +2,12 @@ import os
 import re
 import random
 import tweepy
-import urusai as channel_activity
 import discord
 import asyncio
 import datetime
 import commentjson
+import gaka as art
+import urusai as channel_activity
 from discord.ext import commands
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -25,12 +26,26 @@ bot = commands.Bot(command_prefix="!")
 @bot.group(aliases=["art"])
 async def artist(ctx):
     if ctx.invoked_subcommand is None:
-        await ctx.send("I should be fetching artist data!")
+        if art.last_artist is None:
+            # Better change this to attempt to look back instead of giving up right away
+            await ctx.send("I'm not aware of anybody at the moment...")
+            return
 
 
 @artist.command(aliases=["twit"])
 async def twitter(ctx):
-    await ctx.send("Birb.")
+    embed = discord.Embed()
+    embed.set_author(
+        name="{} (@{})".format(art.last_artist.twitter_name, art.last_artist.twitter_screen_name),
+        url="https://twitter.com/{}".format(art.last_artist.twitter_screen_name),
+        icon_url=art.last_artist.twitter_profile_image_url_https
+    )
+    embed.set_thumbnail(url=art.last_artist.twitter_profile_image_url_https)
+    embed.set_footer(
+        text="Twitter",
+        icon_url=data["assets"]["twitter"]["favicon"]
+    )
+    await ctx.send(embed=embed)
 
 
 @artist.command(aliases=["dan"])
@@ -105,6 +120,12 @@ async def get_twitter_gallery(msg, url):
 
     parsed_id = url.split("/status/")[1].split('?')[0]
     tweet = twitter_api.get_status(parsed_id, tweet_mode="extended")
+
+    art.last_artist = art.Gaka()
+    art.last_artist.twitter_id = tweet.author.id
+    art.last_artist.twitter_name = tweet.author.name
+    art.last_artist.twitter_screen_name = tweet.author.screen_name
+    art.last_artist.twitter_profile_image_url_https = tweet.author.profile_image_url_https
 
     if not hasattr(tweet, "extended_entities") or len(tweet.extended_entities["media"]) <= 1:
         print("Preview gallery not applicable.")

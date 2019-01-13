@@ -2,6 +2,7 @@ import os
 import re
 import random
 import tweepy
+import urusai as channel_activity
 import discord
 import asyncio
 import datetime
@@ -68,8 +69,6 @@ async def on_ready():
 
 @bot.event
 async def on_message(msg):
-    global activity_count, last_channel_with_activity, activity_warned
-
     # Prevent bot from spamming itself
     if msg.author.bot:
         return
@@ -83,15 +82,15 @@ async def on_message(msg):
             if "twitter" in domain:
                 await get_twitter_gallery(msg, urls[i])
 
-    if last_channel_with_activity != msg.channel.id or len(urls) > 0:
-        last_channel_with_activity = msg.channel.id
-        activity_count = 0
+    if channel_activity.last_channel != msg.channel.id or len(urls) > 0:
+        channel_activity.last_channel = msg.channel.id
+        channel_activity.count = 0
 
-    activity_count += 1
+    channel_activity.count += 1
 
     if str(msg.channel.id) in data["rules"]["quiet_channels"]:
-        if not activity_warned and activity_count >= data["rules"]["quiet_channels"][str(msg.channel.id)]["max_messages_without_embeds"]:
-            activity_warned = True
+        if not channel_activity.warned and channel_activity.count >= data["rules"]["quiet_channels"][str(msg.channel.id)]["max_messages_without_embeds"]:
+            channel_activity.warned = True
             await msg.channel.send(random.choice(data["quotes"]["quiet_channel_past_threshold"]))
 
     await bot.process_commands(msg)
@@ -167,7 +166,4 @@ def get_domains(array):
     return domains
 
 
-last_channel_with_activity = None
-activity_count = 0
-activity_warned = False
 bot.run(data["keys"]["discord"]["token"])

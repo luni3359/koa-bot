@@ -5,6 +5,7 @@ import tweepy
 import discord
 import asyncio
 import datetime
+import subprocess
 import commentjson
 import gaka as art
 import urusai as channel_activity
@@ -62,6 +63,20 @@ async def pixiv(ctx):
 @bot.command(name="danbooru", aliases=["dan"])
 async def search_danbooru(ctx):
     await ctx.send("Searching is fun!")
+
+
+@bot.command(name="temperature", aliases=["temp"])
+async def report_bot_temp(ctx):
+    try:
+        current_temp = subprocess.run(["vcgencmd", "measure_temp"], stdout=subprocess.PIPE, universal_newlines=True)
+    except FileNotFoundError:
+        current_temp = subprocess.run(["sensors"], stdout=subprocess.PIPE, universal_newlines=True)
+    await ctx.send(current_temp.stdout)
+
+
+@bot.command(name="last")
+async def talk_status(ctx):
+    await ctx.send("Last channel: {}\nCurrent count there: {}".format(channel_activity.last_channel, channel_activity.count))
 
 
 @bot.command(aliases=["ava"])

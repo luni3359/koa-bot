@@ -223,6 +223,11 @@ async def get_pixiv_gallery(msg, url):
         await channel.send("Sorry, sorry, sorry! Link missing data!")
         return
 
+    embed = discord.Embed()
+    embed.set_thumbnail(url=msg.author.avatar_url)
+    embed.description = "{} said...\n\n{}".format(msg.author.mention, msg.content)
+    await channel.send(embed=embed)
+
     await msg.delete()
     await temp_wait.delete()
 
@@ -232,7 +237,7 @@ async def get_pixiv_gallery(msg, url):
     image_name = "pixiv_img.png"
     embed = discord.Embed()
     embed.set_author(
-        name="{}".format(illust["user"]["name"]),
+        name=illust["user"]["name"],
         url="https://www.pixiv.net/member.php?id={}".format(illust["user"]["id"])
     )
     embed.title = illust.title
@@ -254,15 +259,9 @@ async def get_pixiv_gallery(msg, url):
         image_name = "pixiv_img.png"
         embed = discord.Embed()
         embed.set_author(
-            name="{}".format(illust["user"]["name"]),
+            name=illust["user"]["name"],
             url="https://www.pixiv.net/member.php?id={}".format(illust["user"]["id"])
         )
-        # embed.title = illust.title
-        # embed.url = url
-        # if not illust.caption:
-        #     embed.description = "{} by {}".format(illust.title, illust["user"]["name"])
-        # else:
-        #     embed.description = illust.caption
         embed.set_image(url="attachment://{}".format(image_name))
         await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
 

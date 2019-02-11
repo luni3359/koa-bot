@@ -1,23 +1,31 @@
-import os
-import re
-import random
-import tweepy
-import discord
 import asyncio
 import datetime
+import os
+import random
+import re
 import subprocess
+import io
+
+import aiohttp
 import commentjson
+import discord
+import tweepy
+from discord.ext import commands
+from pixivpy3 import *
+
 import gaka as art
 import urusai as channel_activity
-from discord.ext import commands
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(SOURCE_DIR, "config.jsonc")) as json_file:
     data = commentjson.load(json_file)
 
-auth = tweepy.OAuthHandler(data["keys"]["twitter"]["consumer"], data["keys"]["twitter"]["consumer_secret"])
-auth.set_access_token(data["keys"]["twitter"]["token"], data["keys"]["twitter"]["token_secret"])
-twitter_api = tweepy.API(auth)
+twit_auth = tweepy.OAuthHandler(data["keys"]["twitter"]["consumer"], data["keys"]["twitter"]["consumer_secret"])
+twit_auth.set_access_token(data["keys"]["twitter"]["token"], data["keys"]["twitter"]["token_secret"])
+twitter_api = tweepy.API(twit_auth)
+
+pixiv_api = AppPixivAPI()
+pixiv_api.login(data["keys"]["pixiv"]["username"], data["keys"]["pixiv"]["password"])
 
 bot = commands.Bot(command_prefix="!")
 
@@ -109,8 +117,11 @@ async def on_message(msg):
         domains = get_domains(urls)
         for i in range(len(domains)):
             domain = domains[i]
-            if "twitter" in domain:
+            if "twitter.com" in domain:
                 await get_twitter_gallery(msg, urls[i])
+
+            if "pixiv.net" in domain:
+                await get_pixiv_gallery(msg, urls[i])
 
     if channel_activity.last_channel != msg.channel.id or len(urls) > 0:
         channel_activity.last_channel = msg.channel.id
@@ -151,6 +162,7 @@ async def get_twitter_gallery(msg, url):
         print(str(datetime.datetime.now()))
         print(dir(e))
         print(e.url)
+
     if len(msg.embeds) <= 0:
         print("I wouldn't have worked. Embeds report as 0 on the first try after inactivity on message #{} at {}.".format(msg.id, str(datetime.datetime.now())))
         # await channel.send("I wouldn't have worked")
@@ -183,6 +195,82 @@ async def get_twitter_gallery(msg, url):
             )
 
         await channel.send(embed=embed)
+
+
+async def get_pixiv_gallery(msg, url):
+    channel = msg.channel
+
+    # Checking whether or not it contains an id
+    if not "illust_id=" in url:
+        return
+
+    parsed_id = url.split("illust_id=")[1].split('&')[0]
+    illust_json = pixiv_api.illust_detail(parsed_id, req_auth=True)
+
+    if "error" in illust_json:
+        # await channel.send("Invalid id")
+        return
+
+    illust = illust_json.illust
+    temp_wait = await channel.send("Right away! Please be patient...")
+
+    meta_dir = None
+    if illust["meta_single_page"]:
+        meta_dir = "meta_single_page"
+    elif illust["meta_pages"]:
+        meta_dir = "meta_pages"
+    else:
+        await channel.send("Sorry, sorry, sorry! Link missing data!")
+        return
+
+    await msg.delete()
+    await temp_wait.delete()
+
+    async with aiohttp.ClientSession() as session:
+        img_bytes = await fetch_image(session, illust["image_urls"]["medium"], {"Referer": "https://app-api.pixiv.net/"})
+
+    image_name = "pixiv_img.png"
+    embed = discord.Embed()
+    embed.set_author(
+        name="{}".format(illust["user"]["name"]),
+        url="https://www.pixiv.net/member.php?id={}".format(illust["user"]["id"])
+    )
+    embed.title = illust.title
+    embed.url = url
+    if not illust.caption:
+        embed.description = "{} by {}".format(illust.title, illust["user"]["name"])
+    else:
+        embed.description = illust.caption
+    embed.set_image(url="attachment://{}".format(image_name))
+    await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
+
+    if len(illust[meta_dir]) <= 1:
+        return
+
+    for picture in illust[meta_dir][1:4]:
+        async with aiohttp.ClientSession() as session:
+            img_bytes = await fetch_image(session, picture.image_urls["medium"], {"Referer": "https://app-api.pixiv.net/"})
+
+        image_name = "pixiv_img.png"
+        embed = discord.Embed()
+        embed.set_author(
+            name="{}".format(illust["user"]["name"]),
+            url="https://www.pixiv.net/member.php?id={}".format(illust["user"]["id"])
+        )
+        # embed.title = illust.title
+        # embed.url = url
+        # if not illust.caption:
+        #     embed.description = "{} by {}".format(illust.title, illust["user"]["name"])
+        # else:
+        #     embed.description = illust.caption
+        embed.set_image(url="attachment://{}".format(image_name))
+        await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
+
+
+async def fetch_image(session, url, headers={}):
+    async with session.get(url, headers=headers) as response:
+        img_bytes = io.BytesIO(await response.read())
+        return img_bytes
 
 
 def get_urls(string):

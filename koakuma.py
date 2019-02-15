@@ -45,8 +45,8 @@ async def artist(ctx):
 async def twitter(ctx):
     embed = discord.Embed()
     embed.set_author(
-        name="{} (@{})".format(art.last_artist.twitter_name, art.last_artist.twitter_screen_name),
-        url="https://twitter.com/{}".format(art.last_artist.twitter_screen_name),
+        name="%s (@%s)" % (art.last_artist.twitter_name, art.last_artist.twitter_screen_name),
+        url="https://twitter.com/%s" % art.last_artist.twitter_screen_name,
         icon_url=art.last_artist.twitter_profile_image_url_https
     )
     embed.set_thumbnail(url=art.last_artist.twitter_profile_image_url_https)
@@ -84,7 +84,7 @@ async def report_bot_temp(ctx):
 
 @bot.command(name="last")
 async def talk_status(ctx):
-    await ctx.send("Last channel: {}\nCurrent count there: {}".format(channel_activity.last_channel, channel_activity.count))
+    await ctx.send("Last channel: %s\nCurrent count there: %s" % (channel_activity.last_channel, channel_activity.count))
 
 
 @bot.command(aliases=["ava"])
@@ -92,7 +92,7 @@ async def avatar(ctx):
     embed = discord.Embed()
     embed.set_image(url=ctx.message.author.avatar_url)
     embed.set_author(
-        name="{} #{}".format(ctx.message.author.name, ctx.message.author.discriminator),
+        name="%s #%i" % (ctx.message.author.name, ctx.message.author.discriminator),
         icon_url=ctx.message.author.avatar_url
     )
     await ctx.send(embed=embed)
@@ -164,7 +164,7 @@ async def get_twitter_gallery(msg, url):
         print(e.url)
 
     if len(msg.embeds) <= 0:
-        print("I wouldn't have worked. Embeds report as 0 on the first try after inactivity on message #{} at {}.".format(msg.id, str(datetime.datetime.now())))
+        print("I wouldn't have worked. Embeds report as 0 on the first try after inactivity on message #%i at %s." % (msg.id, str(datetime.datetime.now())))
         # await channel.send("I wouldn't have worked")
 
     gallery_pics = []
@@ -181,8 +181,8 @@ async def get_twitter_gallery(msg, url):
 
         embed = discord.Embed()
         embed.set_author(
-            name="{} (@{})".format(tweet.author.name, tweet.author.screen_name),
-            url="https://twitter.com/{}".format(tweet.author.screen_name),
+            name="%s (@%s)" % (tweet.author.name, tweet.author.screen_name),
+            url="https://twitter.com/%s" % tweet.author.screen_name,
             icon_url=tweet.author.profile_image_url_https
         )
         embed.set_image(url=picture)
@@ -225,7 +225,7 @@ async def get_pixiv_gallery(msg, url):
 
     embed = discord.Embed()
     embed.set_thumbnail(url=msg.author.avatar_url)
-    embed.description = "{} said...\n\n{}".format(msg.author.mention, msg.content)
+    embed.description = "%s said...\n\n%s" % (msg.author.mention, msg.content)
     await channel.send(embed=embed)
 
     await msg.delete()
@@ -238,15 +238,15 @@ async def get_pixiv_gallery(msg, url):
     embed = discord.Embed()
     embed.set_author(
         name=illust["user"]["name"],
-        url="https://www.pixiv.net/member.php?id={}".format(illust["user"]["id"])
+        url="https://www.pixiv.net/member.php?id=%i" % illust["user"]["id"]
     )
     embed.title = illust.title
     embed.url = url
     if not illust.caption:
-        embed.description = "{} by {}".format(illust.title, illust["user"]["name"])
+        embed.description = "%s by %s" % (illust.title, illust["user"]["name"])
     else:
         embed.description = illust.caption
-    embed.set_image(url="attachment://{}".format(image_name))
+    embed.set_image(url="attachment://%s" % image_name)
     await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
 
     if len(illust[meta_dir]) <= 1:
@@ -260,9 +260,9 @@ async def get_pixiv_gallery(msg, url):
         embed = discord.Embed()
         embed.set_author(
             name=illust["user"]["name"],
-            url="https://www.pixiv.net/member.php?id={}".format(illust["user"]["id"])
+            url="https://www.pixiv.net/member.php?id=%i" % illust["user"]["id"]
         )
-        embed.set_image(url="attachment://{}".format(image_name))
+        embed.set_image(url="attachment://%s" % image_name)
         await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
 
 

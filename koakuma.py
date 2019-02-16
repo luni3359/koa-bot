@@ -1,17 +1,18 @@
 import asyncio
 import datetime
+import io
 import os
 import random
 import re
 import subprocess
-import io
 
 import aiohttp
 import commentjson
 import discord
+import pixivpy3
 import tweepy
 from discord.ext import commands
-import pixivpy3
+from pybooru import Danbooru
 
 import gaka as art
 import urusai as channel_activity
@@ -26,6 +27,8 @@ twitter_api = tweepy.API(twit_auth)
 
 pixiv_api = pixivpy3.AppPixivAPI()
 pixiv_api.login(data['keys']['pixiv']['username'], data['keys']['pixiv']['password'])
+
+danbooru_api = Danbooru('danbooru', username=data['keys']['danbooru']['username'], api_key=data['keys']['danbooru']['key'])
 
 bot = commands.Bot(command_prefix='!')
 
@@ -69,9 +72,31 @@ async def pixiv(ctx):
 
 # Search on danbooru!
 @bot.command(name='danbooru', aliases=['dan'])
-async def search_danbooru(ctx):
-    await ctx.send('Searching is fun!')
+async def search_danbooru(ctx, *args):
+    search = ' '.join(args)
+    if len(args) < 6:
+        search += " order:favcount"
 
+    posts = danbooru_api.post_list(tags=search, page=1, limit=3)
+    pictures = []
+    for post in posts:
+        print(post)
+        if 'tagblockedhere' in post['tag_string_general'].split():
+            try:
+                fileurl = post['file_url']
+            except:
+                fileurl = 'https://danbooru.donmai.us' + post['source']
+        else:
+            fileurl = 'https://danbooru.donmai.us/posts/%i' % post['id']
+
+        pictures.append(fileurl)
+        print('\n\n')
+
+    pictures = '\n'.join(pictures)
+    if len(pictures) > 1:
+        await ctx.send(pictures)
+    else:
+        await ctx.send("There's no matches for that...")
 
 @bot.command(name='temperature', aliases=['temp'])
 async def report_bot_temp(ctx):

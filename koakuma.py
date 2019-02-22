@@ -75,19 +75,20 @@ async def pixiv(ctx):
 async def search_danbooru(ctx, *args):
     search = ' '.join(args)
     if len(args) < 6:
-        search += " order:favcount"
+        search += ' order:favcount'
 
     posts = danbooru_api.post_list(tags=search, page=1, limit=3)
     pictures = []
     for post in posts:
-        print(post)
-        if 'tagblockedhere' in post['tag_string_general'].split():
-            try:
-                fileurl = post['file_url']
-            except:
-                fileurl = 'https://danbooru.donmai.us' + post['source']
-        else:
-            fileurl = 'https://danbooru.donmai.us/posts/%i' % post['id']
+        post_tags = post['tag_string_general'].split()
+        for tag_lacking_preview in data['rules']['no_preview_tags']:
+            if tag_lacking_preview in post_tags:
+                try:
+                    fileurl = post['file_url']
+                except:
+                    fileurl = 'https://danbooru.donmai.us' + post['source']
+            else:
+                fileurl = 'https://danbooru.donmai.us/posts/%i' % post['id']
 
         pictures.append(fileurl)
         print('\n\n')

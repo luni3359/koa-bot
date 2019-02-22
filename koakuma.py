@@ -1,10 +1,10 @@
 import asyncio
-import datetime
 import io
 import os
 import random
 import re
 import subprocess
+from datetime import datetime
 
 import aiohttp
 import commentjson
@@ -31,6 +31,7 @@ pixiv_api.login(data['keys']['pixiv']['username'], data['keys']['pixiv']['passwo
 danbooru_api = Danbooru('danbooru', username=data['keys']['danbooru']['username'], api_key=data['keys']['danbooru']['key'])
 
 bot = commands.Bot(command_prefix='!')
+bot.launch_time = datetime.utcnow()
 
 
 # Get info about an artist based on a previous immediate message containing a valid url from either
@@ -123,6 +124,13 @@ async def avatar(ctx):
     )
     await ctx.send(embed=embed)
 
+@bot.command()
+async def uptime(ctx):
+    delta_uptime = datetime.utcnow() - bot.launch_time
+    hours, remainder = divmod(int(delta_uptime.total_seconds()), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    days, hours = divmod(hours, 24)
+    await ctx.send('I\'ve been running for %i days, %i hours, %i minutes and %i seconds.' % (days, hours, minutes, seconds))
 
 @bot.event
 async def on_ready():
@@ -185,12 +193,12 @@ async def get_twitter_gallery(msg, url):
 
     print(msg.embeds)
     for e in msg.embeds:
-        print(str(datetime.datetime.now()))
+        print(str(datetime.now()))
         print(dir(e))
         print(e.url)
 
     if len(msg.embeds) <= 0:
-        print('I wouldn\'t have worked. Embeds report as 0 on the first try after inactivity on message #%i at %s.' % (msg.id, str(datetime.datetime.now())))
+        print('I wouldn\'t have worked. Embeds report as 0 on the first try after inactivity on message #%i at %s.' % (msg.id, str(datetime.now())))
         # await channel.send('I wouldn't have worked')
 
     gallery_pics = []
@@ -231,8 +239,9 @@ async def get_pixiv_gallery(msg, url):
         return
 
     parsed_id = url.split('illust_id=')[1].split('&')[0]
+    print('Now starting to process pixiv link #%s' % parsed_id)
     illust_json = pixiv_api.illust_detail(parsed_id, req_auth=True)
-
+    print('Pixiv auth passed! (for #%s)' % parsed_id)
     if 'error' in illust_json:
         # await channel.send('Invalid id')
         return
@@ -257,8 +266,12 @@ async def get_pixiv_gallery(msg, url):
     await msg.delete()
     await temp_wait.delete()
 
+    print('Retrieving first picture for #%s' % parsed_id)
+
     async with aiohttp.ClientSession() as session:
         img_bytes = await fetch_image(session, illust['image_urls']['medium'], {'Referer': 'https://app-api.pixiv.net/'})
+
+    print('Retrieved #%s (maybe)' % parsed_id)
 
     image_name = 'pixiv_img.png'
     embed = discord.Embed()
@@ -276,12 +289,14 @@ async def get_pixiv_gallery(msg, url):
     await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
 
     if len(illust[meta_dir]) <= 1:
+        print('DONE PIXIV!')
         return
 
     for picture in illust[meta_dir][1:4]:
+        print('Retrieving more pictures from #%s...' % parsed_id)
         async with aiohttp.ClientSession() as session:
             img_bytes = await fetch_image(session, picture.image_urls['medium'], {'Referer': 'https://app-api.pixiv.net/'})
-
+        print('Retrieved more from #%s (maybe)' % parsed_id)
         image_name = 'pixiv_img.png'
         embed = discord.Embed()
         embed.set_author(
@@ -290,6 +305,7 @@ async def get_pixiv_gallery(msg, url):
         )
         embed.set_image(url='attachment://%s' % image_name)
         await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
+    print('DONE PIXIV!')
 
 
 async def fetch_image(session, url, headers={}):

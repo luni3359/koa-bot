@@ -241,10 +241,20 @@ async def get_pixiv_gallery(msg, url):
     parsed_id = url.split('illust_id=')[1].split('&')[0]
     print('Now starting to process pixiv link #%s' % parsed_id)
     illust_json = pixiv_api.illust_detail(parsed_id, req_auth=True)
-    print('Pixiv auth passed! (for #%s)' % parsed_id)
+    print(illust_json)
     if 'error' in illust_json:
         # await channel.send('Invalid id')
-        return
+        # Attempt to login
+        pixiv_api.login(data['keys']['pixiv']['username'], data['keys']['pixiv']['password'])
+        illust_json = pixiv_api.illust_detail(parsed_id, req_auth=True)
+        print(illust_json)
+
+        if 'error' in illust_json:
+            # too bad
+            print('Invalid Pixiv id')
+            return
+
+    print('Pixiv auth passed! (for #%s)' % parsed_id)
 
     illust = illust_json.illust
     temp_wait = await channel.send('Right away! Please be patient...')

@@ -257,9 +257,8 @@ async def get_pixiv_gallery(msg, url):
     print('Pixiv auth passed! (for #%s)' % parsed_id)
 
     illust = illust_json.illust
-    temp_wait = await channel.send('Right away! Please be patient...')
-
     meta_dir = None
+
     if illust['meta_single_page']:
         meta_dir = 'meta_single_page'
     elif illust['meta_pages']:
@@ -268,14 +267,14 @@ async def get_pixiv_gallery(msg, url):
         await channel.send('Sorry, sorry, sorry! Link missing data!')
         return
 
+    temp_wait = await channel.send('***%s***' % random.choice(data['quotes']['processing_long_task']))
+
     embed = discord.Embed()
     embed.set_thumbnail(url=msg.author.avatar_url)
     embed.description = '%s said...\n\n%s' % (msg.author.mention, msg.content)
     await channel.send(embed=embed)
 
     await msg.delete()
-    await temp_wait.delete()
-
     print('Retrieving first picture for #%s' % parsed_id)
 
     async with aiohttp.ClientSession() as session:
@@ -299,6 +298,7 @@ async def get_pixiv_gallery(msg, url):
     await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
 
     if len(illust[meta_dir]) <= 1:
+        await temp_wait.delete()
         print('DONE PIXIV!')
         return
 
@@ -315,6 +315,8 @@ async def get_pixiv_gallery(msg, url):
         )
         embed.set_image(url='attachment://%s' % image_name)
         await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
+
+    await temp_wait.delete()
     print('DONE PIXIV!')
 
 

@@ -75,8 +75,6 @@ async def pixiv(ctx):
 @bot.command(name='danbooru', aliases=['dan'])
 async def search_danbooru(ctx, *args):
     search = ' '.join(args)
-    if len(args) < 6:
-        search += ' order:favcount'
 
     posts = danbooru_api.post_list(tags=search, page=1, limit=3)
     pictures = []
@@ -87,7 +85,7 @@ async def search_danbooru(ctx, *args):
                 try:
                     fileurl = post['file_url']
                 except:
-                    fileurl = 'https://danbooru.donmai.us' + post['source']
+                    fileurl = 'https://danbooru.donmai.us%s' % post['source']
             else:
                 fileurl = 'https://danbooru.donmai.us/posts/%i' % post['id']
 
@@ -99,6 +97,7 @@ async def search_danbooru(ctx, *args):
         await ctx.send(pictures)
     else:
         await ctx.send("There's no matches for that...")
+
 
 @bot.command(name='temperature', aliases=['temp'])
 async def report_bot_temp(ctx):
@@ -124,6 +123,7 @@ async def avatar(ctx):
     )
     await ctx.send(embed=embed)
 
+
 @bot.command()
 async def uptime(ctx):
     delta_uptime = datetime.utcnow() - bot.launch_time
@@ -131,6 +131,7 @@ async def uptime(ctx):
     minutes, seconds = divmod(remainder, 60)
     days, hours = divmod(hours, 24)
     await ctx.send('I\'ve been running for %i days, %i hours, %i minutes and %i seconds.' % (days, hours, minutes, seconds))
+
 
 @bot.event
 async def on_ready():
@@ -174,12 +175,11 @@ async def on_message(msg):
 async def get_twitter_gallery(msg, url):
     channel = msg.channel
 
-    # Checking whether or not it contains an id
-    if not '/status/' in url:
+    post_id = get_post_id(url, '/status/', '?')
+    if not post_id:
         return
 
-    parsed_id = url.split('/status/')[1].split('?')[0]
-    tweet = twitter_api.get_status(parsed_id, tweet_mode='extended')
+    tweet = twitter_api.get_status(post_id, tweet_mode='extended')
 
     art.last_artist = art.Gaka()
     art.last_artist.twitter_id = tweet.author.id
@@ -209,9 +209,9 @@ async def get_twitter_gallery(msg, url):
         # Appending :orig to get a better image quality
         gallery_pics.append(picture['media_url_https'] + ':orig')
 
-    gallery_pics_total = len(gallery_pics)
+    total_gallery_pics = len(gallery_pics)
     for picture in gallery_pics:
-        gallery_pics_total -= 1
+        total_gallery_pics -= 1
 
         embed = discord.Embed()
         embed.set_author(
@@ -222,7 +222,7 @@ async def get_twitter_gallery(msg, url):
         embed.set_image(url=picture)
 
         # If it's the last picture to show, add a brand footer
-        if gallery_pics_total <= 0:
+        if total_gallery_pics <= 0:
             embed.set_footer(
                 text='Twitter',
                 icon_url=data['assets']['twitter']['favicon']
@@ -234,27 +234,25 @@ async def get_twitter_gallery(msg, url):
 async def get_pixiv_gallery(msg, url):
     channel = msg.channel
 
-    # Checking whether or not it contains an id
-    if not 'illust_id=' in url:
+    post_id = get_post_id(url, 'illust_id=', '&')
+    if not post_id:
         return
 
-    parsed_id = url.split('illust_id=')[1].split('&')[0]
-    print('Now starting to process pixiv link #%s' % parsed_id)
-    illust_json = pixiv_api.illust_detail(parsed_id, req_auth=True)
+    print('Now starting to process pixiv link #%s' % post_id)
+    illust_json = pixiv_api.illust_detail(post_id, req_auth=True)
     print(illust_json)
     if 'error' in illust_json:
-        # await channel.send('Invalid id')
         # Attempt to login
         pixiv_api.login(data['keys']['pixiv']['username'], data['keys']['pixiv']['password'])
-        illust_json = pixiv_api.illust_detail(parsed_id, req_auth=True)
+        illust_json = pixiv_api.illust_detail(post_id, req_auth=True)
         print(illust_json)
 
         if 'error' in illust_json:
             # too bad
-            print('Invalid Pixiv id')
+            print('Invalid Pixiv id #%s' % post_id)
             return
 
-    print('Pixiv auth passed! (for #%s)' % parsed_id)
+    print('Pixiv auth passed! (for #%s)' % post_id)
 
     illust = illust_json.illust
     meta_dir = None
@@ -269,67 +267,52 @@ async def get_pixiv_gallery(msg, url):
 
     temp_wait = await channel.send('***%s***' % random.choice(data['quotes']['processing_long_task']))
 
-    embed = discord.Embed()
-    embed.set_thumbnail(url=msg.author.avatar_url)
-    embed.description = '%s said...\n\n%s' % (msg.author.mention, msg.content)
-    await channel.send(embed=embed)
+    total_illust_pictures = len(illust[meta_dir])
+    pictures_processed = 0
+    for picture in illust[meta_dir][0:4]:
+        pictures_processed += 1
+        print('Retrieving picture from #%s...' % post_id)
+        image = await fetch_image(picture.image_urls['medium'], {'Referer': 'https://app-api.pixiv.net/'})
 
-    await msg.delete()
-    print('Retrieving first picture for #%s' % parsed_id)
-
-    async with aiohttp.ClientSession() as session:
-        img_bytes = await fetch_image(session, illust['image_urls']['medium'], {'Referer': 'https://app-api.pixiv.net/'})
-
-    print('Retrieved #%s (maybe)' % parsed_id)
-
-    image_name = 'pixiv_img.png'
-    embed = discord.Embed()
-    embed.set_author(
-        name=illust['user']['name'],
-        url='https://www.pixiv.net/member.php?id=%i' % illust['user']['id']
-    )
-    embed.title = illust.title
-    embed.url = url
-    if not illust.caption:
-        embed.description = '%s by %s' % (illust.title, illust['user']['name'])
-    else:
-        embed.description = illust.caption
-    embed.set_image(url='attachment://%s' % image_name)
-    await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
-
-    if len(illust[meta_dir]) <= 1:
-        await temp_wait.delete()
-        print('DONE PIXIV!')
-        return
-
-    for picture in illust[meta_dir][1:4]:
-        print('Retrieving more pictures from #%s...' % parsed_id)
-        async with aiohttp.ClientSession() as session:
-            img_bytes = await fetch_image(session, picture.image_urls['medium'], {'Referer': 'https://app-api.pixiv.net/'})
-        print('Retrieved more from #%s (maybe)' % parsed_id)
-        image_name = 'pixiv_img.png'
+        print('Retrieved more from #%s (maybe)' % post_id)
+        image_name = get_file_name(picture.image_urls['medium'])
         embed = discord.Embed()
         embed.set_author(
             name=illust['user']['name'],
             url='https://www.pixiv.net/member.php?id=%i' % illust['user']['id']
         )
         embed.set_image(url='attachment://%s' % image_name)
-        await channel.send(file=discord.File(fp=img_bytes, filename=image_name), embed=embed)
+
+        if pictures_processed >= min(4, total_illust_pictures):
+            if total_illust_pictures > 4:
+                embed.set_footer(
+                    text='%i+ remaining' % (total_illust_pictures - 4),
+                    icon_url=data['assets']['pixiv']['favicon']
+                )
+            else:
+                embed.set_footer(
+                    text='pixiv',
+                    icon_url=data['assets']['pixiv']['favicon']
+                )
+
+        await channel.send(file=discord.File(fp=image, filename=image_name), embed=embed)
 
     await temp_wait.delete()
     print('DONE PIXIV!')
 
 
-async def fetch_image(session, url, headers={}):
-    async with session.get(url, headers=headers) as response:
-        img_bytes = io.BytesIO(await response.read())
-        return img_bytes
+async def fetch_image(url, headers={}):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as response:
+            img_bytes = io.BytesIO(await response.read())
+            return img_bytes
 
 
 def get_urls(string):
     # findall() has been used
     # with valid conditions for urls in string
-    matching_urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', string)
+    regex_exp = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    matching_urls = re.findall(regex_exp, string)
     return matching_urls
 
 
@@ -341,6 +324,17 @@ def get_domains(array):
         domain = url.split('//')[-1].split('/')[0].split('?')[0]
         domains.append(domain)
     return domains
+
+
+def get_file_name(url):
+    return url.split('/')[-1]
+
+
+def get_post_id(url, word_to_match, trim_to):
+    if not word_to_match in url:
+        return False
+
+    return url.split(word_to_match)[1].split(trim_to)[0]
 
 
 bot.run(data['keys']['discord']['token'])

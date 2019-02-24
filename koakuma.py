@@ -265,46 +265,46 @@ async def get_pixiv_gallery(msg, url):
         await channel.send('Sorry, sorry, sorry! Link missing data!')
         return
 
-    temp_wait = await channel.send('***%s***' % random.choice(data['quotes']['processing_long_task']))
-
     total_illust_pictures = len(illust[meta_dir])
     if total_illust_pictures <= 1:
         illust[meta_dir] = [illust[meta_dir]]
 
-    pictures_processed = 0
-    for picture in illust[meta_dir][0:4]:
-        pictures_processed += 1
-        print('Retrieving picture from #%s...' % post_id)
+    temp_wait = await channel.send('***%s***' % random.choice(data['quotes']['processing_long_task']))
+    async with channel.typing():
+        pictures_processed = 0
+        for picture in illust[meta_dir][0:4]:
+            pictures_processed += 1
+            print('Retrieving picture from #%s...' % post_id)
 
-        try:
-            img_url = picture.image_urls['medium']
-        except AttributeError:
-            img_url = illust.image_urls['medium']
+            try:
+                img_url = picture.image_urls['medium']
+            except AttributeError:
+                img_url = illust.image_urls['medium']
 
-        image = await fetch_image(img_url, {'Referer': 'https://app-api.pixiv.net/'})
+            image = await fetch_image(img_url, {'Referer': 'https://app-api.pixiv.net/'})
 
-        print('Retrieved more from #%s (maybe)' % post_id)
-        image_filename = get_file_name(img_url)
-        embed = discord.Embed()
-        embed.set_author(
-            name=illust['user']['name'],
-            url='https://www.pixiv.net/member.php?id=%i' % illust['user']['id']
-        )
-        embed.set_image(url='attachment://%s' % image_filename)
+            print('Retrieved more from #%s (maybe)' % post_id)
+            image_filename = get_file_name(img_url)
+            embed = discord.Embed()
+            embed.set_author(
+                name=illust['user']['name'],
+                url='https://www.pixiv.net/member.php?id=%i' % illust['user']['id']
+            )
+            embed.set_image(url='attachment://%s' % image_filename)
 
-        if pictures_processed >= min(4, total_illust_pictures):
-            if total_illust_pictures > 4:
-                embed.set_footer(
-                    text='%i+ remaining' % (total_illust_pictures - 4),
-                    icon_url=data['assets']['pixiv']['favicon']
-                )
-            else:
-                embed.set_footer(
-                    text=data['assets']['pixiv']['name'],
-                    icon_url=data['assets']['pixiv']['favicon']
-                )
+            if pictures_processed >= min(4, total_illust_pictures):
+                if total_illust_pictures > 4:
+                    embed.set_footer(
+                        text='%i+ remaining' % (total_illust_pictures - 4),
+                        icon_url=data['assets']['pixiv']['favicon']
+                    )
+                else:
+                    embed.set_footer(
+                        text=data['assets']['pixiv']['name'],
+                        icon_url=data['assets']['pixiv']['favicon']
+                    )
 
-        await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
+            await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
 
     await temp_wait.delete()
     print('DONE PIXIV!')
@@ -320,7 +320,7 @@ async def fetch_image(url, headers={}):
 def get_urls(string):
     # findall() has been used
     # with valid conditions for urls in string
-    regex_exp = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    regex_exp = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'  # pylint: disable=anomalous-backslash-in-string
     matching_urls = re.findall(regex_exp, string)
     return matching_urls
 

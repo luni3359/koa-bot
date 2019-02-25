@@ -1,4 +1,3 @@
-import asyncio
 import io
 import os
 import random
@@ -10,9 +9,9 @@ import aiohttp
 import commentjson
 import discord
 import pixivpy3
+import pybooru
 import tweepy
 from discord.ext import commands
-from pybooru import Danbooru
 
 import gaka as art
 import urusai as channel_activity
@@ -28,7 +27,7 @@ twitter_api = tweepy.API(twit_auth)
 pixiv_api = pixivpy3.AppPixivAPI()
 pixiv_api.login(data['keys']['pixiv']['username'], data['keys']['pixiv']['password'])
 
-danbooru_api = Danbooru('danbooru', username=data['keys']['danbooru']['username'], api_key=data['keys']['danbooru']['key'])
+danbooru_api = pybooru.Danbooru('danbooru', username=data['keys']['danbooru']['username'], api_key=data['keys']['danbooru']['key'])
 
 bot = commands.Bot(command_prefix='!')
 bot.launch_time = datetime.utcnow()
@@ -77,26 +76,54 @@ async def search_danbooru(ctx, *args):
     search = ' '.join(args)
 
     posts = danbooru_api.post_list(tags=search, page=1, limit=3)
-    pictures = []
     for post in posts:
         post_tags = post['tag_string_general'].split()
         for tag_lacking_preview in data['rules']['no_preview_tags']:
             if tag_lacking_preview in post_tags:
                 try:
                     fileurl = post['file_url']
+                # Exception needs error type
                 except:
+                    # this is wrong because post['source'] looks like this: 'https://i.pximg.net/img-original/img/2019/02/19/22/30/59/73277959_p3.png'
                     fileurl = 'https://danbooru.donmai.us%s' % post['source']
+                break
             else:
                 fileurl = 'https://danbooru.donmai.us/posts/%i' % post['id']
 
-        pictures.append(fileurl)
-        print('\n\n')
+        if '/data/' in fileurl:
+            embed = discord.Embed()
+            post_char = re.sub(' \(.*?\)', '', combine_tags(post['tag_string_character']))  # pylint: disable=anomalous-backslash-in-string
+            post_copy = combine_tags(post['tag_string_copyright'])
+            post_artist = combine_tags(post['tag_string_artist'])
+            embed_post_title = ''
 
-    pictures = '\n'.join(pictures)
-    if len(pictures) > 1:
-        await ctx.send(pictures)
-    else:
-        await ctx.send("There's no matches for that...")
+            if post_char:
+                embed_post_title += post_char
+
+            if post_copy:
+                if not post_char:
+                    embed_post_title += post_copy
+                else:
+                    embed_post_title += ' (%s)' % post_copy
+
+            if post_artist:
+                embed_post_title += ' drawn by %s' % post_artist
+
+            if not post_char and not post_copy and not post_artist:
+                embed_post_title += '#%s' % post['id']
+
+            embed_post_title += ' - Danbooru'
+            if len(embed_post_title) >= data['assets']['danbooru']['max_embed_title_length']:
+                embed_post_title = embed_post_title[:data['assets']['danbooru']['max_embed_title_length'] - 3] + '...'
+
+            embed.title = embed_post_title
+            embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
+            embed.set_image(url=fileurl)
+            await ctx.send('<https://danbooru.donmai.us/posts/%i>' % post['id'], embed=embed)
+        else:
+            await ctx.send(fileurl)
+
+    # TODO: Tell user when there were no matches
 
 
 @bot.command(name='temperature', aliases=['temp'])
@@ -105,6 +132,7 @@ async def report_bot_temp(ctx):
         current_temp = subprocess.run(['vcgencmd', 'measure_temp'], stdout=subprocess.PIPE, universal_newlines=True)
     except FileNotFoundError:
         current_temp = subprocess.run(['sensors'], stdout=subprocess.PIPE, universal_newlines=True)
+
     await ctx.send(current_temp.stdout)
 
 
@@ -148,17 +176,16 @@ async def on_message(msg):
 
     # Test for image urls
     urls = get_urls(msg.content)
-    if len(urls) > 0:
+    if urls:
         domains = get_domains(urls)
-        for i in range(len(domains)):
-            domain = domains[i]
+        for i, domain in enumerate(domains):
             if 'twitter.com' in domain:
                 await get_twitter_gallery(msg, urls[i])
 
             if 'pixiv.net' in domain:
                 await get_pixiv_gallery(msg, urls[i])
 
-    if channel_activity.last_channel != msg.channel.id or len(urls) > 0:
+    if channel_activity.last_channel != msg.channel.id or urls:
         channel_activity.last_channel = msg.channel.id
         channel_activity.count = 0
 
@@ -197,7 +224,7 @@ async def get_twitter_gallery(msg, url):
         print(dir(e))
         print(e.url)
 
-    if len(msg.embeds) <= 0:
+    if not msg.embeds:
         print('I wouldn\'t have worked. Embeds report as 0 on the first try after inactivity on message #%i at %s.' % (msg.id, str(datetime.now())))
         # await channel.send('I wouldn't have worked')
 
@@ -344,6 +371,17 @@ def get_post_id(url, word_to_match, trim_to):
         return False
 
     return url.split(word_to_match)[1].split(trim_to)[0]
+
+
+def combine_tags(tags):
+    tags_split = tags.split()[:5]
+
+    if len(tags_split) > 1:
+        joint_tags = ', '.join(tags_split[:-1])
+        joint_tags += ' and %s' % tags_split[-1]
+        return joint_tags.strip().replace('_', ' ')
+
+    return ''.join(tags_split).strip().replace('_', ' ')
 
 
 bot.run(data['keys']['discord']['token'])

@@ -1,3 +1,4 @@
+import asyncio
 import io
 import os
 import random
@@ -25,7 +26,6 @@ twit_auth.set_access_token(data['keys']['twitter']['token'], data['keys']['twitt
 twitter_api = tweepy.API(twit_auth)
 
 pixiv_api = pixivpy3.AppPixivAPI()
-pixiv_api.login(data['keys']['pixiv']['username'], data['keys']['pixiv']['password'])
 
 danbooru_api = pybooru.Danbooru('danbooru', username=data['keys']['danbooru']['username'], api_key=data['keys']['danbooru']['key'])
 
@@ -73,10 +73,19 @@ async def pixiv(ctx):
 # Search on danbooru!
 @bot.command(name='danbooru', aliases=['dan'])
 async def search_danbooru(ctx, *args):
+    # return await ctx.send('Currently unavailable.')
     search = ' '.join(args)
+    print('User searching for: %s' % search)
 
-    posts = danbooru_api.post_list(tags=search, page=1, limit=3)
+    posts = danbooru_api.post_list(tags=search, page=1, limit=3, random=True)
+    print('API search complete!')
+
+    if not posts:
+        await ctx.send('Sorry, nothing found!')
+        return
+
     for post in posts:
+        print('Parsing post #%i...' % post['id'])
         post_tags = post['tag_string_general'].split()
         for tag_lacking_preview in data['rules']['no_preview_tags']:
             if tag_lacking_preview in post_tags:
@@ -85,12 +94,13 @@ async def search_danbooru(ctx, *args):
                 # Exception needs error type
                 except:
                     # this is wrong because post['source'] looks like this: 'https://i.pximg.net/img-original/img/2019/02/19/22/30/59/73277959_p3.png'
-                    fileurl = 'https://danbooru.donmai.us%s' % post['source']
+                    # fileurl = 'https://danbooru.donmai.us%s' % post['source']
+                    fileurl = post['source']
                 break
             else:
                 fileurl = 'https://danbooru.donmai.us/posts/%i' % post['id']
 
-        if '/data/' in fileurl:
+        if '/data/' in fileurl or 'raikou' in fileurl:
             embed = discord.Embed()
             post_char = re.sub(' \(.*?\)', '', combine_tags(post['tag_string_character']))  # pylint: disable=anomalous-backslash-in-string
             post_copy = combine_tags(post['tag_string_copyright'])
@@ -119,11 +129,11 @@ async def search_danbooru(ctx, *args):
             embed.title = embed_post_title
             embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
             embed.set_image(url=fileurl)
-            await ctx.send('<https://danbooru.donmai.us/posts/%i>' % post['id'], embed=embed)
+            await ctx.send('<%s>' % embed.url, embed=embed)
         else:
             await ctx.send(fileurl)
 
-    # TODO: Tell user when there were no matches
+        print('Parse of #%i complete' % post['id'])
 
 
 @bot.command(name='temperature', aliases=['temp'])
@@ -146,7 +156,7 @@ async def avatar(ctx):
     embed = discord.Embed()
     embed.set_image(url=ctx.message.author.avatar_url)
     embed.set_author(
-        name='%s #%i' % (ctx.message.author.name, ctx.message.author.discriminator),
+        name='%s #%i' % (ctx.message.author.name, int(ctx.message.author.discriminator)),
         icon_url=ctx.message.author.avatar_url
     )
     await ctx.send(embed=embed)
@@ -384,4 +394,47 @@ def combine_tags(tags):
     return ''.join(tags_split).strip().replace('_', ' ')
 
 
+async def lookup_pending_posts():
+    await bot.wait_until_ready()
+
+    pending_posts = []
+
+    safe_channels = []
+    for channel in data['tasks']['danbooru']['safe_channels']:
+        new_channel = bot.get_channel(int(channel))
+        safe_channels.append(new_channel)
+
+    nsfw_channels = []
+    for channel in data['tasks']['danbooru']['nsfw_channels']:
+        new_channel = bot.get_channel(int(channel))
+        nsfw_channels.append(new_channel)
+
+    while not bot.is_closed():
+        posts = danbooru_api.post_list(tags=data['tasks']['danbooru']['tag_list'], page=1, limit=5, random=True)
+
+        safe_posts = []
+        nsfw_posts = []
+        for post in posts:
+            if not post['id'] in pending_posts:
+                pending_posts.append(post['id'])
+                if post['rating'] is 's':
+                    safe_posts.append('https://danbooru.donmai.us/posts/%i' % post['id'])
+                else:
+                    nsfw_posts.append('https://danbooru.donmai.us/posts/%i' % post['id'])
+
+        safe_posts = '\n'.join(safe_posts)
+        nsfw_posts = '\n'.join(nsfw_posts)
+
+        if safe_posts:
+            for channel in safe_channels:
+                await channel.send('Here are some posts to take into consideration:\n%s' % safe_posts)
+
+        if nsfw_posts:
+            for channel in nsfw_channels:
+                await channel.send('Here are some posts to take into consideration:\n%s' % nsfw_posts)
+
+        await asyncio.sleep(60)
+
+
+bot.loop.create_task(lookup_pending_posts())
 bot.run(data['keys']['discord']['token'])

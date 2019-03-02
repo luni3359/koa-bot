@@ -6,8 +6,8 @@ import commentjson
 import discord
 from discord.ext import commands
 
-SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(SOURCE_DIR, 'config.jsonc')) as json_file:
+PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
+with open(os.path.join(PROJECT_DIR, 'config.jsonc')) as json_file:
     data = commentjson.load(json_file)
 
 
@@ -31,10 +31,12 @@ initial_extensions = [
     # 'cogs.members',
     # 'cogs.owner',
     # 'cogs.simple'
-    'cogs.linkparser'
+    'cogs.linkparser',
+    'cogs.twitter'
 ]
 
 bot = commands.Bot(command_prefix=get_prefix, description='A Rewrite Cog Example')
+bot.__dict__.update(data)
 
 # Here we load our extensions(cogs) listed above in [initial_extensions].
 if __name__ == '__main__':
@@ -56,4 +58,4 @@ async def on_ready():
     print(f'Successfully logged in and booted...!')
 
 
-bot.run(data['keys']['discord']['token'], bot=True, reconnect=True)
+bot.run(bot.auth_keys['discord']['token'], bot=True, reconnect=True)

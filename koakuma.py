@@ -73,7 +73,7 @@ async def pixiv(ctx):
 # Search on danbooru!
 @bot.command(name='danbooru', aliases=['dan'])
 async def search_danbooru(ctx, *args):
-    # return await ctx.send('Currently unavailable.')
+    return await ctx.send('Currently unavailable.')
     search = ' '.join(args)
     print('User searching for: %s' % search)
 
@@ -276,6 +276,9 @@ async def get_pixiv_gallery(msg, url):
         return
 
     print('Now starting to process pixiv link #%s' % post_id)
+    if pixiv_api.access_token is None:
+        pixiv_api.login(data['keys']['pixiv']['username'], data['keys']['pixiv']['password'])
+
     illust_json = pixiv_api.illust_detail(post_id, req_auth=True)
     print(illust_json)
     if 'error' in illust_json:
@@ -433,8 +436,8 @@ async def lookup_pending_posts():
             for channel in nsfw_channels:
                 await channel.send('Here are some posts to take into consideration:\n%s' % nsfw_posts)
 
-        await asyncio.sleep(60)
+        await asyncio.sleep(60 * 5)
 
 
-bot.loop.create_task(lookup_pending_posts())
+# bot.loop.create_task(lookup_pending_posts())
 bot.run(data['keys']['discord']['token'])

@@ -9,18 +9,26 @@ class LinkParserCog(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_message(self, ctx):
+    async def on_message(self, message):
         """Test for image urls"""
+        if message.author.bot:
+            return
 
-        urls = self.get_urls(ctx.content)
+        ctx = await self.bot.get_context(message)
+
+        urls = self.get_urls(message.content)
         if urls:
             domains = self.get_domains(urls)
             for i, domain in enumerate(domains):
                 if self.bot.assets['twitter']['domain'] in domain:
+                    commandr = self.bot.get_command('omg')
+                    await ctx.invoke(commandr)
                     print('twitter link')
                     # await get_twitter_gallery(msg, urls[i])
 
                 if self.bot.assets['pixiv']['domain'] in domain:
+                    commandr = self.bot.get_command('omg')
+                    await ctx.invoke(commandr)
                     print('pixiv link')
                     # await get_pixiv_gallery(msg, urls[i])
 

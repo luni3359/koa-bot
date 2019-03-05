@@ -32,7 +32,8 @@ initial_extensions = [
     # 'cogs.owner',
     # 'cogs.simple'
     'cogs.linkparser',
-    'cogs.twitter'
+    'cogs.gallery'
+    # 'cogs.twitter'
 ]
 
 bot = commands.Bot(command_prefix=get_prefix, description='A Rewrite Cog Example')

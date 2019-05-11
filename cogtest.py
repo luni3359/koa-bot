@@ -31,8 +31,7 @@ initial_extensions = [
     # 'cogs.members',
     # 'cogs.owner',
     # 'cogs.simple'
-    'cogs.linkparser',
-    'cogs.gallery'
+    'cogs.onmessage'
     # 'cogs.twitter'
 ]
 

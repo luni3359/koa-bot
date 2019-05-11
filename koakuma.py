@@ -29,7 +29,7 @@ pixiv_api = pixivpy3.AppPixivAPI()
 
 danbooru_api = pybooru.Danbooru('danbooru', username=data['keys']['danbooru']['username'], api_key=data['keys']['danbooru']['key'])
 
-bot = commands.Bot(command_prefix='!')
+bot = commands.Bot(command_prefix='!', description='')
 bot.launch_time = datetime.utcnow()
 
 
@@ -102,7 +102,7 @@ async def search_danbooru(ctx, *args):
 
         if '/data/' in fileurl or 'raikou' in fileurl:
             embed = discord.Embed()
-            post_char = re.sub(' \(.*?\)', '', combine_tags(post['tag_string_character']))  # pylint: disable=anomalous-backslash-in-string
+            post_char = re.sub(' \(.*?\)', '', combine_tags(post['tag_string_character']))
             post_copy = combine_tags(post['tag_string_copyright'])
             post_artist = combine_tags(post['tag_string_artist'])
             embed_post_title = ''
@@ -360,7 +360,7 @@ async def fetch_image(url, headers={}):
 def get_urls(string):
     # findall() has been used
     # with valid conditions for urls in string
-    regex_exp = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'  # pylint: disable=anomalous-backslash-in-string
+    regex_exp = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
     matching_urls = re.findall(regex_exp, string)
     return matching_urls
 

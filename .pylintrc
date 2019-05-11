@@ -1,0 +1,5 @@
+[MESSAGES CONTROL]
+disable=W1401,C0301,C0103,W0121
+
+[TYPECHECK]
+ignored-classes=Bot

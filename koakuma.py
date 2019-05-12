@@ -21,20 +21,22 @@ SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(SOURCE_DIR, 'config.jsonc')) as json_file:
     data = commentjson.load(json_file)
 
-twit_auth = tweepy.OAuthHandler(data['keys']['twitter']['consumer'], data['keys']['twitter']['consumer_secret'])
-twit_auth.set_access_token(data['keys']['twitter']['token'], data['keys']['twitter']['token_secret'])
+bot = commands.Bot(command_prefix='!', description='')
+bot.launch_time = datetime.utcnow()
+bot.__dict__.update(data)
+
+twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
+twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
 twitter_api = tweepy.API(twit_auth)
 
 pixiv_api = pixivpy3.AppPixivAPI()
 
-danbooru_api = pybooru.Danbooru('danbooru', username=data['keys']['danbooru']['username'], api_key=data['keys']['danbooru']['key'])
-
-bot = commands.Bot(command_prefix='!', description='')
-bot.launch_time = datetime.utcnow()
-
+danbooru_api = pybooru.Danbooru('danbooru', username=bot.auth_keys['danbooru']['username'], api_key=bot.auth_keys['danbooru']['key'])
 
 # Get info about an artist based on a previous immediate message containing a valid url from either
 # twitter, danbooru or pixiv.
+
+
 @bot.group(aliases=['art'])
 async def artist(ctx):
     if ctx.invoked_subcommand is None:
@@ -54,8 +56,8 @@ async def twitter(ctx):
     )
     embed.set_thumbnail(url=art.last_artist.twitter_profile_image_url_https)
     embed.set_footer(
-        text=data['assets']['twitter']['name'],
-        icon_url=data['assets']['twitter']['favicon']
+        text=bot.assets['twitter']['name'],
+        icon_url=bot.assets['twitter']['favicon']
     )
     await ctx.send(embed=embed)
 
@@ -87,12 +89,12 @@ async def search_danbooru(ctx, *args):
     for post in posts:
         print('Parsing post #%i...' % post['id'])
         post_tags = post['tag_string_general'].split()
-        for tag_lacking_preview in data['rules']['no_preview_tags']:
+        for tag_lacking_preview in bot.rules['no_preview_tags']:
             if tag_lacking_preview in post_tags:
                 try:
                     fileurl = post['file_url']
                 # Exception needs error type
-                except:
+                except Exception:
                     # this is wrong because post['source'] looks like this: 'https://i.pximg.net/img-original/img/2019/02/19/22/30/59/73277959_p3.png'
                     # fileurl = 'https://danbooru.donmai.us%s' % post['source']
                     fileurl = post['source']
@@ -123,8 +125,8 @@ async def search_danbooru(ctx, *args):
                 embed_post_title += '#%s' % post['id']
 
             embed_post_title += ' - Danbooru'
-            if len(embed_post_title) >= data['assets']['danbooru']['max_embed_title_length']:
-                embed_post_title = embed_post_title[:data['assets']['danbooru']['max_embed_title_length'] - 3] + '...'
+            if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
+                embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
             embed.title = embed_post_title
             embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
@@ -201,10 +203,10 @@ async def on_message(msg):
 
     channel_activity.count += 1
 
-    if str(msg.channel.id) in data['rules']['quiet_channels']:
-        if not channel_activity.warned and channel_activity.count >= data['rules']['quiet_channels'][str(msg.channel.id)]['max_messages_without_embeds']:
+    if str(msg.channel.id) in bot.rules['quiet_channels']:
+        if not channel_activity.warned and channel_activity.count >= bot.rules['quiet_channels'][str(msg.channel.id)]['max_messages_without_embeds']:
             channel_activity.warned = True
-            await msg.channel.send(random.choice(data['quotes']['quiet_channel_past_threshold']))
+            await msg.channel.send(random.choice(bot.quotes['quiet_channel_past_threshold']))
 
     await bot.process_commands(msg)
 
@@ -261,8 +263,8 @@ async def get_twitter_gallery(msg, url):
         # If it's the last picture to show, add a brand footer
         if total_gallery_pics <= 0:
             embed.set_footer(
-                text=data['assets']['twitter']['name'],
-                icon_url=data['assets']['twitter']['favicon']
+                text=bot.assets['twitter']['name'],
+                icon_url=bot.assets['twitter']['favicon']
             )
 
         await channel.send(embed=embed)
@@ -277,13 +279,13 @@ async def get_pixiv_gallery(msg, url):
 
     print('Now starting to process pixiv link #%s' % post_id)
     if pixiv_api.access_token is None:
-        pixiv_api.login(data['keys']['pixiv']['username'], data['keys']['pixiv']['password'])
+        pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
 
     illust_json = pixiv_api.illust_detail(post_id, req_auth=True)
     print(illust_json)
     if 'error' in illust_json:
         # Attempt to login
-        pixiv_api.login(data['keys']['pixiv']['username'], data['keys']['pixiv']['password'])
+        pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
         illust_json = pixiv_api.illust_detail(post_id, req_auth=True)
         print(illust_json)
 
@@ -309,7 +311,7 @@ async def get_pixiv_gallery(msg, url):
     if total_illust_pictures <= 1:
         illust[meta_dir] = [illust[meta_dir]]
 
-    temp_wait = await channel.send('***%s***' % random.choice(data['quotes']['processing_long_task']))
+    temp_wait = await channel.send('***%s***' % random.choice(bot.quotes['processing_long_task']))
     async with channel.typing():
         pictures_processed = 0
         for picture in illust[meta_dir][0:4]:
@@ -336,12 +338,12 @@ async def get_pixiv_gallery(msg, url):
                 if total_illust_pictures > 4:
                     embed.set_footer(
                         text='%i+ remaining' % (total_illust_pictures - 4),
-                        icon_url=data['assets']['pixiv']['favicon']
+                        icon_url=bot.assets['pixiv']['favicon']
                     )
                 else:
                     embed.set_footer(
-                        text=data['assets']['pixiv']['name'],
-                        icon_url=data['assets']['pixiv']['favicon']
+                        text=bot.assets['pixiv']['name'],
+                        icon_url=bot.assets['pixiv']['favicon']
                     )
 
             await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
@@ -403,17 +405,17 @@ async def lookup_pending_posts():
     pending_posts = []
 
     safe_channels = []
-    for channel in data['tasks']['danbooru']['safe_channels']:
+    for channel in bot.tasks['danbooru']['safe_channels']:
         new_channel = bot.get_channel(int(channel))
         safe_channels.append(new_channel)
 
     nsfw_channels = []
-    for channel in data['tasks']['danbooru']['nsfw_channels']:
+    for channel in bot.tasks['danbooru']['nsfw_channels']:
         new_channel = bot.get_channel(int(channel))
         nsfw_channels.append(new_channel)
 
     while not bot.is_closed():
-        posts = danbooru_api.post_list(tags=data['tasks']['danbooru']['tag_list'], page=1, limit=5, random=True)
+        posts = danbooru_api.post_list(tags=bot.tasks['danbooru']['tag_list'], page=1, limit=5, random=True)
 
         safe_posts = []
         nsfw_posts = []
@@ -438,6 +440,5 @@ async def lookup_pending_posts():
 
         await asyncio.sleep(60 * 5)
 
-
 # bot.loop.create_task(lookup_pending_posts())
-bot.run(data['keys']['discord']['token'])
+bot.run(bot.auth_keys['discord']['token'])

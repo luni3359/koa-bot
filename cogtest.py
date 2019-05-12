@@ -55,7 +55,8 @@ async def on_ready():
     print('\n\nLogged in as: %s - %s\nVersion: %s\n' % (bot.user.name, bot.user.id, discord.__version__))
 
     await bot.change_presence(activity=discord.Game(name='with books'))
-    print(f'Successfully logged in and booted...!')
+    print('Successfully logged in and booted...!') # raspberry doesn't support the later line
+    # print(f'Successfully logged in and booted...!')
 
 
 bot.run(bot.auth_keys['discord']['token'], bot=True, reconnect=True)

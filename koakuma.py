@@ -191,11 +191,14 @@ async def on_message(msg):
     if urls:
         domains = get_domains(urls)
         for i, domain in enumerate(domains):
-            if 'twitter.com' in domain:
+            if bot.assets['twitter']['domain'] in domain:
                 await get_twitter_gallery(msg, urls[i])
 
-            if 'pixiv.net' in domain:
+            if bot.assets['pixiv']['domain'] in domain:
                 await get_pixiv_gallery(msg, urls[i])
+
+            if bot.assets['danbooru']['domain'] in domain:
+                await get_danbooru_gallery(msg, urls[i])
 
     if channel_activity.last_channel != msg.channel.id or urls:
         channel_activity.last_channel = msg.channel.id
@@ -209,6 +212,84 @@ async def on_message(msg):
             await msg.channel.send(random.choice(bot.quotes['quiet_channel_past_threshold']))
 
     await bot.process_commands(msg)
+
+
+async def get_danbooru_gallery(msg, url):
+    channel = msg.channel
+
+    post_id = get_post_id(url, '/posts/', '?')
+    if not post_id:
+        return
+
+    post = danbooru_api.post_show(post_id)
+
+    if not post:
+        return
+
+    if post['has_children']:
+        search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
+    elif post['parent_id']:
+        search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['parent_id'])
+    else:
+        return
+
+    posts = danbooru_api.post_list(tags=search)
+
+    total_posts = len(posts)
+    posts_processed = 0
+
+    for post in posts:
+        print('Parsing post #%i...' % post['id'])
+        posts_processed += 1
+
+        if post['file_url']:
+            fileurl = post['file_url']
+        else:
+            fileurl = post['source']
+
+        embed = discord.Embed()
+        post_char = re.sub(' \(.*?\)', '', combine_tags(post['tag_string_character']))
+        post_copy = combine_tags(post['tag_string_copyright'])
+        post_artist = combine_tags(post['tag_string_artist'])
+        embed_post_title = ''
+
+        if post_char:
+            embed_post_title += post_char
+
+        if post_copy:
+            if not post_char:
+                embed_post_title += post_copy
+            else:
+                embed_post_title += ' (%s)' % post_copy
+
+        if post_artist:
+            embed_post_title += ' drawn by %s' % post_artist
+
+        if not post_char and not post_copy and not post_artist:
+            embed_post_title += '#%s' % post['id']
+
+        embed_post_title += ' - Danbooru'
+        if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
+            embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
+
+        embed.title = embed_post_title
+        embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
+        embed.set_image(url=fileurl)
+
+        if posts_processed >= min(4, total_posts):
+            if total_posts > 4:
+                embed.set_footer(
+                    text='%i+ remaining' % (total_posts - 4)
+                    # icon_url=bot.assets['danbooru']['favicon']
+                )
+            else:
+                embed.set_footer(
+                    text=bot.assets['danbooru']['name']
+                    # icon_url=bot.assets['danbooru']['favicon']
+                )
+
+        print('Parse of #%i complete' % post['id'])
+        await channel.send(embed=embed)
 
 
 async def get_twitter_gallery(msg, url):

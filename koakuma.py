@@ -10,7 +10,7 @@ import aiohttp
 import commentjson
 import discord
 import pixivpy3
-import pybooru
+# import pybooru
 import tweepy
 from discord.ext import commands
 
@@ -31,7 +31,8 @@ twitter_api = tweepy.API(twit_auth)
 
 pixiv_api = pixivpy3.AppPixivAPI()
 
-danbooru_api = pybooru.Danbooru('danbooru', username=bot.auth_keys['danbooru']['username'], api_key=bot.auth_keys['danbooru']['key'])
+# danbooru_api = pybooru.Danbooru('danbooru', username=bot.auth_keys['danbooru']['username'], api_key=bot.auth_keys['danbooru']['key'])
+danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
 
 # Get info about an artist based on a previous immediate message containing a valid url from either
 # twitter, danbooru or pixiv.
@@ -71,7 +72,7 @@ async def danbooru(ctx):
 async def pixiv(ctx):
     await ctx.send('Navi?')
 
-
+'''
 # Search on danbooru!
 @bot.command(name='danbooru', aliases=['dan'])
 async def search_danbooru(ctx, *args):
@@ -136,6 +137,7 @@ async def search_danbooru(ctx, *args):
             await ctx.send(fileurl)
 
         print('Parse of #%i complete' % post['id'])
+'''
 
 
 @bot.command(name='temperature', aliases=['temp'])
@@ -214,14 +216,39 @@ async def on_message(msg):
     await bot.process_commands(msg)
 
 
+async def post_show(post_id):
+    async with aiohttp.ClientSession(auth=danbooru_auth) as session:
+        async with session.get('https://danbooru.donmai.us/posts/%s.json' % (post_id)) as r:
+            if r.status == 200:
+                return await r.json()
+            else:
+                print('error fetching post #%s' % post_id)
+                return False
+
+
+async def post_list(tags):
+    data = '{"tags": "%s"}' % tags
+
+    async with aiohttp.ClientSession(auth=danbooru_auth) as session:
+        async with session.get('https://danbooru.donmai.us/posts.json', data=data, headers={"Content-Type": "application/json"}) as r:
+            if r.status == 200:
+                return await r.json()
+            else:
+                print('error fetching search: %s' % tags)
+                print(r.status)
+                return False
+
+
 async def get_danbooru_gallery(msg, url):
     channel = msg.channel
 
     post_id = get_post_id(url, '/posts/', '?')
+
     if not post_id:
         return
 
-    post = danbooru_api.post_show(post_id)
+    post = await post_show(post_id)
+    # post = danbooru_api.post_show(post_id)
 
     if not post:
         return
@@ -233,7 +260,8 @@ async def get_danbooru_gallery(msg, url):
     else:
         return
 
-    posts = danbooru_api.post_list(tags=search)
+    # posts = danbooru_api.post_list(tags=search)
+    posts = await post_list(search)
 
     total_posts = len(posts)
     posts_processed = 0
@@ -479,7 +507,7 @@ def combine_tags(tags):
 
     return ''.join(tags_split).strip().replace('_', ' ')
 
-
+'''
 async def lookup_pending_posts():
     await bot.wait_until_ready()
 
@@ -520,6 +548,7 @@ async def lookup_pending_posts():
                 await channel.send('Here are some posts to take into consideration:\n%s' % nsfw_posts)
 
         await asyncio.sleep(60 * 5)
+'''
 
 # bot.loop.create_task(lookup_pending_posts())
 bot.run(bot.auth_keys['discord']['token'])

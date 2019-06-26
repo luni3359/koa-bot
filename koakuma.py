@@ -10,7 +10,6 @@ import aiohttp
 import commentjson
 import discord
 import pixivpy3
-# import pybooru
 import tweepy
 from discord.ext import commands
 
@@ -31,7 +30,6 @@ twitter_api = tweepy.API(twit_auth)
 
 pixiv_api = pixivpy3.AppPixivAPI()
 
-# danbooru_api = pybooru.Danbooru('danbooru', username=bot.auth_keys['danbooru']['username'], api_key=bot.auth_keys['danbooru']['key'])
 danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
 
 # Get info about an artist based on a previous immediate message containing a valid url from either
@@ -113,7 +111,6 @@ async def search_word(ctx, word):
                     embed.description = '%s►  *%s*' % (embed.description, pronunciation.replace('*', '・'))
 
                     if 'fl' in category:
-                        # embed.add_field(name=category['fl'].upper(), value='\u200b')
                         embed.description = '%s\n\n__**%s**__' % (embed.description, category['fl'].upper())
 
                     for subcategory in definitions:
@@ -139,14 +136,14 @@ async def search_word(ctx, word):
                                 # Format bullet point
                                 similar_meaning_string += '%s: %s\n' % (meaning_position, definition[0][1])
 
-                        # embed.add_field(name='vd' in subcategory and subcategory['vd'] or 'definition', value=formatDictionaryOddities(similar_meaning_string), inline=False)
                         embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd'] or 'definition', formatDictionaryOddities(similar_meaning_string))
 
                     # Add etymology
                     if 'et' in category:
                         etymology = category['et']
-                        # embed.add_field(name='etymology', value=formatDictionaryOddities(etymology[0][1]))
                         embed.description = '%s\n**%s**\n%s\n\n' % (embed.description, 'etymology', formatDictionaryOddities(etymology[0][1]))
+                    else:
+                        embed.description = '%s\n\n' % embed.description
 
                 await ctx.send(embed=embed)
             else:
@@ -156,7 +153,7 @@ async def search_word(ctx, word):
 def formatDictionaryOddities(str):
     # Properly format words encased in weird characters
     while True:
-        matches = re.findall('({[a-z_]+[\|}\*]+([a-zÀ-Ž\ \-\,]+)(?:\*?{\/[a-z]*|[a-z0-9\ \-\|\:]*)})', str, re.IGNORECASE)
+        matches = re.findall('({[a-z_]+[\|}\*]+([a-zÀ-Ž\ \-\,]+)(?:\*?{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', str, re.IGNORECASE)
 
         if not len(matches) > 0:
             # Remove all filler
@@ -346,7 +343,6 @@ async def get_danbooru_gallery(msg, url):
         return
 
     post = await post_show(post_id)
-    # post = danbooru_api.post_show(post_id)
 
     if not post:
         return
@@ -358,7 +354,6 @@ async def get_danbooru_gallery(msg, url):
     else:
         return
 
-    # posts = danbooru_api.post_list(tags=search)
     posts = await post_list(search)
 
     total_posts = len(posts)

@@ -152,16 +152,17 @@ async def search_word(ctx, word):
 
 def formatDictionaryOddities(str):
     # Properly format words encased in weird characters
+
+    # Remove all filler
+    str = re.sub('\{bc\}|\*', '', str)
+
     while True:
-        matches = re.findall('({[a-z_]+[\|}\*]+([a-zÀ-Ž\ \-\,]+)(?:\*?{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', str, re.IGNORECASE)
+        matches = re.findall('({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', str, re.IGNORECASE)
 
         if not len(matches) > 0:
-            # Remove all filler
-            str = re.sub('\{bc\}', '', str)
+            str = re.sub('\{\/?[a-z\ _\-]+\}', '', str)
             print(str)
             return str
-
-        print(str)
 
         for match in matches:
             str = str.replace(match[0], '*%s*' % match[1].upper())

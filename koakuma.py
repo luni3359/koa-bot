@@ -1,4 +1,3 @@
-import asyncio
 import io
 import os
 import random
@@ -6,6 +5,7 @@ import re
 import subprocess
 from datetime import datetime
 
+import typing
 import aiohttp
 import commentjson
 import discord
@@ -71,6 +71,104 @@ async def danbooru(ctx):
 @artist.command(aliases=['pix'])
 async def pixiv(ctx):
     await ctx.send('Navi?')
+
+
+@bot.command(name='word', aliases=['w', 'dictionary'])
+async def search_word(ctx, word):
+    word = word.lower()
+    user_search = '%s/%s?key=%s' % (bot.assets['merriam-webster']['search_url'], word, bot.auth_keys['merriam-webster']['key'])
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(user_search) as r:
+            if r.status == 200:
+                js = await r.json()
+
+                # Check if there are any results at all
+                if not len(js) > 0:
+                    await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
+                    return
+
+                # Validate that the word exists and if it doesn't, show suggestions
+                if not 'def' in js[0]:
+                    suggestions = js[0:5]
+
+                    for i, suggestion in enumerate(suggestions):
+                        suggestions[i] = '• %s' % suggestion
+
+                    embed = discord.Embed()
+                    embed.description = '\n\n'.join(suggestions)
+                    embed.description = '*%s*' % embed.description
+                    await ctx.send(random.choice(bot.quotes['dictionary_try_this']), embed=embed)
+                    return
+
+                embed = discord.Embed()
+                embed.title = word
+                embed.url = '%s/%s' % (bot.assets['merriam-webster']['dictionary_url'], word)
+                embed.description = ''
+
+                for category in js[0:2]:
+                    pronunciation = category['hwi']['hw']
+                    definitions = category['def']
+
+                    embed.description = '%s►  *%s*' % (embed.description, pronunciation.replace('*', '・'))
+
+                    if 'fl' in category:
+                        # embed.add_field(name=category['fl'].upper(), value='\u200b')
+                        embed.description = '%s\n\n__**%s**__' % (embed.description, category['fl'].upper())
+
+                    for subcategory in definitions:
+                        similar_meaning_string = ''
+                        for similar_meanings in subcategory['sseq']:
+                            for meaning in similar_meanings:
+                                meaning_item = meaning[1]
+
+                                if isinstance(meaning_item, typing.List):
+                                    meaning_item = meaning_item[0]
+
+                                meaning_position = 'sn' in meaning_item and meaning_item['sn'] or '1'
+
+                                if not meaning_position[0].isdigit():
+                                    meaning_position = '%s%s' % ('\u3000', meaning_position)
+
+                                # Get definition
+                                if isinstance(meaning_item, typing.List):
+                                    definition = meaning_item[1]['dt']
+                                else:
+                                    definition = 'dt' in meaning_item and meaning_item['dt'] or 'sense' in meaning_item and meaning_item['sense']['dt']
+
+                                # Format bullet point
+                                similar_meaning_string += '%s: %s\n' % (meaning_position, definition[0][1])
+
+                        # embed.add_field(name='vd' in subcategory and subcategory['vd'] or 'definition', value=formatDictionaryOddities(similar_meaning_string), inline=False)
+                        embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd'] or 'definition', formatDictionaryOddities(similar_meaning_string))
+
+                    # Add etymology
+                    if 'et' in category:
+                        etymology = category['et']
+                        # embed.add_field(name='etymology', value=formatDictionaryOddities(etymology[0][1]))
+                        embed.description = '%s\n**%s**\n%s\n\n' % (embed.description, 'etymology', formatDictionaryOddities(etymology[0][1]))
+
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send("Oops. What?")
+
+
+def formatDictionaryOddities(str):
+    # Properly format words encased in weird characters
+    while True:
+        matches = re.findall('({[a-z_]+[\|}\*]+([a-zÀ-Ž\ \-\,]+)(?:\*?{\/[a-z]*|[a-z0-9\ \-\|\:]*)})', str, re.IGNORECASE)
+
+        if not len(matches) > 0:
+            # Remove all filler
+            str = re.sub('\{bc\}', '', str)
+            print(str)
+            return str
+
+        print(str)
+
+        for match in matches:
+            str = str.replace(match[0], '*%s*' % match[1].upper())
+
 
 '''
 # Search on danbooru!
@@ -506,6 +604,7 @@ def combine_tags(tags):
         return joint_tags.strip().replace('_', ' ')
 
     return ''.join(tags_split).strip().replace('_', ' ')
+
 
 '''
 async def lookup_pending_posts():

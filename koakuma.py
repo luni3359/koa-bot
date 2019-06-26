@@ -129,12 +129,19 @@ async def search_word(ctx, word):
 
                                 # Get definition
                                 if isinstance(meaning_item, typing.List):
-                                    definition = meaning_item[1]['dt']
+                                    definition = meaning_item[1]['dt'][0][1]
+                                elif 'dt' in meaning_item:
+                                    definition = meaning_item['dt'][0][1]
+                                elif 'sense' in meaning_item:
+                                    definition = meaning_item['sense']['dt'][0][1]
                                 else:
-                                    definition = 'dt' in meaning_item and meaning_item['dt'] or 'sense' in meaning_item and meaning_item['sense']['dt']
+                                    definition = ', '.join(meaning_item['sls'])
+
+                                if isinstance(definition, typing.List):
+                                    definition = definition[0][0][1]
 
                                 # Format bullet point
-                                similar_meaning_string += '%s: %s\n' % (meaning_position, definition[0][1])
+                                similar_meaning_string += '%s: %s\n' % (meaning_position, definition)
 
                         embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd'] or 'definition', formatDictionaryOddities(similar_meaning_string))
 

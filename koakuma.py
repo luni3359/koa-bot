@@ -3,9 +3,10 @@ import os
 import random
 import re
 import subprocess
+import typing
+import urllib
 from datetime import datetime
 
-import typing
 import aiohttp
 import commentjson
 import discord
@@ -71,6 +72,41 @@ async def pixiv(ctx):
     await ctx.send('Navi?')
 
 
+@bot.command(name='urbandictionary', aliases=['wu', 'udictionary'])
+async def search_urban(ctx, word):
+    word = word.lower()
+    user_search = '%s%s' % (bot.assets['urban_dictionary']['search_url'], word)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(user_search) as r:
+            if r.status == 200:
+                js = await r.json()
+
+                # Check if there are any results at all
+                if not 'list' in js or not len(js['list']) > 0:
+                    await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
+                    return
+
+                embed = discord.Embed()
+                embed.title = word
+                embed.url = '%s%s' % (bot.assets['urban_dictionary']['dictionary_url'], word)
+                embed.description = ''
+
+                i = 0
+                for entry in js['list'][:3]:
+                    i = i + 1
+                    definition = entry['definition']
+                    example = entry['example']
+
+                    embed.description += '**%i. %s**\n\n' % (i, formatDictionaryOddities(definition, 'urban'))
+                    embed.description += formatDictionaryOddities(example, 'urban') + '\n\n'
+
+                if len(embed.description) > 2048:
+                    embed.description = embed.description[:2048]
+
+                await ctx.send(embed=embed)
+
+
 @bot.command(name='word', aliases=['w', 'dictionary'])
 async def search_word(ctx, word):
     word = word.lower()
@@ -86,25 +122,27 @@ async def search_word(ctx, word):
                     await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
                     return
 
+                embed = discord.Embed()
+
                 # Validate that the word exists and if it doesn't, show suggestions
                 if not 'def' in js[0]:
-                    suggestions = js[0:5]
+                    suggestions = js[:5]
 
                     for i, suggestion in enumerate(suggestions):
                         suggestions[i] = '• %s' % suggestion
 
-                    embed = discord.Embed()
-                    embed.description = '\n\n'.join(suggestions)
-                    embed.description = '*%s*' % embed.description
+                    embed.description = '*%s*' % '\n\n'.join(suggestions)
                     await ctx.send(random.choice(bot.quotes['dictionary_try_this']), embed=embed)
                     return
 
-                embed = discord.Embed()
                 embed.title = word
                 embed.url = '%s/%s' % (bot.assets['merriam-webster']['dictionary_url'], word)
                 embed.description = ''
 
-                for category in js[0:2]:
+                for category in js[:2]:
+                    if not 'def' in category or not 'hwi' in category:
+                        continue
+
                     pronunciation = category['hwi']['hw']
                     definitions = category['def']
 
@@ -143,12 +181,13 @@ async def search_word(ctx, word):
                                 # Format bullet point
                                 similar_meaning_string += '%s: %s\n' % (meaning_position, definition)
 
-                        embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd'] or 'definition', formatDictionaryOddities(similar_meaning_string))
+                        embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd']
+                                                                or 'definition', formatDictionaryOddities(similar_meaning_string, 'merriam'))
 
                     # Add etymology
                     if 'et' in category:
                         etymology = category['et']
-                        embed.description = '%s\n**%s**\n%s\n\n' % (embed.description, 'etymology', formatDictionaryOddities(etymology[0][1]))
+                        embed.description = '%s\n**%s**\n%s\n\n' % (embed.description, 'etymology', formatDictionaryOddities(etymology[0][1], 'merriam'))
                     else:
                         embed.description = '%s\n\n' % embed.description
 
@@ -157,22 +196,31 @@ async def search_word(ctx, word):
                 await ctx.send("Oops. What?")
 
 
-def formatDictionaryOddities(str):
-    # Properly format words encased in weird characters
+def formatDictionaryOddities(str, which):
+    if which == 'merriam':
+        # Properly format words encased in weird characters
 
-    # Remove all filler
-    str = re.sub('\{bc\}|\*', '', str)
+        # Remove all filler
+        str = re.sub('\{bc\}|\*', '', str)
 
-    while True:
-        matches = re.findall('({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', str, re.IGNORECASE)
+        while True:
+            matches = re.findall('({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', str, re.IGNORECASE)
 
-        if not len(matches) > 0:
-            str = re.sub('\{\/?[a-z\ _\-]+\}', '', str)
-            print(str)
-            return str
+            if not len(matches) > 0:
+                str = re.sub('\{\/?[a-z\ _\-]+\}', '', str)
+                print(str)
+                return str
 
+            for match in matches:
+                str = str.replace(match[0], '*%s*' % match[1].upper())
+    elif which == 'urban':
+        str = str.replace('*', '\*')
+
+        matches = re.findall('(\[([\w\ ’\']+)\])', str, re.IGNORECASE)
         for match in matches:
-            str = str.replace(match[0], '*%s*' % match[1].upper())
+            str = str.replace(match[0], '[%s](%s%s)' % (match[1], bot.assets['urban_dictionary']['dictionary_url'], urllib.parse.quote(match[1])))
+
+        return str
 
 
 '''
@@ -524,7 +572,7 @@ async def get_pixiv_gallery(msg, url):
     temp_wait = await channel.send('***%s***' % random.choice(bot.quotes['processing_long_task']))
     async with channel.typing():
         pictures_processed = 0
-        for picture in illust[meta_dir][0:4]:
+        for picture in illust[meta_dir][:4]:
             pictures_processed += 1
             print('Retrieving picture from #%s...' % post_id)
 

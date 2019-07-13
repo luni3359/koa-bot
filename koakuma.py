@@ -73,9 +73,10 @@ async def pixiv(ctx):
 
 
 @bot.command(name='urbandictionary', aliases=['wu', 'udictionary'])
-async def search_urban(ctx, word):
-    word = word.lower()
-    user_search = '%s%s' % (bot.assets['urban_dictionary']['search_url'], word)
+async def search_urban(ctx, *word):
+    word = ' '.join(word).lower()
+    word_encoded = urllib.parse.quote_plus(word)
+    user_search = '%s%s' % (bot.assets['urban_dictionary']['search_url'], word_encoded)
 
     async with aiohttp.ClientSession() as session:
         async with session.get(user_search) as r:
@@ -89,7 +90,7 @@ async def search_urban(ctx, word):
 
                 embed = discord.Embed()
                 embed.title = word
-                embed.url = '%s%s' % (bot.assets['urban_dictionary']['dictionary_url'], word)
+                embed.url = '%s%s' % (bot.assets['urban_dictionary']['dictionary_url'], word_encoded)
                 embed.description = ''
 
                 i = 0
@@ -108,9 +109,10 @@ async def search_urban(ctx, word):
 
 
 @bot.command(name='word', aliases=['w', 'dictionary'])
-async def search_word(ctx, word):
-    word = word.lower()
-    user_search = '%s/%s?key=%s' % (bot.assets['merriam-webster']['search_url'], word, bot.auth_keys['merriam-webster']['key'])
+async def search_word(ctx, *word):
+    word = ' '.join(word).lower()
+    word_encoded = urllib.parse.quote(word)
+    user_search = '%s/%s?key=%s' % (bot.assets['merriam-webster']['search_url'], word_encoded, bot.auth_keys['merriam-webster']['key'])
 
     async with aiohttp.ClientSession() as session:
         async with session.get(user_search) as r:
@@ -136,7 +138,7 @@ async def search_word(ctx, word):
                     return
 
                 embed.title = word
-                embed.url = '%s/%s' % (bot.assets['merriam-webster']['dictionary_url'], word)
+                embed.url = '%s/%s' % (bot.assets['merriam-webster']['dictionary_url'], word_encoded)
                 embed.description = ''
 
                 for category in js[:2]:
@@ -196,31 +198,31 @@ async def search_word(ctx, word):
                 await ctx.send("Oops. What?")
 
 
-def formatDictionaryOddities(str, which):
+def formatDictionaryOddities(txt, which):
     if which == 'merriam':
         # Properly format words encased in weird characters
 
         # Remove all filler
-        str = re.sub('\{bc\}|\*', '', str)
+        txt = re.sub('\{bc\}|\*', '', txt)
 
         while True:
-            matches = re.findall('({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', str, re.IGNORECASE)
+            matches = re.findall('({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', txt, re.IGNORECASE)
 
             if not len(matches) > 0:
-                str = re.sub('\{\/?[a-z\ _\-]+\}', '', str)
-                print(str)
-                return str
+                txt = re.sub('\{\/?[a-z\ _\-]+\}', '', txt)
+                print(txt)
+                return txt
 
             for match in matches:
-                str = str.replace(match[0], '*%s*' % match[1].upper())
+                txt = txt.replace(match[0], '*%s*' % match[1].upper())
     elif which == 'urban':
-        str = str.replace('*', '\*')
+        txt = txt.replace('*', '\*')
 
-        matches = re.findall('(\[([\w\ ’\']+)\])', str, re.IGNORECASE)
+        matches = re.findall('(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
         for match in matches:
-            str = str.replace(match[0], '[%s](%s%s)' % (match[1], bot.assets['urban_dictionary']['dictionary_url'], urllib.parse.quote(match[1])))
+            txt = txt.replace(match[0], '[%s](%s%s)' % (match[1], bot.assets['urban_dictionary']['dictionary_url'], urllib.parse.quote(match[1])))
 
-        return str
+        return txt
 
 
 '''
@@ -406,7 +408,7 @@ async def get_danbooru_gallery(msg, url):
     if post['has_children']:
         search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
     elif post['parent_id']:
-        search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['parent_id'])
+        search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
     else:
         return
 
@@ -415,7 +417,7 @@ async def get_danbooru_gallery(msg, url):
     total_posts = len(posts)
     posts_processed = 0
 
-    for post in posts:
+    for post in posts[:4]:
         print('Parsing post #%i...' % post['id'])
         posts_processed += 1
 

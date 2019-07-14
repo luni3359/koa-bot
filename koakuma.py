@@ -1,4 +1,4 @@
-import io
+"""Koakuma bot"""
 import os
 import random
 import re
@@ -15,6 +15,7 @@ import tweepy
 from discord.ext import commands
 
 import gaka as art
+import net
 import urusai as channel_activity
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -33,12 +34,12 @@ pixiv_api = pixivpy3.AppPixivAPI()
 
 danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
 
-# Get info about an artist based on a previous immediate message containing a valid url from either
-# twitter, danbooru or pixiv.
-
 
 @bot.group(aliases=['art'])
 async def artist(ctx):
+    """Get info about an artist based on a previous immediate message containing a valid url
+    from either twitter, danbooru or pixiv."""
+
     if ctx.invoked_subcommand is None:
         if art.last_artist is None:
             # Better change this to attempt to look back instead of giving up right away
@@ -48,6 +49,8 @@ async def artist(ctx):
 
 @artist.command(aliases=['twit'])
 async def twitter(ctx):
+    """Display artist's twitter"""
+
     embed = discord.Embed()
     embed.set_author(
         name='%s (@%s)' % (art.last_artist.twitter_name, art.last_artist.twitter_screen_name),
@@ -64,141 +67,151 @@ async def twitter(ctx):
 
 @artist.command(aliases=['dan'])
 async def danbooru(ctx):
+    """Display artist's art from danbooru"""
+
     await ctx.send('Box.')
 
 
 @artist.command(aliases=['pix'])
 async def pixiv(ctx):
+    """Display something from pixiv"""
+
     await ctx.send('Navi?')
 
 
 @bot.command(name='urbandictionary', aliases=['wu', 'udictionary'])
 async def search_urban(ctx, *word):
+    """Search a term in urbandictionary"""
+
     word = ' '.join(word).lower()
     word_encoded = urllib.parse.quote_plus(word)
     user_search = '%s%s' % (bot.assets['urban_dictionary']['search_url'], word_encoded)
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(user_search) as r:
-            if r.status == 200:
-                js = await r.json()
+    js = await net.http_request(user_search, json=True)
 
-                # Check if there are any results at all
-                if not 'list' in js or not len(js['list']) > 0:
-                    await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
-                    return
+    if not js:
+        await ctx.send('Error retrieving data from server.')
+        return
 
-                embed = discord.Embed()
-                embed.title = word
-                embed.url = '%s%s' % (bot.assets['urban_dictionary']['dictionary_url'], word_encoded)
-                embed.description = ''
+    # Check if there are any results at all
+    if not 'list' in js or not len(js['list']) > 0:
+        await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
+        return
 
-                i = 0
-                for entry in js['list'][:3]:
-                    i = i + 1
-                    definition = entry['definition']
-                    example = entry['example']
+    embed = discord.Embed()
+    embed.title = word
+    embed.url = '%s%s' % (bot.assets['urban_dictionary']['dictionary_url'], word_encoded)
+    embed.description = ''
 
-                    embed.description += '**%i. %s**\n\n' % (i, formatDictionaryOddities(definition, 'urban'))
-                    embed.description += formatDictionaryOddities(example, 'urban') + '\n\n'
+    i = 0
+    for entry in js['list'][:3]:
+        i = i + 1
+        definition = entry['definition']
+        example = entry['example']
 
-                if len(embed.description) > 2048:
-                    embed.description = embed.description[:2048]
+        embed.description += '**%i. %s**\n\n' % (i, formatDictionaryOddities(definition, 'urban'))
+        embed.description += formatDictionaryOddities(example, 'urban') + '\n\n'
 
-                await ctx.send(embed=embed)
+    if len(embed.description) > 2048:
+        embed.description = embed.description[:2048]
+
+    await ctx.send(embed=embed)
 
 
 @bot.command(name='word', aliases=['w', 'dictionary'])
 async def search_word(ctx, *word):
+    """Search a term in merriam-webster's dictionary"""
+
     word = ' '.join(word).lower()
     word_encoded = urllib.parse.quote(word)
     user_search = '%s/%s?key=%s' % (bot.assets['merriam-webster']['search_url'], word_encoded, bot.auth_keys['merriam-webster']['key'])
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(user_search) as r:
-            if r.status == 200:
-                js = await r.json()
+    js = await net.http_request(user_search, json=True)
 
-                # Check if there are any results at all
-                if not len(js) > 0:
-                    await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
-                    return
+    if not js:
+        await ctx.send("Oops. What?")
+        return
 
-                embed = discord.Embed()
+    # Check if there are any results at all
+    if not len(js) > 0:
+        await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
+        return
 
-                # Validate that the word exists and if it doesn't, show suggestions
-                if not 'def' in js[0]:
-                    suggestions = js[:5]
+    embed = discord.Embed()
 
-                    for i, suggestion in enumerate(suggestions):
-                        suggestions[i] = '• %s' % suggestion
+    # Validate that the word exists and if it doesn't, show suggestions
+    if not 'def' in js[0]:
+        suggestions = js[:5]
 
-                    embed.description = '*%s*' % '\n\n'.join(suggestions)
-                    await ctx.send(random.choice(bot.quotes['dictionary_try_this']), embed=embed)
-                    return
+        for i, suggestion in enumerate(suggestions):
+            suggestions[i] = '• %s' % suggestion
 
-                embed.title = word
-                embed.url = '%s/%s' % (bot.assets['merriam-webster']['dictionary_url'], word_encoded)
-                embed.description = ''
+        embed.description = '*%s*' % '\n\n'.join(suggestions)
+        await ctx.send(random.choice(bot.quotes['dictionary_try_this']), embed=embed)
+        return
 
-                for category in js[:2]:
-                    if not 'def' in category or not 'hwi' in category:
-                        continue
+    embed.title = word
+    embed.url = '%s/%s' % (bot.assets['merriam-webster']['dictionary_url'], word_encoded)
+    embed.description = ''
 
-                    pronunciation = category['hwi']['hw']
-                    definitions = category['def']
+    for category in js[:2]:
+        if not 'def' in category or not 'hwi' in category:
+            continue
 
-                    embed.description = '%s►  *%s*' % (embed.description, pronunciation.replace('*', '・'))
+        pronunciation = category['hwi']['hw']
+        definitions = category['def']
 
-                    if 'fl' in category:
-                        embed.description = '%s\n\n__**%s**__' % (embed.description, category['fl'].upper())
+        embed.description = '%s►  *%s*' % (embed.description, pronunciation.replace('*', '・'))
 
-                    for subcategory in definitions:
-                        similar_meaning_string = ''
-                        for similar_meanings in subcategory['sseq']:
-                            for meaning in similar_meanings:
-                                meaning_item = meaning[1]
+        if 'fl' in category:
+            embed.description = '%s\n\n__**%s**__' % (embed.description, category['fl'].upper())
 
-                                if isinstance(meaning_item, typing.List):
-                                    meaning_item = meaning_item[0]
+        for subcategory in definitions:
+            similar_meaning_string = ''
+            for similar_meanings in subcategory['sseq']:
+                for meaning in similar_meanings:
+                    meaning_item = meaning[1]
 
-                                meaning_position = 'sn' in meaning_item and meaning_item['sn'] or '1'
+                    if isinstance(meaning_item, typing.List):
+                        meaning_item = meaning_item[0]
 
-                                if not meaning_position[0].isdigit():
-                                    meaning_position = '%s%s' % ('\u3000', meaning_position)
+                    meaning_position = 'sn' in meaning_item and meaning_item['sn'] or '1'
 
-                                # Get definition
-                                if isinstance(meaning_item, typing.List):
-                                    definition = meaning_item[1]['dt'][0][1]
-                                elif 'dt' in meaning_item:
-                                    definition = meaning_item['dt'][0][1]
-                                elif 'sense' in meaning_item:
-                                    definition = meaning_item['sense']['dt'][0][1]
-                                else:
-                                    definition = ', '.join(meaning_item['sls'])
+                    if not meaning_position[0].isdigit():
+                        meaning_position = '%s%s' % ('\u3000', meaning_position)
 
-                                if isinstance(definition, typing.List):
-                                    definition = definition[0][0][1]
-
-                                # Format bullet point
-                                similar_meaning_string += '%s: %s\n' % (meaning_position, definition)
-
-                        embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd']
-                                                                or 'definition', formatDictionaryOddities(similar_meaning_string, 'merriam'))
-
-                    # Add etymology
-                    if 'et' in category:
-                        etymology = category['et']
-                        embed.description = '%s\n**%s**\n%s\n\n' % (embed.description, 'etymology', formatDictionaryOddities(etymology[0][1], 'merriam'))
+                    # Get definition
+                    if isinstance(meaning_item, typing.List):
+                        definition = meaning_item[1]['dt'][0][1]
+                    elif 'dt' in meaning_item:
+                        definition = meaning_item['dt'][0][1]
+                    elif 'sense' in meaning_item:
+                        definition = meaning_item['sense']['dt'][0][1]
                     else:
-                        embed.description = '%s\n\n' % embed.description
+                        definition = ', '.join(meaning_item['sls'])
 
-                await ctx.send(embed=embed)
-            else:
-                await ctx.send("Oops. What?")
+                    if isinstance(definition, typing.List):
+                        definition = definition[0][0][1]
+
+                    # Format bullet point
+                    similar_meaning_string += '%s: %s\n' % (meaning_position, definition)
+
+            embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd']
+                                                    or 'definition', formatDictionaryOddities(similar_meaning_string, 'merriam'))
+
+        # Add etymology
+        if 'et' in category:
+            etymology = category['et']
+            embed.description = '%s\n**%s**\n%s\n\n' % (embed.description, 'etymology', formatDictionaryOddities(etymology[0][1], 'merriam'))
+        else:
+            embed.description = '%s\n\n' % embed.description
+
+    await ctx.send(embed=embed)
 
 
 def formatDictionaryOddities(txt, which):
+    """Trim weird markup from dictionary entries"""
+
     if which == 'merriam':
         # Properly format words encased in weird characters
 
@@ -225,16 +238,14 @@ def formatDictionaryOddities(txt, which):
         return txt
 
 
-'''
-# Search on danbooru!
 @bot.command(name='danbooru', aliases=['dan'])
 async def search_danbooru(ctx, *args):
-    return await ctx.send('Currently unavailable.')
+    """Search on danbooru!"""
+
     search = ' '.join(args)
     print('User searching for: %s' % search)
 
-    posts = danbooru_api.post_list(tags=search, page=1, limit=3, random=True)
-    print('API search complete!')
+    posts = await board_search(tags=search, limit=3, random=True)
 
     if not posts:
         await ctx.send('Sorry, nothing found!')
@@ -290,11 +301,12 @@ async def search_danbooru(ctx, *args):
             await ctx.send(fileurl)
 
         print('Parse of #%i complete' % post['id'])
-'''
 
 
 @bot.command(name='temperature', aliases=['temp'])
 async def report_bot_temp(ctx):
+    """Show the bot's current temperature"""
+
     try:
         current_temp = subprocess.run(['vcgencmd', 'measure_temp'], stdout=subprocess.PIPE, universal_newlines=True)
     except FileNotFoundError:
@@ -305,11 +317,14 @@ async def report_bot_temp(ctx):
 
 @bot.command(name='last')
 async def talk_status(ctx):
+    """Mention a brief summary of the last used channel"""
     await ctx.send('Last channel: %s\nCurrent count there: %s' % (channel_activity.last_channel, channel_activity.count))
 
 
 @bot.command(aliases=['ava'])
 async def avatar(ctx):
+    """Display the avatar of an user"""
+
     embed = discord.Embed()
     embed.set_image(url=ctx.message.author.avatar_url)
     embed.set_author(
@@ -321,6 +336,8 @@ async def avatar(ctx):
 
 @bot.command()
 async def uptime(ctx):
+    """Mention the current uptime"""
+
     delta_uptime = datetime.utcnow() - bot.launch_time
     hours, remainder = divmod(int(delta_uptime.total_seconds()), 3600)
     minutes, seconds = divmod(remainder, 60)
@@ -328,71 +345,46 @@ async def uptime(ctx):
     await ctx.send('I\'ve been running for %i days, %i hours, %i minutes and %i seconds.' % (days, hours, minutes, seconds))
 
 
-@bot.event
-async def on_ready():
-    print('ready!')
-    # Change play status to something fitting
-    await bot.change_presence(activity=discord.Game(name='with books'))
+async def board_search(**kwargs):
+    """Board searches handler
 
+    Keywords:
+        board::str
+            Specify what board to search on, default is danbooru.
+        post_id::int
+            Used for searching by post id on a board
+        tags::str
+            Used for searching with tags on a board
+        limit::int
+            How many images to retrieve, default is 5
+        random::bool
+            Pick at random from results, default is False
 
-@bot.event
-async def on_message(msg):
-    # Prevent bot from spamming itself
-    if msg.author.bot:
-        return
+    Returns:
+        json::dict
+    """
 
-    # Test for image urls
-    urls = get_urls(msg.content)
-    if urls:
-        domains = get_domains(urls)
-        for i, domain in enumerate(domains):
-            if bot.assets['twitter']['domain'] in domain:
-                await get_twitter_gallery(msg, urls[i])
+    board = kwargs.get('board', 'danbooru')
 
-            if bot.assets['pixiv']['domain'] in domain:
-                await get_pixiv_gallery(msg, urls[i])
+    post_id = kwargs.get('post_id')
+    tags = kwargs.get('tags')
+    limit = kwargs.get('limit', 5)
+    random = kwargs.get('random', False)
 
-            if bot.assets['danbooru']['domain'] in domain:
-                await get_danbooru_gallery(msg, urls[i])
+    if board == 'danbooru':
+        if post_id:
+            url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
+            return await net.http_request(url, auth=danbooru_auth, json=True, err_msg='error fetching post #%s' % post_id)
+        elif limit and tags:
 
-    if channel_activity.last_channel != msg.channel.id or urls:
-        channel_activity.last_channel = msg.channel.id
-        channel_activity.count = 0
-
-    channel_activity.count += 1
-
-    if str(msg.channel.id) in bot.rules['quiet_channels']:
-        if not channel_activity.warned and channel_activity.count >= bot.rules['quiet_channels'][str(msg.channel.id)]['max_messages_without_embeds']:
-            channel_activity.warned = True
-            await msg.channel.send(random.choice(bot.quotes['quiet_channel_past_threshold']))
-
-    await bot.process_commands(msg)
-
-
-async def post_show(post_id):
-    async with aiohttp.ClientSession(auth=danbooru_auth) as session:
-        async with session.get('https://danbooru.donmai.us/posts/%s.json' % (post_id)) as r:
-            if r.status == 200:
-                return await r.json()
-            else:
-                print('error fetching post #%s' % post_id)
-                return False
-
-
-async def post_list(tags):
-    data = '{"tags": "%s"}' % tags
-
-    async with aiohttp.ClientSession(auth=danbooru_auth) as session:
-        async with session.get('https://danbooru.donmai.us/posts.json', data=data, headers={"Content-Type": "application/json"}) as r:
-            if r.status == 200:
-                return await r.json()
-            else:
-                print('error fetching search: %s' % tags)
-                print(r.status)
-                return False
+        elif tags:
+            data = '{"tags": "%s"}' % tags
+            return await net.http_request('https://danbooru.donmai.us/posts.json', auth=danbooru_auth, data=data, headers={"Content-Type": "application/json"}, json=True, err_msg='error fetching search: %s' % tags)
 
 
 async def get_danbooru_gallery(msg, url):
+    """Automatically fetch and post any image galleries from danbooru"""
+
     channel = msg.channel
 
     post_id = get_post_id(url, '/posts/', '?')
@@ -400,7 +392,7 @@ async def get_danbooru_gallery(msg, url):
     if not post_id:
         return
 
-    post = await post_show(post_id)
+    post = await board_search(post_id=post_id)
 
     if not post:
         return
@@ -412,7 +404,7 @@ async def get_danbooru_gallery(msg, url):
     else:
         return
 
-    posts = await post_list(search)
+    posts = await board_search(tags=search)
 
     total_posts = len(posts)
     posts_processed = 0
@@ -472,6 +464,8 @@ async def get_danbooru_gallery(msg, url):
 
 
 async def get_twitter_gallery(msg, url):
+    """Automatically fetch and post any image galleries from twitter"""
+
     channel = msg.channel
 
     post_id = get_post_id(url, '/status/', '?')
@@ -531,6 +525,8 @@ async def get_twitter_gallery(msg, url):
 
 
 async def get_pixiv_gallery(msg, url):
+    """Automatically fetch and post any image galleries from pixiv"""
+
     channel = msg.channel
 
     post_id = get_post_id(url, 'illust_id=', '&')
@@ -583,7 +579,7 @@ async def get_pixiv_gallery(msg, url):
             except AttributeError:
                 img_url = illust.image_urls['medium']
 
-            image = await fetch_image(img_url, {'Referer': 'https://app-api.pixiv.net/'})
+            image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
 
             print('Retrieved more from #%s (maybe)' % post_id)
             image_filename = get_file_name(img_url)
@@ -612,36 +608,9 @@ async def get_pixiv_gallery(msg, url):
     print('DONE PIXIV!')
 
 
-async def fetch_image(url, headers={}):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers) as response:
-            img_bytes = io.BytesIO(await response.read())
-            return img_bytes
-
-
-def get_urls(string):
-    # findall() has been used
-    # with valid conditions for urls in string
-    regex_exp = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-    matching_urls = re.findall(regex_exp, string)
-    return matching_urls
-
-
-def get_domains(array):
-    domains = []
-
-    for url in array:
-        # thanks dude https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868
-        domain = url.split('//')[-1].split('/')[0].split('?')[0]
-        domains.append(domain)
-    return domains
-
-
-def get_file_name(url):
-    return url.split('/')[-1]
-
-
 def get_post_id(url, word_to_match, trim_to):
+    """Get post id from url"""
+
     if not word_to_match in url:
         return False
 
@@ -649,6 +618,8 @@ def get_post_id(url, word_to_match, trim_to):
 
 
 def combine_tags(tags):
+    """Combine tags and give them a readable format"""
+
     tags_split = tags.split()[:5]
 
     if len(tags_split) > 1:
@@ -657,6 +628,32 @@ def combine_tags(tags):
         return joint_tags.strip().replace('_', ' ')
 
     return ''.join(tags_split).strip().replace('_', ' ')
+
+
+def get_urls(string):
+    """findall() has been used with valid conditions for urls in string"""
+
+    regex_exp = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    matching_urls = re.findall(regex_exp, string)
+    return matching_urls
+
+
+def get_domains(array):
+    """Get domains from a link
+    thanks dude https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868"""
+
+    domains = []
+
+    for url in array:
+        domain = url.split('//')[-1].split('/')[0].split('?')[0]
+        domains.append(domain)
+    return domains
+
+
+def get_file_name(url):
+    """Get file name from url"""
+
+    return url.split('/')[-1]
 
 
 '''
@@ -701,6 +698,54 @@ async def lookup_pending_posts():
 
         await asyncio.sleep(60 * 5)
 '''
+
+
+@bot.event
+async def on_message(msg):
+    """Searches messages for urls and certain keywords"""
+
+    # Prevent bot from spamming itself
+    if msg.author.bot:
+        return
+
+    # Test for units
+    # TODO Find inches, feet, any units that can be converted to its international version
+
+    # Test for image urls
+    urls = get_urls(msg.content)
+    if urls:
+        domains = get_domains(urls)
+        for i, domain in enumerate(domains):
+            if bot.assets['twitter']['domain'] in domain:
+                await get_twitter_gallery(msg, urls[i])
+
+            if bot.assets['pixiv']['domain'] in domain:
+                await get_pixiv_gallery(msg, urls[i])
+
+            if bot.assets['danbooru']['domain'] in domain:
+                await get_danbooru_gallery(msg, urls[i])
+
+    if channel_activity.last_channel != msg.channel.id or urls:
+        channel_activity.last_channel = msg.channel.id
+        channel_activity.count = 0
+
+    channel_activity.count += 1
+
+    if str(msg.channel.id) in bot.rules['quiet_channels']:
+        if not channel_activity.warned and channel_activity.count >= bot.rules['quiet_channels'][str(msg.channel.id)]['max_messages_without_embeds']:
+            channel_activity.warned = True
+            await msg.channel.send(random.choice(bot.quotes['quiet_channel_past_threshold']))
+
+    await bot.process_commands(msg)
+
+
+@bot.event
+async def on_ready():
+    """On bot start"""
+
+    print('ready!')
+    # Change play status to something fitting
+    await bot.change_presence(activity=discord.Game(name='with books'))
 
 # bot.loop.create_task(lookup_pending_posts())
 bot.run(bot.auth_keys['discord']['token'])

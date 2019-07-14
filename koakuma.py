@@ -1,4 +1,5 @@
 """Koakuma bot"""
+import json
 import os
 import random
 import re
@@ -365,21 +366,23 @@ async def board_search(**kwargs):
     """
 
     board = kwargs.get('board', 'danbooru')
-
     post_id = kwargs.get('post_id')
     tags = kwargs.get('tags')
     limit = kwargs.get('limit', 5)
     random = kwargs.get('random', False)
 
+    data = {
+        'tags': tags,
+        'limit': limit,
+        'random': random
+    }
+
     if board == 'danbooru':
         if post_id:
             url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
             return await net.http_request(url, auth=danbooru_auth, json=True, err_msg='error fetching post #%s' % post_id)
-        elif limit and tags:
-
         elif tags:
-            data = '{"tags": "%s"}' % tags
-            return await net.http_request('https://danbooru.donmai.us/posts.json', auth=danbooru_auth, data=data, headers={"Content-Type": "application/json"}, json=True, err_msg='error fetching search: %s' % tags)
+            return await net.http_request('https://danbooru.donmai.us/posts.json', auth=danbooru_auth, data=json.dumps(data), headers={"Content-Type": "application/json"}, json=True, err_msg='error fetching search: %s' % tags)
 
 
 async def get_danbooru_gallery(msg, url):

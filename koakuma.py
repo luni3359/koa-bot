@@ -706,7 +706,7 @@ async def lookup_pending_posts():
 async def convert_to_si(msg):
     """Convert imperial units to SI"""
 
-    regex_exp = r'(([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))(?:\ *(?:and)?\ *)?([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in))|([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))|([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in)))'
+    regex_exp = r'(([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))(?:\ *(?:and)?\ *)?([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in)?)|([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))|([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in)))'
     results = re.findall(regex_exp, msg.content)
 
     if not results:

@@ -5,4 +5,9 @@ A = ([0-9]+(?:\.?[0-9]+)?\ *(?:'|foot|feet|ft))
 B = ([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in))
 C = (?:\ *(?:and)?\ *)?
 ACB = ([0-9]+(?:\.?[0-9]+)?\ *(?:'|foot|feet|ft))(?:\ *(?:and)?\ *)?([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in))
-(ACB|A|B) = (([0-9]+(?:\.?[0-9]+)?\ *(?:'|foot|feet|ft))(?:\ *(?:and)?\ *)?([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in))|([0-9]+(?:\.?[0-9]+)?\ *(?:'|foot|feet|ft))|([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in)))
+(ACB|A|B) = (([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))(?:\ *(?:and)?\ *)?([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in)?)|([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))|([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in)))
+
+Note: (ACB|A|B) was modified in the first check because people often write down heights as follows:
+5'6　← notice lack of any following symbols
+
+And thus the first check makes the inches symbol/keyword optional

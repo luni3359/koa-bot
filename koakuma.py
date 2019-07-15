@@ -217,13 +217,13 @@ def formatDictionaryOddities(txt, which):
         # Properly format words encased in weird characters
 
         # Remove all filler
-        txt = re.sub('\{bc\}|\*', '', txt)
+        txt = re.sub(r'\{bc\}|\*', '', txt)
 
         while True:
-            matches = re.findall('({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', txt, re.IGNORECASE)
+            matches = re.findall(r'({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', txt, re.IGNORECASE)
 
             if not len(matches) > 0:
-                txt = re.sub('\{\/?[a-z\ _\-]+\}', '', txt)
+                txt = re.sub(r'\{\/?[a-z\ _\-]+\}', '', txt)
                 print(txt)
                 return txt
 
@@ -232,7 +232,7 @@ def formatDictionaryOddities(txt, which):
     elif which == 'urban':
         txt = txt.replace('*', '\*')
 
-        matches = re.findall('(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
+        matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
         for match in matches:
             txt = txt.replace(match[0], '[%s](%s%s)' % (match[1], bot.assets['urban_dictionary']['dictionary_url'], urllib.parse.quote(match[1])))
 
@@ -270,7 +270,7 @@ async def search_danbooru(ctx, *args):
 
         if '/data/' in fileurl or 'raikou' in fileurl:
             embed = discord.Embed()
-            post_char = re.sub(' \(.*?\)', '', combine_tags(post['tag_string_character']))
+            post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
             post_copy = combine_tags(post['tag_string_copyright'])
             post_artist = combine_tags(post['tag_string_artist'])
             embed_post_title = ''
@@ -422,7 +422,7 @@ async def get_danbooru_gallery(msg, url):
             fileurl = post['source']
 
         embed = discord.Embed()
-        post_char = re.sub(' \(.*?\)', '', combine_tags(post['tag_string_character']))
+        post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
         post_copy = combine_tags(post['tag_string_copyright'])
         post_artist = combine_tags(post['tag_string_artist'])
         embed_post_title = ''
@@ -636,7 +636,7 @@ def combine_tags(tags):
 def get_urls(string):
     """findall() has been used with valid conditions for urls in string"""
 
-    regex_exp = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    regex_exp = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
     matching_urls = re.findall(regex_exp, string)
     return matching_urls
 
@@ -703,6 +703,52 @@ async def lookup_pending_posts():
 '''
 
 
+async def convert_to_si(msg):
+    """Convert imperial units to SI"""
+
+    regex_exp = r'(([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))(?:\ *(?:and)?\ *)?([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in))|([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))|([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in)))'
+    results = re.findall(regex_exp, msg.content)
+
+    if not results:
+        return
+
+    channel = msg.channel
+    conversion_str = random.choice(bot.quotes['converting_units']) + '```'
+
+    for match in results:
+        units = {
+            'feet': match[1] or match[3],
+            'inches': match[2] or match[4],
+        }
+        converted_units = {
+            'meters': 0,
+            'feet': 0,
+            'inches': 0,
+        }
+
+        for key in units:
+            if not units[key]:
+                continue
+
+            units[key] = float(re.match(r'\d+\.?\d*', units[key]).group(0))
+
+        if units['feet']:
+            converted_units['meters'] += units['feet'] * 0.3048
+
+        if units['inches']:
+            converted_units['meters'] += units['inches'] * 0.0254
+
+        conversion_str += '\n%s → %0.4fm' % (match[0], converted_units['meters'])
+
+    # Random chance for final quote, 50% chance
+    if not random.getrandbits(1):
+        conversion_str += '```\n' + random.choice(bot.quotes['converting_units_modest'])
+    else:
+        conversion_str += '```'
+
+    await channel.send(conversion_str)
+
+
 @bot.event
 async def on_message(msg):
     """Searches messages for urls and certain keywords"""
@@ -712,7 +758,7 @@ async def on_message(msg):
         return
 
     # Test for units
-    # TODO Find inches, feet, any units that can be converted to its international version
+    await convert_to_si(msg)
 
     # Test for image urls
     urls = get_urls(msg.content)

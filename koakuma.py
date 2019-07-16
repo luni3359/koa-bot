@@ -1,4 +1,5 @@
 """Koakuma bot"""
+import asyncio
 import json
 import os
 import random
@@ -17,7 +18,9 @@ from discord.ext import commands
 
 import gaka as art
 import net
+import converter
 import urusai as channel_activity
+
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(SOURCE_DIR, 'config.jsonc')) as json_file:
@@ -659,8 +662,8 @@ def get_file_name(url):
     return url.split('/')[-1]
 
 
-'''
 async def lookup_pending_posts():
+    """Every 5 minutes search for danbooru posts"""
     await bot.wait_until_ready()
 
     pending_posts = []
@@ -676,7 +679,7 @@ async def lookup_pending_posts():
         nsfw_channels.append(new_channel)
 
     while not bot.is_closed():
-        posts = danbooru_api.post_list(tags=bot.tasks['danbooru']['tag_list'], page=1, limit=5, random=True)
+        posts = await board_search(tags=bot.tasks['danbooru']['tag_list'], limit=5, random=True)
 
         safe_posts = []
         nsfw_posts = []
@@ -693,52 +696,46 @@ async def lookup_pending_posts():
 
         if safe_posts:
             for channel in safe_channels:
-                await channel.send('Here are some posts to take into consideration:\n%s' % safe_posts)
+                await channel.send(bot.quotes['posts_to_approve'] + safe_posts)
 
         if nsfw_posts:
             for channel in nsfw_channels:
-                await channel.send('Here are some posts to take into consideration:\n%s' % nsfw_posts)
+                await channel.send(bot.quotes['posts_to_approve'] + nsfw_posts)
 
         await asyncio.sleep(60 * 5)
-'''
 
 
-async def convert_to_si(msg):
+async def convert_units(msg):
     """Convert imperial units to SI"""
 
-    regex_exp = r'(([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))(?:\ *(?:and)?\ *)?([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in)?)|([0-9]+(?:\.?[0-9]+)?\ *(?:\'|foot|feet|ft))|([0-9]+(?:\.?[0-9]+)?\ *(?:"|inches|inch|in)))'
-    results = re.findall(regex_exp, msg.content)
+    # Find all measures
+    measures = converter.find_measurements(msg.content)
 
-    if not results:
+    if not measures:
         return
 
     channel = msg.channel
     conversion_str = random.choice(bot.quotes['converting_units']) + '```'
 
-    for match in results:
-        units = {
-            'feet': match[1] or match[3],
-            'inches': match[2] or match[4],
-        }
-        converted_units = {
-            'meters': 0,
-            'feet': 0,
-            'inches': 0,
-        }
+    """
+    mi -> ?
+    ft -> m 0.3048
+    in -> m 0.0254
+    km -> ft 3280.8
+    m -> ft 3.2808
+    cm -> ft 0.032808
+    """
+    for measure in measures:
+        if measure[0] == 'footinches':
+            conversion_value = measure[1] * converter.ureg.foot + measure[2] * converter.ureg.inch
+            # conversion_str += '%i\'%f" → %0.4fm' % (int(measure[1]), measure[2], conversion_value)
+            conversion_str += "^\{owo\}^"
+            print('{:~P}' % conversion_value)
+            print('{:~P}'.format(conversion_value))
+            continue
 
-        for key in units:
-            if not units[key]:
-                continue
-
-            units[key] = float(re.match(r'\d+\.?\d*', units[key]).group(0))
-
-        if units['feet']:
-            converted_units['meters'] += units['feet'] * 0.3048
-
-        if units['inches']:
-            converted_units['meters'] += units['inches'] * 0.0254
-
-        conversion_str += '\n%s → %0.4fm' % (match[0], converted_units['meters'])
+        # conversion_value =
+        # conversion_str += '%f%s → %0.4f' % (measure[1], measure[2], )
 
     # Random chance for final quote, 50% chance
     if not random.getrandbits(1):
@@ -758,7 +755,7 @@ async def on_message(msg):
         return
 
     # Test for units
-    await convert_to_si(msg)
+    await convert_units(msg)
 
     # Test for image urls
     urls = get_urls(msg.content)
@@ -796,5 +793,5 @@ async def on_ready():
     # Change play status to something fitting
     await bot.change_presence(activity=discord.Game(name='with books'))
 
-# bot.loop.create_task(lookup_pending_posts())
+bot.loop.create_task(lookup_pending_posts())
 bot.run(bot.auth_keys['discord']['token'])

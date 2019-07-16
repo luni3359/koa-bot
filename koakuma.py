@@ -706,7 +706,18 @@ async def lookup_pending_posts():
 
 
 async def convert_units(msg):
-    """Convert imperial units to SI"""
+    """Convert units found to their opposite (SI <-> imp)"""
+
+    imperial_units = [
+        'feet',
+        'inches',
+        'miles',
+    ]
+    si_units = [
+        'meters',
+        'centimeters',
+        'kilometers',
+    ]
 
     # Find all measures
     measures = converter.find_measurements(msg.content)
@@ -717,25 +728,30 @@ async def convert_units(msg):
     channel = msg.channel
     conversion_str = random.choice(bot.quotes['converting_units']) + '```'
 
-    """
-    mi -> ?
-    ft -> m 0.3048
-    in -> m 0.0254
-    km -> ft 3280.8
-    m -> ft 3.2808
-    cm -> ft 0.032808
-    """
     for measure in measures:
         if measure[0] == 'footinches':
-            conversion_value = measure[1] * converter.ureg.foot + measure[2] * converter.ureg.inch
-            # conversion_str += '%i\'%f" → %0.4fm' % (int(measure[1]), measure[2], conversion_value)
-            conversion_str += "^\{owo\}^"
-            print('{:~P}' % conversion_value)
-            print('{:~P}'.format(conversion_value))
+            value = measure[1]
+            value2 = measure[2]
+
+            converted_value = value * converter.ureg.foot + value2 * converter.ureg.inch
+            conversion_str += ('\n{} {} → {}').format(value * converter.ureg.foot, value2 * converter.ureg.inch, converted_value.to_base_units())
             continue
 
-        # conversion_value =
-        # conversion_str += '%f%s → %0.4f' % (measure[1], measure[2], )
+        unit, value = measure
+        value = value * converter.ureg[unit]
+
+        if unit in imperial_units:
+            converted_value = value.to_base_units()
+            converted_value = converted_value.to_compact()
+        elif unit in si_units:
+            if unit == 'kilometers':
+                converted_value = value.to(converter.ureg.miles)
+            elif value.magnitude >= 300:
+                converted_value = value.to(converter.ureg.yards)
+            else:
+                converted_value = value.to(converter.ureg.feet)
+
+        conversion_str += ('\n{} → {}').format(value, converted_value)
 
     # Random chance for final quote, 50% chance
     if not random.getrandbits(1):

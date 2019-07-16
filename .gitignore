@@ -1,6 +1,3 @@
 __pycache__
 .vscode
-bot-info.json
 config*
-testjson.json.txt
-twitter.py

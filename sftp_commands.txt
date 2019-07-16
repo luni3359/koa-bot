@@ -1,0 +1,2 @@
+cd koa-bot/
+put -r *

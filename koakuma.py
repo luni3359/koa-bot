@@ -770,6 +770,8 @@ async def on_message(msg):
     if msg.author.bot:
         return
 
+    channel = msg.channel
+
     # Test for units
     await convert_units(msg)
 
@@ -787,16 +789,18 @@ async def on_message(msg):
             if bot.assets['danbooru']['domain'] in domain:
                 await get_danbooru_gallery(msg, urls[i])
 
-    if channel_activity.last_channel != msg.channel.id or urls:
-        channel_activity.last_channel = msg.channel.id
+    if channel_activity.last_channel != channel.id or urls:
+        channel_activity.last_channel = channel.id
         channel_activity.count = 0
 
     channel_activity.count += 1
 
-    if str(msg.channel.id) in bot.rules['quiet_channels']:
-        if not channel_activity.warned and channel_activity.count >= bot.rules['quiet_channels'][str(msg.channel.id)]['max_messages_without_embeds']:
+    if str(channel.id) in bot.rules['quiet_channels']:
+        if not channel_activity.warned and channel_activity.count >= bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
             channel_activity.warned = True
-            await msg.channel.send(random.choice(bot.quotes['quiet_channel_past_threshold']))
+            async with channel.typing():
+                await asyncio.sleep(random.randint(0, 1) + 1)
+                await channel.send(random.choice(bot.quotes['quiet_channel_past_threshold']))
 
     await bot.process_commands(msg)
 

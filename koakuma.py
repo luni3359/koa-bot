@@ -58,7 +58,7 @@ async def twitter(ctx):
     embed = discord.Embed()
     embed.set_author(
         name='%s (@%s)' % (art.last_artist.twitter_name, art.last_artist.twitter_screen_name),
-        url='https://twitter.com/%s' % art.last_artist.twitter_screen_name,
+        url='https://twitter.com/' + art.last_artist.twitter_screen_name,
         icon_url=art.last_artist.twitter_profile_image_url_https
     )
     embed.set_thumbnail(url=art.last_artist.twitter_profile_image_url_https)
@@ -89,7 +89,7 @@ async def search_urban(ctx, *word):
 
     word = ' '.join(word).lower()
     word_encoded = urllib.parse.quote_plus(word)
-    user_search = '%s%s' % (bot.assets['urban_dictionary']['search_url'], word_encoded)
+    user_search = bot.assets['urban_dictionary']['search_url'] + word_encoded
 
     js = await net.http_request(user_search, json=True)
 
@@ -104,7 +104,7 @@ async def search_urban(ctx, *word):
 
     embed = discord.Embed()
     embed.title = word
-    embed.url = '%s%s' % (bot.assets['urban_dictionary']['dictionary_url'], word_encoded)
+    embed.url = bot.assets['urban_dictionary']['dictionary_url'] + word_encoded
     embed.description = ''
 
     i = 0
@@ -148,7 +148,7 @@ async def search_word(ctx, *word):
         suggestions = js[:5]
 
         for i, suggestion in enumerate(suggestions):
-            suggestions[i] = '• %s' % suggestion
+            suggestions[i] = '• ' + suggestion
 
         embed.description = '*%s*' % '\n\n'.join(suggestions)
         await ctx.send(random.choice(bot.quotes['dictionary_try_this']), embed=embed)
@@ -182,7 +182,7 @@ async def search_word(ctx, *word):
                     meaning_position = 'sn' in meaning_item and meaning_item['sn'] or '1'
 
                     if not meaning_position[0].isdigit():
-                        meaning_position = '%s%s' % ('\u3000', meaning_position)
+                        meaning_position = '\u3000' + meaning_position
 
                     # Get definition
                     if isinstance(meaning_item, typing.List):
@@ -247,7 +247,7 @@ async def search_danbooru(ctx, *args):
     """Search on danbooru!"""
 
     search = ' '.join(args)
-    print('User searching for: %s' % search)
+    print('User searching for: ' + search)
 
     posts = await board_search(tags=search, limit=3, random=True)
 
@@ -269,7 +269,7 @@ async def search_danbooru(ctx, *args):
                     fileurl = post['source']
                 break
             else:
-                fileurl = 'https://danbooru.donmai.us/posts/%i' % post['id']
+                fileurl = 'https://danbooru.donmai.us/posts/' + post['id']
 
         if '/data/' in fileurl or 'raikou' in fileurl:
             embed = discord.Embed()
@@ -288,17 +288,17 @@ async def search_danbooru(ctx, *args):
                     embed_post_title += ' (%s)' % post_copy
 
             if post_artist:
-                embed_post_title += ' drawn by %s' % post_artist
+                embed_post_title += ' drawn by ' + post_artist
 
             if not post_char and not post_copy and not post_artist:
-                embed_post_title += '#%s' % post['id']
+                embed_post_title += '#' + post['id']
 
             embed_post_title += ' - Danbooru'
             if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
                 embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
             embed.title = embed_post_title
-            embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
+            embed.url = 'https://danbooru.donmai.us/posts/' + post['id']
             embed.set_image(url=fileurl)
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
@@ -383,9 +383,9 @@ async def board_search(**kwargs):
     if board == 'danbooru':
         if post_id:
             url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
-            return await net.http_request(url, auth=danbooru_auth, json=True, err_msg='error fetching post #%s' % post_id)
+            return await net.http_request(url, auth=danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
         elif tags:
-            return await net.http_request('https://danbooru.donmai.us/posts.json', auth=danbooru_auth, data=json.dumps(data), headers={"Content-Type": "application/json"}, json=True, err_msg='error fetching search: %s' % tags)
+            return await net.http_request('https://danbooru.donmai.us/posts.json', auth=danbooru_auth, data=json.dumps(data), headers={"Content-Type": "application/json"}, json=True, err_msg='error fetching search: ' + tags)
 
 
 async def get_danbooru_gallery(msg, url):
@@ -440,7 +440,7 @@ async def get_danbooru_gallery(msg, url):
                 embed_post_title += ' (%s)' % post_copy
 
         if post_artist:
-            embed_post_title += ' drawn by %s' % post_artist
+            embed_post_title += ' drawn by ' + post_artist
 
         if not post_char and not post_copy and not post_artist:
             embed_post_title += '#' + post['id']
@@ -515,7 +515,7 @@ async def get_twitter_gallery(msg, url):
         embed = discord.Embed()
         embed.set_author(
             name='%s (@%s)' % (tweet.author.name, tweet.author.screen_name),
-            url='https://twitter.com/%s' % tweet.author.screen_name,
+            url='https://twitter.com/' + tweet.author.screen_name,
             icon_url=tweet.author.profile_image_url_https
         )
         embed.set_image(url=picture)
@@ -539,7 +539,7 @@ async def get_pixiv_gallery(msg, url):
     if not post_id:
         return
 
-    print('Now starting to process pixiv link #%s' % post_id)
+    print('Now starting to process pixiv link #' + post_id)
     if pixiv_api.access_token is None:
         pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
 
@@ -553,7 +553,7 @@ async def get_pixiv_gallery(msg, url):
 
         if 'error' in illust_json:
             # too bad
-            print('Invalid Pixiv id #%s' % post_id)
+            print('Invalid Pixiv id #' + post_id)
             return
 
     print('Pixiv auth passed! (for #%s)' % post_id)
@@ -592,9 +592,9 @@ async def get_pixiv_gallery(msg, url):
             embed = discord.Embed()
             embed.set_author(
                 name=illust['user']['name'],
-                url='https://www.pixiv.net/member.php?id=%i' % illust['user']['id']
+                url='https://www.pixiv.net/member.php?id=' + illust['user']['id']
             )
-            embed.set_image(url='attachment://%s' % image_filename)
+            embed.set_image(url='attachment://' + image_filename)
 
             if pictures_processed >= min(4, total_illust_pictures):
                 if total_illust_pictures > 4:
@@ -630,7 +630,7 @@ def combine_tags(tags):
 
     if len(tags_split) > 1:
         joint_tags = ', '.join(tags_split[:-1])
-        joint_tags += ' and %s' % tags_split[-1]
+        joint_tags += ' and ' + tags_split[-1]
         return joint_tags.strip().replace('_', ' ')
 
     return ''.join(tags_split).strip().replace('_', ' ')
@@ -744,9 +744,9 @@ async def lookup_pending_posts():
             if not post['id'] in pending_posts:
                 pending_posts.append(post['id'])
                 if post['rating'] is 's':
-                    safe_posts.append('https://danbooru.donmai.us/posts/%i' % post['id'])
+                    safe_posts.append('https://danbooru.donmai.us/posts/' + post['id'])
                 else:
-                    nsfw_posts.append('https://danbooru.donmai.us/posts/%i' % post['id'])
+                    nsfw_posts.append('https://danbooru.donmai.us/posts/' + post['id'])
 
         safe_posts = '\n'.join(safe_posts)
         nsfw_posts = '\n'.join(nsfw_posts)

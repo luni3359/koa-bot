@@ -133,7 +133,7 @@ async def search_word(ctx, *word):
     js = await net.http_request(user_search, json=True)
 
     if not js:
-        await ctx.send("Oops. What?")
+        await ctx.send('Oops. What?')
         return
 
     # Check if there are any results at all
@@ -443,14 +443,14 @@ async def get_danbooru_gallery(msg, url):
             embed_post_title += ' drawn by %s' % post_artist
 
         if not post_char and not post_copy and not post_artist:
-            embed_post_title += '#%s' % post['id']
+            embed_post_title += '#' + post['id']
 
         embed_post_title += ' - Danbooru'
         if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
             embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
         embed.title = embed_post_title
-        embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
+        embed.url = 'https://danbooru.donmai.us/posts/' + post['id']
         embed.set_image(url=fileurl)
 
         if posts_processed >= min(4, total_posts):
@@ -662,6 +662,63 @@ def get_file_name(url):
     return url.split('/')[-1]
 
 
+async def convert_units(msg):
+    """Convert units found to their opposite (SI <-> imp)"""
+
+    imperial_units = [
+        'feet',
+        'inches',
+        'miles',
+    ]
+    si_units = [
+        'meters',
+        'centimeters',
+        'kilometers',
+    ]
+
+    # Find all units
+    units = converter.find_units(msg.content)
+
+    if not units:
+        return
+
+    channel = msg.channel
+    conversion_str = random.choice(bot.quotes['converting_units']) + '```'
+
+    for quantity in units:
+        if quantity[0] == 'footinches':
+            value = quantity[1]
+            value2 = quantity[2]
+
+            converted_value = value * converter.ureg.foot + value2 * converter.ureg.inch
+            conversion_str += ('\n{} {} → {}').format(value * converter.ureg.foot, value2 * converter.ureg.inch, converted_value.to_base_units())
+            continue
+
+        (unit, value) = quantity
+        value = value * converter.ureg[unit]
+
+        if unit in imperial_units:
+            converted_value = value.to_base_units()
+            converted_value = converted_value.to_compact()
+        elif unit in si_units:
+            if unit == 'kilometers':
+                converted_value = value.to(converter.ureg.miles)
+            elif value.magnitude >= 300:
+                converted_value = value.to(converter.ureg.yards)
+            else:
+                converted_value = value.to(converter.ureg.feet)
+
+        conversion_str += ('\n{} → {}').format(value, converted_value)
+
+    # Random chance for final quote, 50% chance
+    if not random.getrandbits(1):
+        conversion_str += '```\n' + random.choice(bot.quotes['converting_units_modest'])
+    else:
+        conversion_str += '```'
+
+    await channel.send(conversion_str)
+
+
 async def lookup_pending_posts():
     """Every 5 minutes search for danbooru posts"""
     await bot.wait_until_ready()
@@ -696,70 +753,13 @@ async def lookup_pending_posts():
 
         if safe_posts:
             for channel in safe_channels:
-                await channel.send(bot.quotes['posts_to_approve'] + safe_posts)
+                await channel.send(bot.quotes['posts_to_approve'] + '\n' + safe_posts)
 
         if nsfw_posts:
             for channel in nsfw_channels:
-                await channel.send(bot.quotes['posts_to_approve'] + nsfw_posts)
+                await channel.send(bot.quotes['posts_to_approve'] + '\n' + nsfw_posts)
 
         await asyncio.sleep(60 * 5)
-
-
-async def convert_units(msg):
-    """Convert units found to their opposite (SI <-> imp)"""
-
-    imperial_units = [
-        'feet',
-        'inches',
-        'miles',
-    ]
-    si_units = [
-        'meters',
-        'centimeters',
-        'kilometers',
-    ]
-
-    # Find all measures
-    measures = converter.find_measurements(msg.content)
-
-    if not measures:
-        return
-
-    channel = msg.channel
-    conversion_str = random.choice(bot.quotes['converting_units']) + '```'
-
-    for measure in measures:
-        if measure[0] == 'footinches':
-            value = measure[1]
-            value2 = measure[2]
-
-            converted_value = value * converter.ureg.foot + value2 * converter.ureg.inch
-            conversion_str += ('\n{} {} → {}').format(value * converter.ureg.foot, value2 * converter.ureg.inch, converted_value.to_base_units())
-            continue
-
-        unit, value = measure
-        value = value * converter.ureg[unit]
-
-        if unit in imperial_units:
-            converted_value = value.to_base_units()
-            converted_value = converted_value.to_compact()
-        elif unit in si_units:
-            if unit == 'kilometers':
-                converted_value = value.to(converter.ureg.miles)
-            elif value.magnitude >= 300:
-                converted_value = value.to(converter.ureg.yards)
-            else:
-                converted_value = value.to(converter.ureg.feet)
-
-        conversion_str += ('\n{} → {}').format(value, converted_value)
-
-    # Random chance for final quote, 50% chance
-    if not random.getrandbits(1):
-        conversion_str += '```\n' + random.choice(bot.quotes['converting_units_modest'])
-    else:
-        conversion_str += '```'
-
-    await channel.send(conversion_str)
 
 
 @bot.event
@@ -807,7 +807,7 @@ async def on_ready():
 
     print('ready!')
     # Change play status to something fitting
-    await bot.change_presence(activity=discord.Game(name='with books'))
+    await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
 
-bot.loop.create_task(lookup_pending_posts())
+# bot.loop.create_task(lookup_pending_posts())
 bot.run(bot.auth_keys['discord']['token'])

@@ -597,17 +597,17 @@ async def get_pixiv_gallery(msg, url):
             embed.set_image(url='attachment://' + image_filename)
 
             if pictures_processed >= min(4, total_illust_pictures):
-                if total_illust_pictures > 4:
-                    embed.set_footer(
-                        text='%i+ remaining' % (total_illust_pictures - 4),
-                        icon_url=bot.assets['pixiv']['favicon']
-                    )
-                else:
-                    embed.set_footer(
-                        text=bot.assets['pixiv']['name'],
-                        icon_url=bot.assets['pixiv']['favicon']
-                    )
+                remaining_footer = ''
 
+                if total_illust_pictures > 4:
+                    remaining_footer = '%i+ remaining' % (total_illust_pictures - 4)
+                else:
+                    remaining_footer = bot.assets['pixiv']['name']
+
+                embed.set_footer(
+                    text=remaining_footer,
+                    icon_url=bot.assets['pixiv']['favicon']
+                )
             await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
 
     await temp_wait.delete()

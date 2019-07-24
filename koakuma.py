@@ -83,7 +83,7 @@ async def pixiv(ctx):
     await ctx.send('Navi?')
 
 
-@bot.command(name='urbandictionary', aliases=['wu', 'udictionary'])
+@bot.command(name='urbandictionary', aliases=['wu', 'udictionary', 'ud'])
 async def search_urban(ctx, *word):
     """Search a term in urbandictionary"""
 

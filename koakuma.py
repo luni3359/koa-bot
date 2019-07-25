@@ -182,14 +182,22 @@ async def search_word(ctx, *word):
                         meaning_position = '\u3000' + meaning_position
 
                     # Get definition
+                    # What a mess
                     if isinstance(meaning_item, typing.List):
-                        definition = meaning_item[1]['dt'][0][1]
+                        if 'sense' in meaning_item[1]:
+                            definition = meaning_item[1]['sense']['dt'][0][1]
+                        else:
+                            definition = meaning_item[1]['dt'][0][1]
                     elif 'dt' in meaning_item:
                         definition = meaning_item['dt'][0][1]
                     elif 'sense' in meaning_item:
                         definition = meaning_item['sense']['dt'][0][1]
-                    else:
+                    elif 'sls' in meaning_item:
                         definition = ', '.join(meaning_item['sls'])
+                    elif 'lbs' in meaning_item:
+                        definition = meaning_item['lbs'][0]
+                    else:
+                        definition = meaning_item['ins'][0]['spl'].upper() + ' ' + meaning_item['ins'][0]['if']
 
                     if isinstance(definition, typing.List):
                         definition = definition[0][0][1]
@@ -492,7 +500,7 @@ async def get_twitter_gallery(msg, url):
     art.last_artist.twitter_screen_name = tweet.author.screen_name
     art.last_artist.twitter_profile_image_url_https = tweet.author.profile_image_url_https
 
-    if 'extended_entities' not in tweet or len(tweet.extended_entities['media']) <= 1:
+    if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
         print('Preview gallery not applicable.')
         return
 
@@ -586,7 +594,7 @@ async def get_pixiv_gallery(msg, url):
             pictures_processed += 1
             print('Retrieving picture from #%s...' % post_id)
 
-            if 'medium' in picture.image_urls:
+            if hasattr(picture, 'image_urls'):
                 img_url = picture.image_urls['medium']
             else:
                 img_url = illust.image_urls['medium']
@@ -816,5 +824,5 @@ async def on_ready():
     # Change play status to something fitting
     await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
 
-bot.loop.create_task(lookup_pending_posts())
+# bot.loop.create_task(lookup_pending_posts())
 bot.run(bot.auth_keys['discord']['token'])

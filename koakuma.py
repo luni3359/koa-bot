@@ -16,11 +16,10 @@ import pixivpy3
 import tweepy
 from discord.ext import commands
 
+import converter
 import gaka as art
 import net
-import converter
 import urusai as channel_activity
-
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(SOURCE_DIR, 'config.jsonc')) as json_file:
@@ -72,15 +71,13 @@ async def twitter(ctx):
 @artist.command(aliases=['dan'])
 async def danbooru(ctx):
     """Display artist's art from danbooru"""
-
-    await ctx.send('Box.')
+    pass
 
 
 @artist.command(aliases=['pix'])
 async def pixiv(ctx):
     """Display something from pixiv"""
-
-    await ctx.send('Navi?')
+    pass
 
 
 @bot.command(name='urbandictionary', aliases=['wu', 'udictionary', 'ud'])
@@ -269,7 +266,7 @@ async def search_danbooru(ctx, *args):
                     fileurl = post['source']
                 break
             else:
-                fileurl = 'https://danbooru.donmai.us/posts/' + post['id']
+                fileurl = 'https://danbooru.donmai.us/posts/' + str(post['id'])
 
         if '/data/' in fileurl or 'raikou' in fileurl:
             embed = discord.Embed()
@@ -291,20 +288,20 @@ async def search_danbooru(ctx, *args):
                 embed_post_title += ' drawn by ' + post_artist
 
             if not post_char and not post_copy and not post_artist:
-                embed_post_title += '#' + post['id']
+                embed_post_title += '#' + str(post['id'])
 
             embed_post_title += ' - Danbooru'
             if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
                 embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
             embed.title = embed_post_title
-            embed.url = 'https://danbooru.donmai.us/posts/' + post['id']
+            embed.url = 'https://danbooru.donmai.us/posts/' + str(post['id'])
             embed.set_image(url=fileurl)
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
             await ctx.send(fileurl)
 
-        print('Parse of #%i complete' % post['id'])
+        print('Parse of #%i complete' % str(post['id']))
 
 
 @bot.command(name='temperature', aliases=['temp'])
@@ -329,13 +326,23 @@ async def talk_status(ctx):
 async def avatar(ctx):
     """Display the avatar of an user"""
 
-    embed = discord.Embed()
-    embed.set_image(url=ctx.message.author.avatar_url)
-    embed.set_author(
-        name='%s #%i' % (ctx.message.author.name, int(ctx.message.author.discriminator)),
-        icon_url=ctx.message.author.avatar_url
-    )
-    await ctx.send(embed=embed)
+    if ctx.message.mentions:
+        for mention in ctx.message.mentions:
+            embed = discord.Embed()
+            embed.set_image(url=mention.avatar_url)
+            embed.set_author(
+                name='%s #%i' % (mention.name, int(mention.discriminator)),
+                icon_url=mention.avatar_url
+            )
+            await ctx.send(embed=embed)
+    else:
+        embed = discord.Embed()
+        embed.set_image(url=ctx.message.author.avatar_url)
+        embed.set_author(
+            name='%s #%i' % (ctx.message.author.name, int(ctx.message.author.discriminator)),
+            icon_url=ctx.message.author.avatar_url
+        )
+        await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -443,14 +450,14 @@ async def get_danbooru_gallery(msg, url):
             embed_post_title += ' drawn by ' + post_artist
 
         if not post_char and not post_copy and not post_artist:
-            embed_post_title += '#' + post['id']
+            embed_post_title += '#' + str(post['id'])
 
         embed_post_title += ' - Danbooru'
         if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
             embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
         embed.title = embed_post_title
-        embed.url = 'https://danbooru.donmai.us/posts/' + post['id']
+        embed.url = 'https://danbooru.donmai.us/posts/' + str(post['id'])
         embed.set_image(url=fileurl)
 
         if posts_processed >= min(4, total_posts):
@@ -592,7 +599,7 @@ async def get_pixiv_gallery(msg, url):
             embed = discord.Embed()
             embed.set_author(
                 name=illust['user']['name'],
-                url='https://www.pixiv.net/member.php?id=' + illust['user']['id']
+                url='https://www.pixiv.net/member.php?id=' + str(illust['user']['id'])
             )
             embed.set_image(url='attachment://' + image_filename)
 
@@ -744,9 +751,9 @@ async def lookup_pending_posts():
             if not post['id'] in pending_posts:
                 pending_posts.append(post['id'])
                 if post['rating'] is 's':
-                    safe_posts.append('https://danbooru.donmai.us/posts/' + post['id'])
+                    safe_posts.append('https://danbooru.donmai.us/posts/' + str(post['id']))
                 else:
-                    nsfw_posts.append('https://danbooru.donmai.us/posts/' + post['id'])
+                    nsfw_posts.append('https://danbooru.donmai.us/posts/' + str(post['id']))
 
         safe_posts = '\n'.join(safe_posts)
         nsfw_posts = '\n'.join(nsfw_posts)

@@ -95,7 +95,7 @@ async def search_urban(ctx, *word):
         return
 
     # Check if there are any results at all
-    if not 'list' in js or not len(js['list']) > 0:
+    if not 'list' in js or not js['list']:
         await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
         return
 
@@ -134,7 +134,7 @@ async def search_word(ctx, *word):
         return
 
     # Check if there are any results at all
-    if not len(js) > 0:
+    if not js:
         await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
         return
 
@@ -222,7 +222,7 @@ def formatDictionaryOddities(txt, which):
         while True:
             matches = re.findall(r'({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', txt, re.IGNORECASE)
 
-            if not len(matches) > 0:
+            if not matches:
                 txt = re.sub(r'\{\/?[a-z\ _\-]+\}', '', txt)
                 print(txt)
                 return txt
@@ -257,10 +257,9 @@ async def search_danbooru(ctx, *args):
         post_tags = post['tag_string_general'].split()
         for tag_lacking_preview in bot.rules['no_preview_tags']:
             if tag_lacking_preview in post_tags:
-                try:
+                if 'file_url' in post:
                     fileurl = post['file_url']
-                # Exception needs error type
-                except Exception:
+                else:
                     # this is wrong because post['source'] looks like this: 'https://i.pximg.net/img-original/img/2019/02/19/22/30/59/73277959_p3.png'
                     # fileurl = 'https://danbooru.donmai.us%s' % post['source']
                     fileurl = post['source']
@@ -493,7 +492,7 @@ async def get_twitter_gallery(msg, url):
     art.last_artist.twitter_screen_name = tweet.author.screen_name
     art.last_artist.twitter_profile_image_url_https = tweet.author.profile_image_url_https
 
-    if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
+    if 'extended_entities' not in tweet or len(tweet.extended_entities['media']) <= 1:
         print('Preview gallery not applicable.')
         return
 
@@ -587,9 +586,9 @@ async def get_pixiv_gallery(msg, url):
             pictures_processed += 1
             print('Retrieving picture from #%s...' % post_id)
 
-            try:
+            if 'medium' in picture.image_urls:
                 img_url = picture.image_urls['medium']
-            except AttributeError:
+            else:
                 img_url = illust.image_urls['medium']
 
             image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
@@ -728,19 +727,16 @@ async def convert_units(msg):
 
 async def lookup_pending_posts():
     """Every 5 minutes search for danbooru posts"""
+
     await bot.wait_until_ready()
 
     pending_posts = []
+    channel_categories = {}
 
-    safe_channels = []
-    for channel in bot.tasks['danbooru']['safe_channels']:
-        new_channel = bot.get_channel(int(channel))
-        safe_channels.append(new_channel)
-
-    nsfw_channels = []
-    for channel in bot.tasks['danbooru']['nsfw_channels']:
-        new_channel = bot.get_channel(int(channel))
-        nsfw_channels.append(new_channel)
+    for channel_category, channel_list in bot.tasks['danbooru']['channels'].items():
+        channel_categories[channel_category] = []
+        for channel in channel_list:
+            channel_categories[channel_category].append(bot.get_channel(int(channel)))
 
     while not bot.is_closed():
         posts = await board_search(tags=bot.tasks['danbooru']['tag_list'], limit=5, random=True)
@@ -758,13 +754,13 @@ async def lookup_pending_posts():
         safe_posts = '\n'.join(safe_posts)
         nsfw_posts = '\n'.join(nsfw_posts)
 
-        if safe_posts:
-            for channel in safe_channels:
-                await channel.send(bot.quotes['posts_to_approve'] + '\n' + safe_posts)
+        if safe_posts or nsfw_posts:
+            for channel in channel_categories['safe_channels']:
+                await channel.send(random.choice(bot.quotes['posts_to_approve']) + '\n' + safe_posts)
 
         if nsfw_posts:
-            for channel in nsfw_channels:
-                await channel.send(bot.quotes['posts_to_approve'] + '\n' + nsfw_posts)
+            for channel in channel_categories['nsfw_channels']:
+                await channel.send(random.choice(bot.quotes['posts_to_approve']) + '\n' + nsfw_posts)
 
         await asyncio.sleep(60 * 5)
 
@@ -820,5 +816,5 @@ async def on_ready():
     # Change play status to something fitting
     await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
 
-# bot.loop.create_task(lookup_pending_posts())
+bot.loop.create_task(lookup_pending_posts())
 bot.run(bot.auth_keys['discord']['token'])

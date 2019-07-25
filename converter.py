@@ -10,12 +10,12 @@ Q_ = ureg.Quantity
 
 num = re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)')
 units = [
-        ('feet', re.compile(r' *(\'|foot|feet|fts?)(?!\w)')),
+        ('feet', re.compile(r' *(\'|foot|feet|ft)(?!\w)')),
         ('inches', re.compile(r' *("|inch|inches|ins?)(?!\w)')),
         ('miles', re.compile(r' *(miles?|mi)(?!\w)')),
-        ('meters', re.compile(r' *(meters?|metres?|m)(?!\w)')),
-        ('centimeters', re.compile(r' *(centimeters?|centimetres?|cm)(?!\w)')),
-        ('kilometers', re.compile(r' *(kilometers?|kilometres?|km)(?!\w)')),
+        ('meters', re.compile(r' *(meters?|metres?|mt?r?s?)(?!\w)')),
+        ('centimeters', re.compile(r' *(centimeters?|centimetres?|cms?)(?!\w)')),
+        ('kilometers', re.compile(r' *(kilometers?|kilometres?|kms?)(?!\w)')),
 ]
 foot_inches_special_case = ('footinches', re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)\'(\.\d+|\d[,\d]*(?:\.\d+)?)"?'))
 

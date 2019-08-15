@@ -276,39 +276,45 @@ async def search_danbooru(ctx, *args):
                 fileurl = 'https://danbooru.donmai.us/posts/' + str(post['id'])
 
         if '/data/' in fileurl or 'raikou' in fileurl:
-            embed = discord.Embed()
-            post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
-            post_copy = combine_tags(post['tag_string_copyright'])
-            post_artist = combine_tags(post['tag_string_artist'])
-            embed_post_title = ''
-
-            if post_char:
-                embed_post_title += post_char
-
-            if post_copy:
-                if not post_char:
-                    embed_post_title += post_copy
-                else:
-                    embed_post_title += ' (%s)' % post_copy
-
-            if post_artist:
-                embed_post_title += ' drawn by ' + post_artist
-
-            if not post_char and not post_copy and not post_artist:
-                embed_post_title += '#' + str(post['id'])
-
-            embed_post_title += ' - Danbooru'
-            if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
-                embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
-
-            embed.title = embed_post_title
-            embed.url = 'https://danbooru.donmai.us/posts/' + str(post['id'])
-            embed.set_image(url=fileurl)
+            embed = generate_danbooru_embed(post, fileurl)
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
             await ctx.send(fileurl)
 
         print('Parse of #%i complete' % str(post['id']))
+
+
+async def generate_danbooru_embed(post, fileurl):
+    """Generate an embed template for danbooru urls"""
+    embed = discord.Embed()
+    post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
+    post_copy = combine_tags(post['tag_string_copyright'])
+    post_artist = combine_tags(post['tag_string_artist'])
+    embed_post_title = ''
+
+    if post_char:
+        embed_post_title += post_char
+
+    if post_copy:
+        if not post_char:
+            embed_post_title += post_copy
+        else:
+            embed_post_title += ' (%s)' % post_copy
+
+    if post_artist:
+        embed_post_title += ' drawn by ' + post_artist
+
+    if not post_char and not post_copy and not post_artist:
+        embed_post_title += '#' + str(post['id'])
+
+    embed_post_title += ' - Danbooru'
+    if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
+        embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
+
+    embed.title = embed_post_title
+    embed.url = 'https://danbooru.donmai.us/posts/' + str(post['id'])
+    embed.set_image(url=fileurl)
+    return embed
 
 
 @bot.command(name='temperature', aliases=['temp'])
@@ -438,34 +444,7 @@ async def get_danbooru_gallery(msg, url):
         else:
             fileurl = post['source']
 
-        embed = discord.Embed()
-        post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
-        post_copy = combine_tags(post['tag_string_copyright'])
-        post_artist = combine_tags(post['tag_string_artist'])
-        embed_post_title = ''
-
-        if post_char:
-            embed_post_title += post_char
-
-        if post_copy:
-            if not post_char:
-                embed_post_title += post_copy
-            else:
-                embed_post_title += ' (%s)' % post_copy
-
-        if post_artist:
-            embed_post_title += ' drawn by ' + post_artist
-
-        if not post_char and not post_copy and not post_artist:
-            embed_post_title += '#' + str(post['id'])
-
-        embed_post_title += ' - Danbooru'
-        if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
-            embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
-
-        embed.title = embed_post_title
-        embed.url = 'https://danbooru.donmai.us/posts/' + str(post['id'])
-        embed.set_image(url=fileurl)
+        embed = generate_danbooru_embed(post, fileurl)
 
         if posts_processed >= min(4, total_posts):
             if total_posts > 4:

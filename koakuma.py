@@ -262,18 +262,10 @@ async def search_danbooru(ctx, *args):
 
     for post in posts:
         print('Parsing post #%i...' % post['id'])
-        post_tags = post['tag_string_general'].split()
-        for tag_lacking_preview in bot.rules['no_preview_tags']:
-            if tag_lacking_preview in post_tags:
-                if 'file_url' in post:
-                    fileurl = post['file_url']
-                else:
-                    # this is wrong because post['source'] looks like this: 'https://i.pximg.net/img-original/img/2019/02/19/22/30/59/73277959_p3.png'
-                    # fileurl = 'https://danbooru.donmai.us%s' % post['source']
-                    fileurl = post['source']
-                break
-            else:
-                fileurl = 'https://danbooru.donmai.us/posts/' + str(post['id'])
+        if post['file_url']:
+            fileurl = post['file_url']
+        else:
+            fileurl = post['source']
 
         if '/data/' in fileurl or 'raikou' in fileurl:
             embed = generate_danbooru_embed(post, fileurl)
@@ -281,10 +273,10 @@ async def search_danbooru(ctx, *args):
         else:
             await ctx.send(fileurl)
 
-        print('Parse of #%i complete' % str(post['id']))
+        print('Parse of #%i complete' % post['id'])
 
 
-async def generate_danbooru_embed(post, fileurl):
+def generate_danbooru_embed(post, fileurl):
     """Generate an embed template for danbooru urls"""
     embed = discord.Embed()
     post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
@@ -422,6 +414,15 @@ async def get_danbooru_gallery(msg, url):
 
     if not post:
         return
+
+    if post['file_url']:
+        fileurl = post['file_url']
+    else:
+        fileurl = post['source']
+
+    if '/data/' in fileurl or 'raikou' in fileurl:
+        embed = generate_danbooru_embed(post, fileurl)
+        await channel.send('<%s>' % embed.url, embed=embed)
 
     if post['has_children']:
         search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])

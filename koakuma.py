@@ -267,7 +267,7 @@ async def search_danbooru(ctx, *args):
         else:
             fileurl = post['source']
 
-        if '/data/' in fileurl or 'raikou' in fileurl:
+        if danbooru_post_is_nsfw(post):
             embed = generate_danbooru_embed(post, fileurl)
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
@@ -276,8 +276,23 @@ async def search_danbooru(ctx, *args):
         print('Parse of #%i complete' % post['id'])
 
 
+def danbooru_post_is_nsfw(post):
+    """Determine whether or not a post is nsfw"""
+    return list_contains(post['tag_string_general'].split(), bot.rules['no_preview_tags'])
+
+
+def list_contains(lst, items_to_be_matched):
+    """Helper function for checking if a list contains any elements of another list"""
+    for item in items_to_be_matched:
+        if item in lst:
+            return True
+
+    return False
+
+
 def generate_danbooru_embed(post, fileurl):
     """Generate an embed template for danbooru urls"""
+
     embed = discord.Embed()
     post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
     post_copy = combine_tags(post['tag_string_copyright'])
@@ -420,7 +435,7 @@ async def get_danbooru_gallery(msg, url):
     else:
         fileurl = post['source']
 
-    if '/data/' in fileurl or 'raikou' in fileurl:
+    if danbooru_post_is_nsfw(post):
         embed = generate_danbooru_embed(post, fileurl)
         await channel.send('<%s>' % embed.url, embed=embed)
 
@@ -638,13 +653,13 @@ def get_urls(string):
     return matching_urls
 
 
-def get_domains(array):
+def get_domains(lst):
     """Get domains from a link
     thanks dude https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868"""
 
     domains = []
 
-    for url in array:
+    for url in lst:
         domain = url.split('//')[-1].split('/')[0].split('?')[0]
         domains.append(domain)
     return domains

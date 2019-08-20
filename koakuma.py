@@ -452,7 +452,7 @@ async def board_search(**kwargs):
     data = {
         'tags': tags,
         'limit': limit,
-        # 'random': random
+        'random': random
     }
 
     if board == 'danbooru':
@@ -478,7 +478,14 @@ async def get_danbooru_gallery(msg, url):
     if not post:
         return
 
-    if danbooru_post_has_missing_nsfw_preview(post):
+    has_missing_nsfw_preview = danbooru_post_has_missing_nsfw_preview(post)
+
+    if post['rating'] is not 's' and not has_missing_nsfw_preview and not channel.is_nsfw():
+        embed = discord.Embed()
+        embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
+        content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
+        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=1, min_duration=1)
+    elif has_missing_nsfw_preview:
         await send_danbooru_posts(channel, [post], show_nsfw=channel.is_nsfw())
 
     if post['has_children']:
@@ -743,6 +750,43 @@ async def convert_units(msg):
     await channel.send(conversion_str)
 
 
+async def koa_is_typing_a_message(ctx, **kwargs):
+    """Make Koakuma seem alive with a 'is typing' delay
+
+    Keywords:
+        content::str
+            Message to be said.
+        embed::discord.Embed
+            Self-explanatory. Default is None.
+        rnd_duration::list or int
+            A list with two int values of what's the least that should be waited for to the most, chosen at random.
+            If provided an int the 0 will be assumed at the start.
+        min_duration::int
+            The amount of time that will be waited regardless of rnd_duration.
+    """
+    content = kwargs.get('content')
+    embed = kwargs.get('embed')
+    rnd_duration = kwargs.get('rnd_duration')
+    min_duration = kwargs.get('min_duration', 0)
+
+    if isinstance(rnd_duration, int):
+        rnd_duration = [0, rnd_duration]
+
+    async with ctx.typing():
+        if rnd_duration:
+            await asyncio.sleep(random.randint(rnd_duration[0], rnd_duration[1]) + min_duration)
+        else:
+            await asyncio.sleep(min_duration)
+
+        if content:
+            if embed is not None:
+                await ctx.send(content, embed=embed)
+            else:
+                await ctx.send(content)
+        elif embed is not None:
+            await ctx.send(embed=embed)
+
+
 async def lookup_pending_posts():
     """Every 5 minutes search for danbooru posts"""
 
@@ -819,9 +863,7 @@ async def on_message(msg):
     if str(channel.id) in bot.rules['quiet_channels']:
         if not channel_activity.warned and channel_activity.count >= bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
             channel_activity.warned = True
-            async with channel.typing():
-                await asyncio.sleep(random.randint(0, 1) + 1)
-                await channel.send(random.choice(bot.quotes['quiet_channel_past_threshold']))
+            await koa_is_typing_a_message(channel, content=random.choice(bot.quotes['quiet_channel_past_threshold']), rnd_duration=1, min_duration=1)
 
     await bot.process_commands(msg)
 

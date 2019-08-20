@@ -260,25 +260,7 @@ async def search_danbooru(ctx, *args):
         await ctx.send('Sorry, nothing found!')
         return
 
-    for post in posts:
-        print('Parsing post #%i...' % post['id'])
-        if post['file_url']:
-            fileurl = post['file_url']
-        else:
-            fileurl = post['source']
-
-        if danbooru_post_is_nsfw(post):
-            embed = generate_danbooru_embed(post, fileurl)
-            await ctx.send('<%s>' % embed.url, embed=embed)
-        else:
-            await ctx.send(fileurl)
-
-        print('Parse of #%i complete' % post['id'])
-
-
-def danbooru_post_is_nsfw(post):
-    """Determine whether or not a post is nsfw"""
-    return list_contains(post['tag_string_general'].split(), bot.rules['no_preview_tags'])
+    await send_danbooru_posts(ctx, posts, show_nsfw=ctx.channel.is_nsfw())
 
 
 def list_contains(lst, items_to_be_matched):
@@ -288,6 +270,72 @@ def list_contains(lst, items_to_be_matched):
             return True
 
     return False
+
+
+def danbooru_post_has_missing_nsfw_preview(post):
+    """Determine whether or not a post is nsfw"""
+    return list_contains(post['tag_string_general'].split(), bot.rules['no_preview_tags'])
+
+
+async def send_danbooru_posts(ctx, posts, **kwargs):
+    """Handle posting posts from danbooru (with stylization)
+    Keywords:
+        ctx
+            The context to interact with the discord API
+        posts::list
+            The post(s) to be sent to a channel
+        show_nsfw::bool
+            Whether or not nsfw posts should have their previews shown. Default is True
+        max_posts::int
+            How many posts should be shown before showing how many of them were cut-off.
+            If max_posts is set to 0 then no footer will be shown and no posts will be omitted.
+    """
+
+    show_nsfw = kwargs.get('show_nsfw', True)
+    max_posts = kwargs.get('max_posts', 4)
+
+    if max_posts != 0:
+        posts = posts[:max_posts]
+
+    total_posts = len(posts)
+    posts_processed = 0
+    last_post = False
+
+    for post in posts:
+        posts_processed += 1
+        print('Parsing post #%i (%i/%i)...' % (post['id'], posts_processed, total_posts))
+
+        if post['file_url']:
+            fileurl = post['file_url']
+        else:
+            fileurl = post['source']
+        embed = generate_danbooru_embed(post, fileurl)
+
+        if max_posts != 0:
+            if posts_processed >= min(max_posts, total_posts):
+                last_post = True
+
+                if total_posts > max_posts:
+                    embed.set_footer(
+                        text='%i+ remaining' % (total_posts - max_posts),
+                        icon_url=bot.assets['danbooru']['favicon']
+                    )
+                else:
+                    embed.set_footer(
+                        text=bot.assets['danbooru']['name'],
+                        icon_url=bot.assets['danbooru']['favicon']
+                    )
+
+        if not show_nsfw and post['rating'] is not 's':
+            embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
+            await ctx.send('<%s>' % embed.url, embed=embed)
+        else:
+            if danbooru_post_has_missing_nsfw_preview(post) or last_post:
+                await ctx.send('<%s>' % embed.url, embed=embed)
+            else:
+                await ctx.send('https://danbooru.donmai.us/posts/' + str(post['id']))
+
+        print('Post #%i complete' % post['id'])
 
 
 def generate_danbooru_embed(post, fileurl):
@@ -381,15 +429,15 @@ async def board_search(**kwargs):
 
     Keywords:
         board::str
-            Specify what board to search on, default is danbooru.
+            Specify what board to search on. Default is danbooru.
         post_id::int
             Used for searching by post id on a board
         tags::str
             Used for searching with tags on a board
         limit::int
-            How many images to retrieve, default is 5
+            How many images to retrieve. Default is 5
         random::bool
-            Pick at random from results, default is False
+            Pick at random from results. Default is False
 
     Returns:
         json::dict
@@ -404,7 +452,7 @@ async def board_search(**kwargs):
     data = {
         'tags': tags,
         'limit': limit,
-        'random': random
+        # 'random': random
     }
 
     if board == 'danbooru':
@@ -430,14 +478,8 @@ async def get_danbooru_gallery(msg, url):
     if not post:
         return
 
-    if post['file_url']:
-        fileurl = post['file_url']
-    else:
-        fileurl = post['source']
-
-    if danbooru_post_is_nsfw(post):
-        embed = generate_danbooru_embed(post, fileurl)
-        await channel.send('<%s>' % embed.url, embed=embed)
+    if danbooru_post_has_missing_nsfw_preview(post):
+        await send_danbooru_posts(channel, [post], show_nsfw=channel.is_nsfw())
 
     if post['has_children']:
         search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
@@ -448,34 +490,7 @@ async def get_danbooru_gallery(msg, url):
 
     posts = await board_search(tags=search)
 
-    total_posts = len(posts)
-    posts_processed = 0
-
-    for post in posts[:4]:
-        print('Parsing post #%i...' % post['id'])
-        posts_processed += 1
-
-        if post['file_url']:
-            fileurl = post['file_url']
-        else:
-            fileurl = post['source']
-
-        embed = generate_danbooru_embed(post, fileurl)
-
-        if posts_processed >= min(4, total_posts):
-            if total_posts > 4:
-                embed.set_footer(
-                    text='%i+ remaining' % (total_posts - 4)
-                    # icon_url=bot.assets['danbooru']['favicon']
-                )
-            else:
-                embed.set_footer(
-                    text=bot.assets['danbooru']['name']
-                    # icon_url=bot.assets['danbooru']['favicon']
-                )
-
-        print('Parse of #%i complete' % post['id'])
-        await channel.send(embed=embed)
+    await send_danbooru_posts(channel, posts, show_nsfw=channel.is_nsfw())
 
 
 async def get_twitter_gallery(msg, url):

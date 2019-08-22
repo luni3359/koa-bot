@@ -272,9 +272,9 @@ def list_contains(lst, items_to_be_matched):
     return False
 
 
-def danbooru_post_has_missing_nsfw_preview(post):
-    """Determine whether or not a post is nsfw"""
-    return list_contains(post['tag_string_general'].split(), bot.rules['no_preview_tags'])
+def danbooru_post_has_missing_preview(post):
+    """Determine whether or not a post misses its preview"""
+    return list_contains(post['tag_string_general'].split(), bot.rules['no_preview_tags']) or post['is_banned']
 
 
 async def send_danbooru_posts(ctx, posts, **kwargs):
@@ -282,7 +282,7 @@ async def send_danbooru_posts(ctx, posts, **kwargs):
     Keywords:
         ctx
             The context to interact with the discord API
-        posts::list
+        posts::list or json object
             The post(s) to be sent to a channel
         show_nsfw::bool
             Whether or not nsfw posts should have their previews shown. Default is True
@@ -293,6 +293,9 @@ async def send_danbooru_posts(ctx, posts, **kwargs):
 
     show_nsfw = kwargs.get('show_nsfw', True)
     max_posts = kwargs.get('max_posts', 4)
+
+    if not isinstance(posts, typing.List):
+        posts = [posts]
 
     if max_posts != 0:
         posts = posts[:max_posts]
@@ -330,7 +333,7 @@ async def send_danbooru_posts(ctx, posts, **kwargs):
             embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
-            if danbooru_post_has_missing_nsfw_preview(post) or last_post:
+            if danbooru_post_has_missing_preview(post) or last_post:
                 await ctx.send('<%s>' % embed.url, embed=embed)
             else:
                 await ctx.send('https://danbooru.donmai.us/posts/' + str(post['id']))
@@ -478,15 +481,13 @@ async def get_danbooru_gallery(msg, url):
     if not post:
         return
 
-    has_missing_nsfw_preview = danbooru_post_has_missing_nsfw_preview(post)
-
-    if post['rating'] is not 's' and not has_missing_nsfw_preview and not channel.is_nsfw():
+    if post['rating'] is not 's' and not channel.is_nsfw():
         embed = discord.Embed()
         embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
         await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=1, min_duration=1)
-    elif has_missing_nsfw_preview:
-        await send_danbooru_posts(channel, [post], show_nsfw=channel.is_nsfw())
+    elif danbooru_post_has_missing_preview(post):
+        await send_danbooru_posts(channel, post, show_nsfw=channel.is_nsfw())
 
     if post['has_children']:
         search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])

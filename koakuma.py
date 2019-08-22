@@ -778,13 +778,13 @@ async def koa_is_typing_a_message(ctx, **kwargs):
         else:
             await asyncio.sleep(min_duration)
 
-        if content:
-            if embed is not None:
+        if embed is not None:
+            if content:
                 await ctx.send(content, embed=embed)
             else:
-                await ctx.send(content)
-        elif embed is not None:
-            await ctx.send(embed=embed)
+                await ctx.send(embed=embed)
+        else:
+            await ctx.send(content)
 
 
 async def lookup_pending_posts():

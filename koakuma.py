@@ -765,6 +765,7 @@ async def koa_is_typing_a_message(ctx, **kwargs):
         min_duration::int
             The amount of time that will be waited regardless of rnd_duration.
     """
+
     content = kwargs.get('content')
     embed = kwargs.get('embed')
     rnd_duration = kwargs.get('rnd_duration')
@@ -786,6 +787,25 @@ async def koa_is_typing_a_message(ctx, **kwargs):
                 await ctx.send(embed=embed)
         else:
             await ctx.send(content)
+
+
+async def change_presence_periodically():
+    """Changes presence at X time, once per day"""
+
+    await bot.wait_until_ready()
+
+    day = datetime.utcnow().day
+
+    while not bot.is_closed():
+        time = datetime.utcnow()
+
+        # if it's time and it's not the same day
+        if time.hour == bot.tasks['presence_change']['utc_hour'] and time.day != day:
+            day = time.day
+            await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
+
+        # check twice an hour
+        await asyncio.sleep(60 * 30)
 
 
 async def lookup_pending_posts():
@@ -878,4 +898,5 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
 
 # bot.loop.create_task(lookup_pending_posts())
+bot.loop.create_task(change_presence_periodically())
 bot.run(bot.auth_keys['discord']['token'])

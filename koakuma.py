@@ -701,11 +701,13 @@ async def convert_units(msg):
         'feet',
         'inches',
         'miles',
+        'pounds',
     ]
     si_units = [
         'meters',
         'centimeters',
         'kilometers',
+        'kilograms'
     ]
 
     # Find all units
@@ -735,6 +737,8 @@ async def convert_units(msg):
         elif unit in si_units:
             if unit == 'kilometers':
                 converted_value = value.to(converter.ureg.miles)
+            elif unit == 'kilograms':
+                converted_value = value.to(converter.ureg.pounds)
             elif value.magnitude >= 300:
                 converted_value = value.to(converter.ureg.yards)
             else:

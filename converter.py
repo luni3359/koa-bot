@@ -10,12 +10,14 @@ Q_ = ureg.Quantity
 
 num = re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)')
 units = [
-        ('feet', re.compile(r' *(\'|foot|feet|ft)(?!\w)')),
-        ('inches', re.compile(r' *("|inch|inches|ins?)(?!\w)')),
-        ('miles', re.compile(r' *(miles?|mi)(?!\w)')),
-        ('meters', re.compile(r' *(meters?|metres?|mt?r?s?)(?!\w)')),
-        ('centimeters', re.compile(r' *(centimeters?|centimetres?|cms?)(?!\w)')),
-        ('kilometers', re.compile(r' *(kilometers?|kilometres?|kms?)(?!\w)')),
+    ('feet', re.compile(r' *(\'|foot|feet|ft)(?!\w)')),
+    ('inches', re.compile(r' *("|inch|inches|ins?)(?!\w)')),
+    ('miles', re.compile(r' *(miles?|mi)(?!\w)')),
+    ('pounds', re.compile(r' *(pounds?|lbs?)(?!\w)')),
+    ('meters', re.compile(r' *(meters?|metres?|mt?r?s?)(?!\w)')),
+    ('centimeters', re.compile(r' *(centimeters?|centimetres?|cms?)(?!\w)')),
+    ('kilometers', re.compile(r' *(kilometers?|kilometres?|kms?)(?!\w)')),
+    ('kilograms', re.compile(r' *(kilograms?|kgs?)(?!\w)')),
 ]
 foot_inches_special_case = ('footinches', re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)\'(\.\d+|\d[,\d]*(?:\.\d+)?)"?'))
 

@@ -31,7 +31,7 @@ bot.__dict__.update(data)
 
 twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
 twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
-twitter_api = tweepy.API(twit_auth)
+twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
 
 pixiv_api = pixivpy3.AppPixivAPI()
 

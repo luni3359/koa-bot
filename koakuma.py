@@ -572,21 +572,24 @@ async def get_pixiv_gallery(msg, url):
         return
 
     print('Now starting to process pixiv link #' + post_id)
+    # Login
     if pixiv_api.access_token is None:
         pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
+    else:
+        pixiv_api.auth()
 
-    illust_json = pixiv_api.illust_detail(post_id, req_auth=True)
+    try:
+        illust_json = pixiv_api.illust_detail(post_id, req_auth=True)
+    except pixivpy3.PixivError as e:
+        await channel.send('Odd...')
+        print(e)
+        return
+
     print(illust_json)
     if 'error' in illust_json:
-        # Attempt to login
-        pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
-        illust_json = pixiv_api.illust_detail(post_id, req_auth=True)
-        print(illust_json)
-
-        if 'error' in illust_json:
-            # too bad
-            print('Invalid Pixiv id #' + post_id)
-            return
+        # too bad
+        print('Invalid Pixiv id #' + post_id)
+        return
 
     print('Pixiv auth passed! (for #%s)' % post_id)
 

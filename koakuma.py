@@ -12,6 +12,7 @@ from datetime import datetime
 import aiohttp
 import commentjson
 import discord
+import mysql.connector as mariadb
 import pixivpy3
 import tweepy
 from discord.ext import commands
@@ -36,6 +37,8 @@ twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
 pixiv_api = pixivpy3.AppPixivAPI()
 
 danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
+
+mariadb_connection = mariadb.connect(user=bot.database['username'], password=bot.database['password'], database=bot.database['schema'])
 
 
 @bot.group(aliases=['art'])

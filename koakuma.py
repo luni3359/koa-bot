@@ -923,7 +923,7 @@ async def on_message(msg):
             if bot.assets['deviantart']['domain'] in domain:
                 await get_deviantart_post(msg, urls[i])
 
-    if channel_activity.last_channel != channel.id or urls:
+    if channel_activity.last_channel != channel.id or urls or msg.attachments:
         channel_activity.last_channel = channel.id
         channel_activity.count = 0
 

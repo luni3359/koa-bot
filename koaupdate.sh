@@ -1,5 +1,5 @@
 #!/bin/bash
-# This script automatically sends updates to the bot and restarts the current instance.
+# This script automatically sends updates to the bot. In the future it should also restart the running instance.
 
 if [ -z ${KOAKUMA_HOME} ]; then
     echo "\$KOAKUMA_HOME is not defined. It needs to point to the bot's directory."
@@ -16,4 +16,8 @@ if [ ! -d ${KOAKUMA_HOME} ]; then
     exit 1
 fi
 
-rsync -aXv --exclude=.* --exclude=__pycache__ --exclude=venv --progress ${KOAKUMA_HOME} ${KOAKUMA_CONNSTR}
+# Appending home of the remote koakuma
+TARGET=${KOAKUMA_CONNSTR}:$(ssh ${KOAKUMA_CONNSTR} 'source ~/.profile; echo $KOAKUMA_HOME')
+echo "Transferring from ${KOAKUMA_HOME} to ${TARGET}"
+
+rsync -aXv --exclude=.* --exclude=__pycache__ --exclude=venv --include=.python-version --progress ${KOAKUMA_HOME}/ ${TARGET}

@@ -20,7 +20,7 @@ async def http_request(url, **kwargs):
                 return False
 
             if json:
-                return await response.json()
+                return await response.json(content_type=None)
 
             return await response.read()
 

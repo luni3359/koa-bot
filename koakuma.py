@@ -652,6 +652,41 @@ async def get_pixiv_gallery(msg, url):
     print('DONE PIXIV!')
 
 
+async def get_deviantart_post(msg, url):
+    """Automatically fetch post from deviantart"""
+
+    channel = msg.channel
+
+    if not '/art/' in url:
+        return
+
+    post_id = re.findall(r'[0-9]+$', url)[0]
+    search_url = bot.assets['deviantart']['search_url_extended'].format(post_id)
+
+    api_result = await net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
+
+    if not api_result['deviation']['isMature']:
+        return
+
+    for file in api_result['deviation']['files']:
+        if file['type'] == 'preview':
+            preview_url = file['src']
+            break
+
+    embed = discord.Embed()
+    embed.set_author(
+        name=api_result['deviation']['author']['username'],
+        url='https://www.deviantart.com/' + api_result['deviation']['author']['username'],
+        icon_url=api_result['deviation']['author']['usericon'])
+    embed.set_image(url=preview_url)
+    embed.set_footer(
+        text='DeviantArt',
+        icon_url=bot.assets['deviantart']['favicon']
+    )
+
+    await channel.send(embed=embed)
+
+
 def get_post_id(url, word_to_match, trim_to):
     """Get post id from url"""
 
@@ -884,6 +919,9 @@ async def on_message(msg):
 
             if bot.assets['danbooru']['domain'] in domain:
                 await get_danbooru_gallery(msg, urls[i])
+
+            if bot.assets['deviantart']['domain'] in domain:
+                await get_deviantart_post(msg, urls[i])
 
     if channel_activity.last_channel != channel.id or urls:
         channel_activity.last_channel = channel.id

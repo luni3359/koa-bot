@@ -1,6 +1,7 @@
 """Koakuma bot"""
 import asyncio
 import json
+import math
 import os
 import random
 import re
@@ -226,7 +227,25 @@ async def search_word(ctx, *word):
         else:
             embed.description = '%s\n\n' % embed.description
 
-    await ctx.send(embed=embed)
+    # Embed descriptions longer than 2048 characters error out.
+    if len(embed.description) > 2048:
+        embeds_to_send = math.ceil(len(embed.description) / 2048) - 1
+        embeds_sent = 0
+
+        dictionary_definitions = embed.description
+        embed.description = dictionary_definitions[0:2048]
+
+        await ctx.send(embed=embed)
+
+        # Print all the message across many embeds
+        while embeds_sent < embeds_to_send:
+            embeds_sent += 1
+
+            embed = discord.Embed()
+            embed.description = dictionary_definitions[2048 * embeds_sent:2048 * (embeds_sent + 1)]
+            await ctx.send(embed=embed)
+    else:
+        await ctx.send(embed=embed)
 
 
 def formatDictionaryOddities(txt, which):

@@ -208,8 +208,13 @@ async def search_word(ctx, *word):
                         definition = ', '.join(meaning_item['sls'])
                     elif 'lbs' in meaning_item:
                         definition = meaning_item['lbs'][0]
+                    elif 'ins' in meaning_item:
+                        if 'spl' in meaning_item['ins'][0]:
+                            definition = meaning_item['ins'][0]['spl'].upper() + ' ' + meaning_item['ins'][0]['if']
+                        else:
+                            definition = meaning_item['ins'][0]['il'] + ' ' + meaning_item['ins'][0]['if'].upper()
                     else:
-                        definition = meaning_item['ins'][0]['spl'].upper() + ' ' + meaning_item['ins'][0]['if']
+                        raise ValueError('Dictionary format could not be resolved.')
 
                     if isinstance(definition, typing.List):
                         definition = definition[0][0][1]

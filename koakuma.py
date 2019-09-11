@@ -141,8 +141,6 @@ async def search_word(ctx, *word):
         await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
         return
 
-    embed = discord.Embed()
-
     # If word has no direct definitions
     if not 'def' in js[0]:
         # If there's suggestions only
@@ -152,6 +150,7 @@ async def search_word(ctx, *word):
             for i, suggestion in enumerate(suggestions):
                 suggestions[i] = '• ' + suggestion
 
+            embed = discord.Embed()
             embed.description = '*%s*' % '\n\n'.join(suggestions)
             await ctx.send(random.choice(bot.quotes['dictionary_try_this']), embed=embed)
             return
@@ -159,10 +158,10 @@ async def search_word(ctx, *word):
         else:
             tense = js[0]['cxs'][0]
             suggested_tense_word = tense['cxtis'][0]['cxt']
-            embed.description = '%s %s.' % (tense['cxl'], suggested_tense_word)
-            await ctx.send(embed=embed)
+            await ctx.invoke(bot.get_command('word'), suggested_tense_word)
             return
 
+    embed = discord.Embed()
     embed.title = word
     embed.url = '%s/%s' % (bot.assets['merriam-webster']['dictionary_url'], word_encoded)
     embed.description = ''

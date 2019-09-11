@@ -143,16 +143,25 @@ async def search_word(ctx, *word):
 
     embed = discord.Embed()
 
-    # Validate that the word exists and if it doesn't, show suggestions
+    # If word has no direct definitions
     if not 'def' in js[0]:
-        suggestions = js[:5]
+        # If there's suggestions only
+        if isinstance(js[0], str):
+            suggestions = js[:5]
 
-        for i, suggestion in enumerate(suggestions):
-            suggestions[i] = '• ' + suggestion
+            for i, suggestion in enumerate(suggestions):
+                suggestions[i] = '• ' + suggestion
 
-        embed.description = '*%s*' % '\n\n'.join(suggestions)
-        await ctx.send(random.choice(bot.quotes['dictionary_try_this']), embed=embed)
-        return
+            embed.description = '*%s*' % '\n\n'.join(suggestions)
+            await ctx.send(random.choice(bot.quotes['dictionary_try_this']), embed=embed)
+            return
+        # If there's suggestions to a different grammatical tense
+        else:
+            tense = js[0]['cxs'][0]
+            suggested_tense_word = tense['cxtis'][0]['cxt']
+            embed.description = '%s %s.' % (tense['cxl'], suggested_tense_word)
+            await ctx.send(embed=embed)
+            return
 
     embed.title = word
     embed.url = '%s/%s' % (bot.assets['merriam-webster']['dictionary_url'], word_encoded)

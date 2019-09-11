@@ -814,8 +814,8 @@ async def convert_units(msg):
 
         conversion_str += ('\n{} → {}').format(value, converted_value)
 
-    # Random chance for final quote, 50% chance
-    if not random.getrandbits(1):
+    # Random chance for final quote ([0..4])
+    if random.randint(0, 4) == 4:
         conversion_str += '```\n' + random.choice(bot.quotes['converting_units_modest'])
     else:
         conversion_str += '```'

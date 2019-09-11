@@ -926,8 +926,8 @@ async def on_message(msg):
     if channel_activity.last_channel != channel.id or urls or msg.attachments:
         channel_activity.last_channel = channel.id
         channel_activity.count = 0
-
-    channel_activity.count += 1
+    else:
+        channel_activity.count += 1
 
     if str(channel.id) in bot.rules['quiet_channels']:
         if not channel_activity.warned and channel_activity.count >= bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:

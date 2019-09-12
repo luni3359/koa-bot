@@ -712,7 +712,7 @@ async def get_deviantart_post(msg, url):
         icon_url=api_result['deviation']['author']['usericon'])
     embed.set_image(url=preview_url)
     embed.set_footer(
-        text='DeviantArt',
+        text=bot.assets['deviantart']['name'],
         icon_url=bot.assets['deviantart']['favicon']
     )
 

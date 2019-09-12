@@ -108,13 +108,21 @@ async def search_jisho(ctx, *word):
     embed.url = bot.assets['jisho']['dictionary_url'] + urllib.parse.quote(words)
     embed.description = ''
 
-    for entry in js['data'][:3]:
-        kanji = entry['slug']
-        primary_reading = entry['japanese'][0]['reading']
+    for entry in js['data'][:4]:
+        kanji = 'word' in entry['japanese'][0] and entry['japanese'][0]['word'] or 'reading' in entry['japanese'][0] and entry['japanese'][0]['reading']
+        primary_reading = 'reading' in entry['japanese'][0] and entry['japanese'][0]['reading'] or None
         jlpt_level = '; '.join(entry['jlpt'])
         definitions = '; '.join(entry['senses'][0]['english_definitions'])
+        what_it_is = '; '.join(entry['senses'][0]['parts_of_speech'])
+        tags = '; '.join(entry['senses'][0]['tags'])
 
-        embed.description += '►{kanji}\n• {reading}{}{}\n\n'.format(jlpt_level, definitions, reading=primary_reading, kanji=kanji)
+        if tags:
+            tags = '\n*%s*' % tags
+
+        if primary_reading:
+            embed.description += '►{kanji}【{reading}】\n{wis}: {}{} {}\n\n'.format(jlpt_level, definitions, tags, wis=what_it_is, reading=primary_reading, kanji=kanji)
+        else:
+            embed.description += '►{kanji}\n{wis}: {}{} {}\n\n'.format(jlpt_level, definitions, tags, wis=what_it_is, kanji=kanji)
 
     if len(embed.description) > 2048:
         embed.description = embed.description[:2048]

@@ -38,6 +38,7 @@ twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
 pixiv_api = pixivpy3.AppPixivAPI()
 
 danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
+e621_auth = aiohttp.BasicAuth(login=bot.auth_keys['e621']['username'], password=bot.auth_keys['e621']['key'])
 
 mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
 
@@ -499,6 +500,12 @@ async def board_search(**kwargs):
             return await net.http_request(url, auth=danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
         elif tags:
             return await net.http_request('https://danbooru.donmai.us/posts.json', auth=danbooru_auth, data=json.dumps(data), headers={"Content-Type": "application/json"}, json=True, err_msg='error fetching search: ' + tags)
+    elif board == 'e621':
+        if post_id:
+            url = 'https://e621.net/post/show/%s.json' % post_id
+            return await net.http_request(url, auth=e621_auth, json=True, headers={'User-Agent': bot.auth_keys['e621']['user-agent']}, err_msg='error fetching post #' + post_id)
+    else:
+        raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 
 
 async def get_danbooru_gallery(msg, url):
@@ -682,6 +689,28 @@ async def get_pixiv_gallery(msg, url):
 
     await temp_wait.delete()
     print('DONE PIXIV!')
+
+
+async def get_e621_gallery(msg, url):
+    """Automatically fetch a bigger preview and gallery from e621"""
+
+    channel = msg.channel
+
+    post_id = get_post_id(url, '/show/', r'^[0-9]+', has_regex=True)
+
+    if not post_id:
+        return
+
+    post = await board_search(post_id=post_id, board='e621')
+
+    if not post:
+        return
+
+    if post['rating'] is not 's' and not channel.is_nsfw():
+        embed = discord.Embed()
+        embed.set_image(url=bot.assets['e621']['nsfw_placeholder'])
+        content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
+        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=1, min_duration=1)
 
 
 async def get_deviantart_post(msg, url):
@@ -954,6 +983,9 @@ async def on_message(msg):
 
             if bot.assets['danbooru']['domain'] in domain:
                 await get_danbooru_gallery(msg, urls[i])
+
+            if bot.assets['e621']['domain'] in domain:
+                await get_e621_gallery(msg, urls[i])
 
             if bot.assets['deviantart']['domain'] in domain:
                 await get_deviantart_post(msg, urls[i])

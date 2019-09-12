@@ -328,6 +328,25 @@ def formatDictionaryOddities(txt, which):
         return txt
 
 
+@bot.command(name='e621', aliases=['e6'])
+async def search_e621(ctx, *args):
+    """Search on e621!"""
+
+    search = ' '.join(args)
+    print('User searching for: ' + search)
+
+    on_nsfw_channel = ctx.channel.is_nsfw()
+
+    async with ctx.typing():
+        posts = await board_search(board='e621', tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
+
+    if not posts:
+        await ctx.send('Sorry, nothing found!')
+        return
+
+    await send_board_posts(ctx, posts, board='e621')
+
+
 @bot.command(name='danbooru', aliases=['dan'])
 async def search_danbooru(ctx, *args):
     """Search on danbooru!"""

@@ -440,11 +440,11 @@ def generate_board_embed(post, fileurl, **kwargs):
             embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
         embed.title = embed_post_title
-        embed.url = 'https://danbooru.donmai.us/posts/%i' + post['id']
+        embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
         embed.set_image(url=fileurl)
     elif board == 'e621':
         embed.title = '#%s: %s - e621' % (post['id'], combine_tags(post['artist']))
-        embed.url = 'https://e621.net/post/show/%i' + post['id']
+        embed.url = 'https://e621.net/post/show/%i' % post['id']
         embed.set_image(url=fileurl)
 
     return embed

@@ -331,39 +331,39 @@ def formatDictionaryOddities(txt, which):
 @bot.command(name='e621', aliases=['e6'])
 async def search_e621(ctx, *args):
     """Search on e621!"""
-
-    search = ' '.join(args)
-    print('User searching for: ' + search)
-
-    on_nsfw_channel = ctx.channel.is_nsfw()
-
-    async with ctx.typing():
-        posts = await board_search(board='e621', tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
-
-    if not posts:
-        await ctx.send('Sorry, nothing found!')
-        return
-
-    await send_board_posts(ctx, posts, board='e621')
+    await search_board(ctx, args, board='e621')
 
 
 @bot.command(name='danbooru', aliases=['dan'])
 async def search_danbooru(ctx, *args):
     """Search on danbooru!"""
+    await search_board(ctx, args)
 
-    search = ' '.join(args)
+
+async def search_board(ctx, tags, board='danbooru'):
+    """Search on image boards!
+    Arguments:
+        ctx
+            The context to interact with the discord API
+        tags::*args (list)
+            List of the tags sent by the user
+        board::str
+            The board to manage. Default is 'danbooru'
+    """
+
+    search = ' '.join(tags)
     print('User searching for: ' + search)
 
     on_nsfw_channel = ctx.channel.is_nsfw()
 
     async with ctx.typing():
-        posts = await board_search(tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
+        posts = await board_search(board=board, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
 
     if not posts:
         await ctx.send('Sorry, nothing found!')
         return
 
-    await send_board_posts(ctx, posts)
+    await send_board_posts(ctx, posts, board=board)
 
 
 def list_contains(lst, items_to_be_matched):

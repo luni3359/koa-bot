@@ -431,18 +431,18 @@ def generate_board_embed(post, fileurl, **kwargs):
             embed_post_title += ' drawn by ' + post_artist
 
         if not post_char and not post_copy and not post_artist:
-            embed_post_title += '#' + str(post['id'])
+            embed_post_title += '#%i' % post['id']
 
         embed_post_title += ' - Danbooru'
         if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
             embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
         embed.title = embed_post_title
-        embed.url = 'https://danbooru.donmai.us/posts/' + str(post['id'])
+        embed.url = 'https://danbooru.donmai.us/posts/%i' + post['id']
         embed.set_image(url=fileurl)
     elif board == 'e621':
         embed.title = '#%s: %s - e621' % (post['id'], combine_tags(post['artist']))
-        embed.url = 'https://e621.net/post/show/' + str(post['id'])
+        embed.url = 'https://e621.net/post/show/%i' + post['id']
         embed.set_image(url=fileurl)
 
     return embed
@@ -715,7 +715,7 @@ async def get_pixiv_gallery(msg, url):
             embed = discord.Embed()
             embed.set_author(
                 name=illust['user']['name'],
-                url='https://www.pixiv.net/member.php?id=' + str(illust['user']['id'])
+                url='https://www.pixiv.net/member.php?id=%i' % illust['user']['id']
             )
             embed.set_image(url='attachment://' + image_filename)
 
@@ -1005,10 +1005,12 @@ async def lookup_pending_posts():
         for post in posts:
             if not post['id'] in pending_posts:
                 pending_posts.append(post['id'])
+                url_to_append = 'https://danbooru.donmai.us/posts/%i' % post['id']
+
                 if post['rating'] is 's':
-                    safe_posts.append('https://danbooru.donmai.us/posts/' + str(post['id']))
+                    safe_posts.append(url_to_append)
                 else:
-                    nsfw_posts.append('https://danbooru.donmai.us/posts/' + str(post['id']))
+                    nsfw_posts.append(url_to_append)
 
         safe_posts = '\n'.join(safe_posts)
         nsfw_posts = '\n'.join(nsfw_posts)

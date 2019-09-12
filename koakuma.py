@@ -85,6 +85,43 @@ async def pixiv(ctx):
     pass
 
 
+@bot.command(name='jisho', aliases=['j'])
+async def search_jisho(ctx, *word):
+    """Search a term in the japanese dictionary jisho"""
+    word = ' '.join(word).lower()
+    word_encoded = urllib.parse.quote_plus(word)
+    user_search = bot.assets['jisho']['search_url'] + word_encoded
+
+    js = await net.http_request(user_search, json=True)
+
+    if not js:
+        await ctx.send('Error retrieving data from server.')
+        return
+
+    # Check if there are any results at all
+    if js['meta']['status'] != 200:
+        await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
+        return
+
+    embed = discord.Embed()
+    embed.title = word
+    embed.url = bot.assets['jisho']['dictionary_url'] + urllib.parse.quote(word)
+    embed.description = ''
+
+    for entry in js['data'][:3]:
+        kanji = entry['slug']
+        primary_reading = entry['japanese'][0]['reading']
+        jlpt_level = '; '.join(entry['jlpt'])
+        definitions = '; '.join(entry['senses'][0]['english_definitions'])
+
+        embed.description += '►{kanji}\n• {reading}{}{}\n\n'.format(jlpt_level, definitions, reading=primary_reading, kanji=kanji)
+
+    if len(embed.description) > 2048:
+        embed.description = embed.description[:2048]
+
+    await ctx.send(embed=embed)
+
+
 @bot.command(name='urbandictionary', aliases=['wu', 'udictionary', 'ud'])
 async def search_urbandictionary(ctx, *word):
     """Search a term in urbandictionary"""

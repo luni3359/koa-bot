@@ -290,13 +290,15 @@ async def search_danbooru(ctx, *args):
     search = ' '.join(args)
     print('User searching for: ' + search)
 
-    posts = await board_search(tags=search, limit=3, random=True)
+    on_nsfw_channel = ctx.channel.is_nsfw()
+
+    posts = await board_search(tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
 
     if not posts:
         await ctx.send('Sorry, nothing found!')
         return
 
-    await send_board_posts(ctx, posts, show_nsfw=ctx.channel.is_nsfw())
+    await send_board_posts(ctx, posts, show_nsfw=on_nsfw_channel)
 
 
 def list_contains(lst, items_to_be_matched):
@@ -513,6 +515,8 @@ async def board_search(**kwargs):
             How many images to retrieve. Default is 5
         random::bool
             Pick at random from results. Default is False
+        include_nsfw::bool
+            Whether or not the search will use safe versions of boards. Default is False
 
     Returns:
         json::dict
@@ -523,6 +527,7 @@ async def board_search(**kwargs):
     tags = kwargs.get('tags')
     limit = kwargs.get('limit', 5)
     random_arg = kwargs.get('random', False)
+    include_nsfw = kwargs.get('include_nsfw', False)
 
     data = {
         'tags': tags,
@@ -531,21 +536,32 @@ async def board_search(**kwargs):
     }
 
     if board == 'danbooru':
+
         if post_id:
             url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
             return await net.http_request(url, auth=danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
         elif tags:
-            return await net.http_request('https://danbooru.donmai.us/posts.json', auth=danbooru_auth, data=json.dumps(data), headers={"Content-Type": "application/json"}, json=True, err_msg='error fetching search: ' + tags)
+            if include_nsfw:
+                url = 'https://danbooru.donmai.us'
+            else:
+                url = 'https://safebooru.donmai.us'
+
+            return await net.http_request(url + '/posts.json', auth=danbooru_auth, data=json.dumps(data), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
     elif board == 'e621':
         # e621 requires to know the User-Agent
-        user_agent = {'User-Agent': bot.auth_keys['e621']['user-agent']}
+        headers = {'User-Agent': bot.auth_keys['e621']['user-agent']}
 
         if post_id:
             url = 'https://e621.net/post/show/%s.json' % post_id
-            return await net.http_request(url, auth=e621_auth, json=True, headers=user_agent, err_msg='error fetching post #' + post_id)
+            return await net.http_request(url, auth=e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
         elif tags:
-            user_agent['Content-Type'] = 'application/json'
-            return await net.http_request('https://e621.net/post/index.json', auth=e621_auth, data=json.dumps(data), headers=user_agent, json=True, err_msg='error fetching search: ' + tags)
+            if include_nsfw:
+                url = 'https://e621.net'
+            else:
+                url = 'https://e926.net'
+
+            headers['Content-Type'] = 'application/json'
+            return await net.http_request(url + '/post/index.json', auth=e621_auth, data=json.dumps(data), headers=headers, json=True, err_msg='error fetching search: ' + tags)
     else:
         raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 

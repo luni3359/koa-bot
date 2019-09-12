@@ -374,10 +374,13 @@ async def send_board_posts(ctx, posts, **kwargs):
             embed.set_image(url=bot.assets[board]['nsfw_placeholder'])
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
-            if danbooru_post_has_missing_preview(post) or last_post:
+            if board == 'danbooru':
+                if danbooru_post_has_missing_preview(post) or last_post:
+                    await ctx.send('<%s>' % embed.url, embed=embed)
+                else:
+                    await ctx.send('https://danbooru.donmai.us/posts/' + str(post['id']))
+            elif board == 'e621':
                 await ctx.send('<%s>' % embed.url, embed=embed)
-            else:
-                await ctx.send('https://danbooru.donmai.us/posts/' + str(post['id']))
 
         print('Post #%i complete' % post['id'])
 
@@ -744,9 +747,9 @@ async def get_e621_gallery(msg, url):
     await send_board_posts(channel, post, board='e621', show_nsfw=channel.is_nsfw())
 
     if post['has_children']:
-        search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
+        search = 'parent:%s' % post['id']
     elif post['parent_id']:
-        search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
+        search = 'id:%s' % post['parent_id']
     else:
         return
 

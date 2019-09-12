@@ -338,16 +338,16 @@ async def send_board_posts(ctx, posts, **kwargs):
     if not isinstance(posts, typing.List):
         posts = [posts]
 
-    if max_posts != 0:
-        posts = posts[:max_posts]
-
     total_posts = len(posts)
     posts_processed = 0
     last_post = False
 
+    if max_posts != 0:
+        posts = posts[:max_posts]
+
     for post in posts:
         posts_processed += 1
-        print('Parsing post #%i (%i/%i)...' % (post['id'], posts_processed, total_posts))
+        print('Parsing post #%i (%i/%i)...' % (post['id'], posts_processed, min(total_posts, max_posts)))
 
         denied_ext = ['webm']
         if post['file_ext'] in denied_ext:

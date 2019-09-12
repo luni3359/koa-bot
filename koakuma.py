@@ -39,7 +39,7 @@ pixiv_api = pixivpy3.AppPixivAPI()
 
 danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
 
-mariadb_connection = mariadb.connect(user=bot.database['username'], password=bot.database['password'], database=bot.database['schema'])
+mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
 
 
 @bot.group(aliases=['art'])

@@ -88,8 +88,8 @@ async def pixiv(ctx):
 @bot.command(name='jisho', aliases=['j'])
 async def search_jisho(ctx, *word):
     """Search a term in the japanese dictionary jisho"""
-    word = ' '.join(word).lower()
-    word_encoded = urllib.parse.quote_plus(word)
+    words = ' '.join(word).lower()
+    word_encoded = urllib.parse.quote_plus(words)
     user_search = bot.assets['jisho']['search_url'] + word_encoded
 
     js = await net.http_request(user_search, json=True)
@@ -104,8 +104,8 @@ async def search_jisho(ctx, *word):
         return
 
     embed = discord.Embed()
-    embed.title = word
-    embed.url = bot.assets['jisho']['dictionary_url'] + urllib.parse.quote(word)
+    embed.title = words
+    embed.url = bot.assets['jisho']['dictionary_url'] + urllib.parse.quote(words)
     embed.description = ''
 
     for entry in js['data'][:3]:
@@ -126,8 +126,8 @@ async def search_jisho(ctx, *word):
 async def search_urbandictionary(ctx, *word):
     """Search a term in urbandictionary"""
 
-    word = ' '.join(word).lower()
-    word_encoded = urllib.parse.quote_plus(word)
+    words = ' '.join(word).lower()
+    word_encoded = urllib.parse.quote_plus(words)
     user_search = bot.assets['urban_dictionary']['search_url'] + word_encoded
 
     js = await net.http_request(user_search, json=True)
@@ -142,7 +142,7 @@ async def search_urbandictionary(ctx, *word):
         return
 
     embed = discord.Embed()
-    embed.title = word
+    embed.title = words
     embed.url = bot.assets['urban_dictionary']['dictionary_url'] + word_encoded
     embed.description = ''
 
@@ -165,8 +165,8 @@ async def search_urbandictionary(ctx, *word):
 async def search_english_word(ctx, *word):
     """Search a term in merriam-webster's dictionary"""
 
-    word = ' '.join(word).lower()
-    word_encoded = urllib.parse.quote(word)
+    words = ' '.join(word).lower()
+    word_encoded = urllib.parse.quote(words)
     user_search = '%s/%s?key=%s' % (bot.assets['merriam-webster']['search_url'], word_encoded, bot.auth_keys['merriam-webster']['key'])
 
     js = await net.http_request(user_search, json=True)
@@ -201,7 +201,7 @@ async def search_english_word(ctx, *word):
             return
 
     embed = discord.Embed()
-    embed.title = word
+    embed.title = words
     embed.url = '%s/%s' % (bot.assets['merriam-webster']['dictionary_url'], word_encoded)
     embed.description = ''
 
@@ -567,7 +567,7 @@ async def board_search(**kwargs):
     random_arg = kwargs.get('random', False)
     include_nsfw = kwargs.get('include_nsfw', False)
 
-    data = {
+    data_arg = {
         'tags': tags,
         'limit': limit,
         'random': random_arg
@@ -584,7 +584,7 @@ async def board_search(**kwargs):
             else:
                 url = 'https://safebooru.donmai.us'
 
-            return await net.http_request(url + '/posts.json', auth=danbooru_auth, data=json.dumps(data), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
+            return await net.http_request(url + '/posts.json', auth=danbooru_auth, data=json.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
     elif board == 'e621':
         # e621 requires to know the User-Agent
         headers = {'User-Agent': bot.auth_keys['e621']['user-agent']}
@@ -599,7 +599,7 @@ async def board_search(**kwargs):
                 url = 'https://e926.net'
 
             headers['Content-Type'] = 'application/json'
-            return await net.http_request(url + '/post/index.json', auth=e621_auth, data=json.dumps(data), headers=headers, json=True, err_msg='error fetching search: ' + tags)
+            return await net.http_request(url + '/post/index.json', auth=e621_auth, data=json.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
     else:
         raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 

@@ -349,6 +349,16 @@ async def send_board_posts(ctx, posts, **kwargs):
         posts_processed += 1
         print('Parsing post #%i (%i/%i)...' % (post['id'], posts_processed, total_posts))
 
+        denied_ext = ['webm']
+        if post['file_ext'] in denied_ext:
+            if board == 'danbooru':
+                url = 'https://danbooru.donmai.us/posts/%i' % post['id']
+            elif board == 'e621':
+                url = 'https://e621.net/post/show/%i' % post['id']
+
+            await ctx.send(url)
+            continue
+
         if post['file_url']:
             fileurl = post['file_url']
         else:
@@ -378,7 +388,7 @@ async def send_board_posts(ctx, posts, **kwargs):
                 if danbooru_post_has_missing_preview(post) or last_post:
                     await ctx.send('<%s>' % embed.url, embed=embed)
                 else:
-                    await ctx.send('https://danbooru.donmai.us/posts/' + str(post['id']))
+                    await ctx.send(embed.url)
             elif board == 'e621':
                 await ctx.send('<%s>' % embed.url, embed=embed)
 

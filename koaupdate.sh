@@ -30,11 +30,11 @@ fi
 
 if [ -z ${REMOTE_HOME} ]; then
     echo "The remote \$KOAKUMA_HOME env var is empty or set incorrectly."
-    exit
+    exit 1
 fi
 
 # Appending home of the remote koakuma
 TARGET=${KOAKUMA_CONNSTR}:${REMOTE_HOME}
 echo "Transferring from ${KOAKUMA_HOME} to ${TARGET}"
 
-rsync -aXv --exclude=.* --exclude=__pycache__ --exclude=venv --include=.python-version --progress ${KOAKUMA_HOME}/ ${TARGET}
+rsync -aXv --include=.python-version --exclude=.* --exclude=__pycache__ --exclude=venv --progress ${KOAKUMA_HOME}/ ${TARGET}

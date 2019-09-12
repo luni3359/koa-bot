@@ -381,7 +381,7 @@ def danbooru_post_has_missing_preview(post):
 
 
 async def send_board_posts(ctx, posts, **kwargs):
-    """Handle posting posts from danbooru (with stylization)
+    """Handle sending posts retrieved from image boards
     Arguments:
         ctx
             The context to interact with the discord API
@@ -463,7 +463,7 @@ async def send_board_posts(ctx, posts, **kwargs):
 
 
 def generate_board_embed(post, fileurl, **kwargs):
-    """Generate an embed template for danbooru urls
+    """Generate embeds for image board post urls
     Arguments:
         post
             The post object

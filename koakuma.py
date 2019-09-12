@@ -652,7 +652,7 @@ async def get_danbooru_gallery(msg, url):
         embed = discord.Embed()
         embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
-        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=1, min_duration=1)
+        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
     if post['has_children']:
         search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
@@ -675,7 +675,7 @@ async def get_danbooru_gallery(msg, url):
         await send_board_posts(channel, posts, show_nsfw=on_nsfw_channel)
     else:
         content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
-        await koa_is_typing_a_message(channel, content=content)
+        await koa_is_typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
 
 async def get_twitter_gallery(msg, url):
@@ -847,7 +847,7 @@ async def get_e621_gallery(msg, url):
         embed = discord.Embed()
         embed.set_image(url=bot.assets['e621']['nsfw_placeholder'])
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
-        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=1, min_duration=1)
+        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
     if post['has_children']:
         search = 'parent:%s' % post['id']
@@ -867,7 +867,7 @@ async def get_e621_gallery(msg, url):
         await send_board_posts(channel, posts, board='e621', show_nsfw=on_nsfw_channel)
     else:
         content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
-        await koa_is_typing_a_message(channel, content=content)
+        await koa_is_typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
 
 async def get_deviantart_post(msg, url):
@@ -1048,7 +1048,10 @@ async def koa_is_typing_a_message(ctx, **kwargs):
 
     async with ctx.typing():
         if rnd_duration:
-            await asyncio.sleep(random.randint(rnd_duration[0], rnd_duration[1]) + min_duration)
+            time_to_wait = random.randint(rnd_duration[0], rnd_duration[1])
+            if time_to_wait < min_duration:
+                time_to_wait = min_duration
+            await asyncio.sleep(time_to_wait)
         else:
             await asyncio.sleep(min_duration)
 
@@ -1164,7 +1167,7 @@ async def on_message(msg):
     if str(channel.id) in bot.rules['quiet_channels']:
         if not channel_activity.warned and channel_activity.count >= bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
             channel_activity.warned = True
-            await koa_is_typing_a_message(channel, content=random.choice(bot.quotes['quiet_channel_past_threshold']), rnd_duration=1, min_duration=1)
+            await koa_is_typing_a_message(channel, content=random.choice(bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
 
     await bot.process_commands(msg)
 

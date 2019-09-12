@@ -214,7 +214,7 @@ async def search_word(ctx, *word):
                         else:
                             definition = meaning_item['ins'][0]['il'] + ' ' + meaning_item['ins'][0]['if'].upper()
                     else:
-                        raise ValueError('Dictionary format could not be resolved.')
+                        raise KeyError('Dictionary format could not be resolved.')
 
                     if isinstance(definition, typing.List):
                         definition = definition[0][0][1]

@@ -296,7 +296,7 @@ async def search_danbooru(ctx, *args):
         await ctx.send('Sorry, nothing found!')
         return
 
-    await send_danbooru_posts(ctx, posts, show_nsfw=ctx.channel.is_nsfw())
+    await send_board_posts(ctx, posts, show_nsfw=ctx.channel.is_nsfw())
 
 
 def list_contains(lst, items_to_be_matched):
@@ -313,13 +313,17 @@ def danbooru_post_has_missing_preview(post):
     return list_contains(post['tag_string_general'].split(), bot.rules['no_preview_tags']) or post['is_banned']
 
 
-async def send_danbooru_posts(ctx, posts, **kwargs):
+async def send_board_posts(ctx, posts, **kwargs):
     """Handle posting posts from danbooru (with stylization)
-    Keywords:
+    Arguments:
         ctx
             The context to interact with the discord API
         posts::list or json object
             The post(s) to be sent to a channel
+
+    Keywords:
+        board::str
+            The board to manage. Default is 'danbooru'
         show_nsfw::bool
             Whether or not nsfw posts should have their previews shown. Default is True
         max_posts::int
@@ -327,6 +331,7 @@ async def send_danbooru_posts(ctx, posts, **kwargs):
             If max_posts is set to 0 then no footer will be shown and no posts will be omitted.
     """
 
+    board = kwargs.get('board', 'danbooru')
     show_nsfw = kwargs.get('show_nsfw', True)
     max_posts = kwargs.get('max_posts', 4)
 
@@ -348,7 +353,7 @@ async def send_danbooru_posts(ctx, posts, **kwargs):
             fileurl = post['file_url']
         else:
             fileurl = post['source']
-        embed = generate_danbooru_embed(post, fileurl)
+        embed = generate_board_embed(post, fileurl, board=board)
 
         if max_posts != 0:
             if posts_processed >= min(max_posts, total_posts):
@@ -357,16 +362,16 @@ async def send_danbooru_posts(ctx, posts, **kwargs):
                 if total_posts > max_posts:
                     embed.set_footer(
                         text='%i+ remaining' % (total_posts - max_posts),
-                        icon_url=bot.assets['danbooru']['favicon']
+                        icon_url=bot.assets[board]['favicon']
                     )
                 else:
                     embed.set_footer(
-                        text=bot.assets['danbooru']['name'],
-                        icon_url=bot.assets['danbooru']['favicon']
+                        text=bot.assets[board]['name'],
+                        icon_url=bot.assets[board]['favicon']
                     )
 
         if not show_nsfw and post['rating'] is not 's':
-            embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
+            embed.set_image(url=bot.assets[board]['nsfw_placeholder'])
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
             if danbooru_post_has_missing_preview(post) or last_post:
@@ -377,37 +382,56 @@ async def send_danbooru_posts(ctx, posts, **kwargs):
         print('Post #%i complete' % post['id'])
 
 
-def generate_danbooru_embed(post, fileurl):
-    """Generate an embed template for danbooru urls"""
+def generate_board_embed(post, fileurl, **kwargs):
+    """Generate an embed template for danbooru urls
+    Arguments:
+        post
+            The post object
+        fileurl::str
+            Url for the file to be used
+
+    Keywords:
+        board::str
+            The board to handle. Default is 'danbooru'
+    """
+
+    board = kwargs.get('board', 'danbooru')
 
     embed = discord.Embed()
-    post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
-    post_copy = combine_tags(post['tag_string_copyright'])
-    post_artist = combine_tags(post['tag_string_artist'])
-    embed_post_title = ''
 
-    if post_char:
-        embed_post_title += post_char
+    if board == 'danbooru':
+        post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
+        post_copy = combine_tags(post['tag_string_copyright'])
+        post_artist = combine_tags(post['tag_string_artist'])
+        embed_post_title = ''
 
-    if post_copy:
-        if not post_char:
-            embed_post_title += post_copy
-        else:
-            embed_post_title += ' (%s)' % post_copy
+        if post_char:
+            embed_post_title += post_char
 
-    if post_artist:
-        embed_post_title += ' drawn by ' + post_artist
+        if post_copy:
+            if not post_char:
+                embed_post_title += post_copy
+            else:
+                embed_post_title += ' (%s)' % post_copy
 
-    if not post_char and not post_copy and not post_artist:
-        embed_post_title += '#' + str(post['id'])
+        if post_artist:
+            embed_post_title += ' drawn by ' + post_artist
 
-    embed_post_title += ' - Danbooru'
-    if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
-        embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
+        if not post_char and not post_copy and not post_artist:
+            embed_post_title += '#' + str(post['id'])
 
-    embed.title = embed_post_title
-    embed.url = 'https://danbooru.donmai.us/posts/' + str(post['id'])
-    embed.set_image(url=fileurl)
+        embed_post_title += ' - Danbooru'
+        if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
+            embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
+
+        embed.title = embed_post_title
+        embed.url = 'https://danbooru.donmai.us/posts/' + str(post['id'])
+        embed.set_image(url=fileurl)
+    elif board == 'e621':
+        embed.title = '#%s: %s - e621' % (post['id'], combine_tags(post['artist']))
+        embed.url = 'https://e621.net/post/show/' + str(post['id'])
+        embed.set_image(url=fileurl)
+
     return embed
 
 
@@ -465,10 +489,9 @@ async def uptime(ctx):
 
 async def board_search(**kwargs):
     """Board searches handler
-
     Keywords:
         board::str
-            Specify what board to search on. Default is danbooru.
+            Specify what board to search on. Default is 'danbooru'
         post_id::int
             Used for searching by post id on a board
         tags::str
@@ -501,9 +524,15 @@ async def board_search(**kwargs):
         elif tags:
             return await net.http_request('https://danbooru.donmai.us/posts.json', auth=danbooru_auth, data=json.dumps(data), headers={"Content-Type": "application/json"}, json=True, err_msg='error fetching search: ' + tags)
     elif board == 'e621':
+        # e621 requires to know the User-Agent
+        user_agent = {'User-Agent': bot.auth_keys['e621']['user-agent']}
+
         if post_id:
             url = 'https://e621.net/post/show/%s.json' % post_id
-            return await net.http_request(url, auth=e621_auth, json=True, headers={'User-Agent': bot.auth_keys['e621']['user-agent']}, err_msg='error fetching post #' + post_id)
+            return await net.http_request(url, auth=e621_auth, json=True, headers=user_agent, err_msg='error fetching post #' + post_id)
+        elif tags:
+            user_agent['Content-Type'] = 'application/json'
+            return await net.http_request('https://e621.net/post/index.json', auth=e621_auth, data=json.dumps(data), headers=user_agent, json=True, err_msg='error fetching search: ' + tags)
     else:
         raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 
@@ -529,7 +558,7 @@ async def get_danbooru_gallery(msg, url):
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
         await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=1, min_duration=1)
     elif danbooru_post_has_missing_preview(post):
-        await send_danbooru_posts(channel, post, show_nsfw=channel.is_nsfw())
+        await send_board_posts(channel, post, show_nsfw=channel.is_nsfw())
 
     if post['has_children']:
         search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
@@ -540,7 +569,7 @@ async def get_danbooru_gallery(msg, url):
 
     posts = await board_search(tags=search)
 
-    await send_danbooru_posts(channel, posts, show_nsfw=channel.is_nsfw())
+    await send_board_posts(channel, posts, show_nsfw=channel.is_nsfw())
 
 
 async def get_twitter_gallery(msg, url):
@@ -701,7 +730,7 @@ async def get_e621_gallery(msg, url):
     if not post_id:
         return
 
-    post = await board_search(post_id=post_id, board='e621')
+    post = await board_search(board='e621', post_id=post_id)
 
     if not post:
         return
@@ -711,6 +740,19 @@ async def get_e621_gallery(msg, url):
         embed.set_image(url=bot.assets['e621']['nsfw_placeholder'])
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
         await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=1, min_duration=1)
+
+    await send_board_posts(channel, post, board='e621', show_nsfw=channel.is_nsfw())
+
+    if post['has_children']:
+        search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
+    elif post['parent_id']:
+        search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
+    else:
+        return
+
+    posts = await board_search(board='e621', tags=search)
+
+    await send_board_posts(channel, posts, board='e621', show_nsfw=channel.is_nsfw())
 
 
 async def get_deviantart_post(msg, url):
@@ -761,16 +803,22 @@ def get_post_id(url, word_to_match, trim_to, has_regex=False):
 
 
 def combine_tags(tags):
-    """Combine tags and give them a readable format"""
+    """Combine tags and give them a readable format
+    Arguments:
+        tags::str or list
+    """
 
-    tags_split = tags.split()[:5]
+    if isinstance(tags, typing.List):
+        tag_list = tags
+    else:
+        tag_list = tags.split()[:5]
 
-    if len(tags_split) > 1:
-        joint_tags = ', '.join(tags_split[:-1])
-        joint_tags += ' and ' + tags_split[-1]
+    if len(tag_list) > 1:
+        joint_tags = ', '.join(tag_list[:-1])
+        joint_tags += ' and ' + tag_list[-1]
         return joint_tags.strip().replace('_', ' ')
 
-    return ''.join(tags_split).strip().replace('_', ' ')
+    return ''.join(tag_list).strip().replace('_', ' ')
 
 
 def get_urls(string):

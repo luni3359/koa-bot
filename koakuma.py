@@ -86,7 +86,7 @@ async def pixiv(ctx):
 
 
 @bot.command(name='urbandictionary', aliases=['wu', 'udictionary', 'ud'])
-async def search_urban(ctx, *word):
+async def search_urbandictionary(ctx, *word):
     """Search a term in urbandictionary"""
 
     word = ' '.join(word).lower()
@@ -125,7 +125,7 @@ async def search_urban(ctx, *word):
 
 
 @bot.command(name='word', aliases=['w', 'dictionary'])
-async def search_word(ctx, *word):
+async def search_english_word(ctx, *word):
     """Search a term in merriam-webster's dictionary"""
 
     word = ' '.join(word).lower()

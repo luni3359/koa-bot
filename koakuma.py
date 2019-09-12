@@ -570,17 +570,21 @@ async def get_danbooru_gallery(msg, url):
         embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
         await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=1, min_duration=1)
-    elif danbooru_post_has_missing_preview(post):
-        await send_board_posts(channel, post, show_nsfw=channel.is_nsfw())
 
     if post['has_children']:
         search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
     elif post['parent_id']:
         search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
-    else:
+    elif danbooru_post_has_missing_preview(post):
+        await send_board_posts(channel, post, show_nsfw=channel.is_nsfw())
         return
 
     posts = await board_search(tags=search)
+
+    if danbooru_post_has_missing_preview(post):
+        post = [post]
+        post.extend(posts)
+        posts = post
 
     await send_board_posts(channel, posts, show_nsfw=channel.is_nsfw())
 
@@ -754,16 +758,18 @@ async def get_e621_gallery(msg, url):
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
         await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=1, min_duration=1)
 
-    await send_board_posts(channel, post, board='e621', show_nsfw=channel.is_nsfw())
-
     if post['has_children']:
         search = 'parent:%s' % post['id']
     elif post['parent_id']:
         search = 'id:%s' % post['parent_id']
     else:
-        return
+        await send_board_posts(channel, post, board='e621', show_nsfw=channel.is_nsfw())
 
     posts = await board_search(board='e621', tags=search)
+
+    post = [post]
+    post.extend(posts)
+    posts = post
 
     await send_board_posts(channel, posts, board='e621', show_nsfw=channel.is_nsfw())
 

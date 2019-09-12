@@ -292,13 +292,14 @@ async def search_danbooru(ctx, *args):
 
     on_nsfw_channel = ctx.channel.is_nsfw()
 
-    posts = await board_search(tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
+    async with ctx.typing():
+        posts = await board_search(tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
 
     if not posts:
         await ctx.send('Sorry, nothing found!')
         return
 
-    await send_board_posts(ctx, posts, show_nsfw=on_nsfw_channel)
+    await send_board_posts(ctx, posts)
 
 
 def list_contains(lst, items_to_be_matched):

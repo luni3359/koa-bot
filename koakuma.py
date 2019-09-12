@@ -522,12 +522,12 @@ async def board_search(**kwargs):
     post_id = kwargs.get('post_id')
     tags = kwargs.get('tags')
     limit = kwargs.get('limit', 5)
-    random = kwargs.get('random', False)
+    random_arg = kwargs.get('random', False)
 
     data = {
         'tags': tags,
         'limit': limit,
-        'random': random
+        'random': random_arg
     }
 
     if board == 'danbooru':

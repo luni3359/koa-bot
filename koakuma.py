@@ -689,10 +689,10 @@ async def get_deviantart_post(msg, url):
 
     channel = msg.channel
 
-    if not '/art/' in url:
+    post_id = get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
+    if not post_id:
         return
 
-    post_id = re.findall(r'[0-9]+$', url)[0]
     search_url = bot.assets['deviantart']['search_url_extended'].format(post_id)
 
     api_result = await net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
@@ -719,13 +719,16 @@ async def get_deviantart_post(msg, url):
     await channel.send(embed=embed)
 
 
-def get_post_id(url, word_to_match, trim_to):
+def get_post_id(url, word_to_match, trim_to, has_regex=False):
     """Get post id from url"""
 
     if not word_to_match in url:
         return False
 
-    return url.split(word_to_match)[1].split(trim_to)[0]
+    if has_regex:
+        return re.findall(trim_to, url.split(word_to_match)[1])[0]
+    else:
+        return url.split(word_to_match)[1].split(trim_to)[0]
 
 
 def combine_tags(tags):

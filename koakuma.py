@@ -646,7 +646,9 @@ async def get_danbooru_gallery(msg, url):
     if not post:
         return
 
-    if post['rating'] is not 's' and not channel.is_nsfw():
+    on_nsfw_channel = channel.is_nsfw()
+
+    if post['rating'] is not 's' and not on_nsfw_channel:
         embed = discord.Embed()
         embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
@@ -656,20 +658,24 @@ async def get_danbooru_gallery(msg, url):
         search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
     elif post['parent_id']:
         search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
-    elif danbooru_post_has_missing_preview(post):
-        await send_board_posts(channel, post, show_nsfw=channel.is_nsfw())
+    elif danbooru_post_has_missing_preview(post) and on_nsfw_channel:
+        await send_board_posts(channel, post, show_nsfw=on_nsfw_channel)
         return
     else:
         return
 
-    posts = await board_search(tags=search)
+    posts = await board_search(tags=search, include_nsfw=on_nsfw_channel)
 
-    if danbooru_post_has_missing_preview(post):
+    if danbooru_post_has_missing_preview(post) and posts:
         post = [post]
         post.extend(posts)
         posts = post
 
-    await send_board_posts(channel, posts, show_nsfw=channel.is_nsfw())
+    if posts:
+        await send_board_posts(channel, posts, show_nsfw=on_nsfw_channel)
+    else:
+        content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
+        await koa_is_typing_a_message(channel, content=content)
 
 
 async def get_twitter_gallery(msg, url):
@@ -835,7 +841,9 @@ async def get_e621_gallery(msg, url):
     if not post:
         return
 
-    if post['rating'] is not 's' and not channel.is_nsfw():
+    on_nsfw_channel = channel.is_nsfw()
+
+    if post['rating'] is not 's' and not on_nsfw_channel:
         embed = discord.Embed()
         embed.set_image(url=bot.assets['e621']['nsfw_placeholder'])
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
@@ -846,15 +854,20 @@ async def get_e621_gallery(msg, url):
     elif post['parent_id']:
         search = 'id:%s' % post['parent_id']
     else:
-        await send_board_posts(channel, post, board='e621', show_nsfw=channel.is_nsfw())
+        await send_board_posts(channel, post, board='e621', show_nsfw=on_nsfw_channel)
 
-    posts = await board_search(board='e621', tags=search)
+    posts = await board_search(board='e621', tags=search, include_nsfw=on_nsfw_channel)
 
-    post = [post]
-    post.extend(posts)
-    posts = post
+    if posts:
+        post = [post]
+        post.extend(posts)
+        posts = post
 
-    await send_board_posts(channel, posts, board='e621', show_nsfw=channel.is_nsfw())
+    if posts:
+        await send_board_posts(channel, posts, board='e621', show_nsfw=on_nsfw_channel)
+    else:
+        content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
+        await koa_is_typing_a_message(channel, content=content)
 
 
 async def get_deviantart_post(msg, url):

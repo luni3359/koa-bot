@@ -595,6 +595,8 @@ async def get_danbooru_gallery(msg, url):
     elif danbooru_post_has_missing_preview(post):
         await send_board_posts(channel, post, show_nsfw=channel.is_nsfw())
         return
+    else:
+        return
 
     posts = await board_search(tags=search)
 

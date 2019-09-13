@@ -658,23 +658,34 @@ async def get_danbooru_gallery(msg, url):
         search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
     elif post['parent_id']:
         search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
-    elif danbooru_post_has_missing_preview(post) and on_nsfw_channel:
-        await send_board_posts(channel, post, show_nsfw=on_nsfw_channel)
-        return
     else:
+        if danbooru_post_has_missing_preview(post):
+            if post['rating'] is 's' or on_nsfw_channel:
+                await send_board_posts(channel, post)
         return
 
     posts = await board_search(tags=search, include_nsfw=on_nsfw_channel)
 
+    post_included_in_results = False
     if danbooru_post_has_missing_preview(post) and posts:
-        post = [post]
-        post.extend(posts)
-        posts = post
+        if post['rating'] is 's' or on_nsfw_channel:
+            post_included_in_results = True
+            post = [post]
+            post.extend(posts)
+            posts = post
 
     if posts:
-        await send_board_posts(channel, posts, show_nsfw=on_nsfw_channel)
+        if post_included_in_results:
+            await send_board_posts(channel, posts, show_nsfw=on_nsfw_channel, max_posts=5)
+        else:
+            await send_board_posts(channel, posts, show_nsfw=on_nsfw_channel)
+
     else:
-        content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
+        if post['rating'] is 's':
+            content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
+        else:
+            content = random.choice(bot.quotes['rude_cannot_show_nsfw_gallery'])
+
         await koa_is_typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
 
@@ -854,19 +865,31 @@ async def get_e621_gallery(msg, url):
     elif post['parent_id']:
         search = 'id:%s' % post['parent_id']
     else:
-        await send_board_posts(channel, post, board='e621', show_nsfw=on_nsfw_channel)
+        if post['rating'] is 's' or on_nsfw_channel:
+            await send_board_posts(channel, post, board='e621')
+        return
 
     posts = await board_search(board='e621', tags=search, include_nsfw=on_nsfw_channel)
 
+    post_included_in_results = False
     if posts:
-        post = [post]
-        post.extend(posts)
-        posts = post
+        if post['rating'] is 's' or on_nsfw_channel:
+            post_included_in_results = True
+            post = [post]
+            post.extend(posts)
+            posts = post
 
     if posts:
-        await send_board_posts(channel, posts, board='e621', show_nsfw=on_nsfw_channel)
+        if post_included_in_results:
+            await send_board_posts(channel, posts, board='e621', show_nsfw=on_nsfw_channel, max_posts=5)
+        else:
+            await send_board_posts(channel, posts, board='e621', show_nsfw=on_nsfw_channel)
     else:
-        content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
+        if post['rating'] is 's':
+            content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
+        else:
+            content = random.choice(bot.quotes['rude_cannot_show_nsfw_gallery'])
+
         await koa_is_typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
 

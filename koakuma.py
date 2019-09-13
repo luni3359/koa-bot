@@ -426,11 +426,7 @@ async def send_board_posts(ctx, posts, **kwargs):
             await ctx.send(url)
             continue
 
-        if post['file_url']:
-            fileurl = post['file_url']
-        else:
-            fileurl = post['source']
-        embed = generate_board_embed(post, fileurl, board=board)
+        embed = generate_board_embed(post, board=board)
 
         if max_posts != 0:
             if posts_processed >= min(max_posts, total_posts):
@@ -462,13 +458,11 @@ async def send_board_posts(ctx, posts, **kwargs):
         print('Post #%i complete' % post['id'])
 
 
-def generate_board_embed(post, fileurl, **kwargs):
+def generate_board_embed(post, **kwargs):
     """Generate embeds for image board post urls
     Arguments:
         post
             The post object
-        fileurl::str
-            Url for the file to be used
 
     Keywords:
         board::str
@@ -476,7 +470,6 @@ def generate_board_embed(post, fileurl, **kwargs):
     """
 
     board = kwargs.get('board', 'danbooru')
-
     embed = discord.Embed()
 
     if board == 'danbooru':
@@ -506,12 +499,19 @@ def generate_board_embed(post, fileurl, **kwargs):
 
         embed.title = embed_post_title
         embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
-        embed.set_image(url=fileurl)
     elif board == 'e621':
         embed.title = '#%s: %s - e621' % (post['id'], combine_tags(post['artist']))
         embed.url = 'https://e621.net/post/show/%i' % post['id']
-        embed.set_image(url=fileurl)
 
+    fileurl = bot.koa['failed_post_preview']
+
+    valid_urls_keys = ['large_file_url', 'sample_url', 'file_url']
+    for key in valid_urls_keys:
+        if key in post:
+            fileurl = post[key]
+            break
+
+    embed.set_image(url=fileurl)
     return embed
 
 

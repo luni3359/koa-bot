@@ -1,6 +1,5 @@
 """Koakuma bot"""
 import asyncio
-import json
 import math
 import os
 import random
@@ -611,7 +610,7 @@ async def board_search(**kwargs):
             else:
                 url = 'https://safebooru.donmai.us'
 
-            return await net.http_request(url + '/posts.json', auth=danbooru_auth, data=json.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
+            return await net.http_request(url + '/posts.json', auth=danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
     elif board == 'e621':
         # e621 requires to know the User-Agent
         headers = {'User-Agent': bot.auth_keys['e621']['user-agent']}
@@ -626,7 +625,7 @@ async def board_search(**kwargs):
                 url = 'https://e926.net'
 
             headers['Content-Type'] = 'application/json'
-            return await net.http_request(url + '/post/index.json', auth=e621_auth, data=json.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
+            return await net.http_request(url + '/post/index.json', auth=e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
     else:
         raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 

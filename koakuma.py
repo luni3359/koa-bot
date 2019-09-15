@@ -633,60 +633,7 @@ async def board_search(**kwargs):
 
 async def get_danbooru_gallery(msg, url):
     """Automatically fetch and post any image galleries from danbooru"""
-
-    channel = msg.channel
-
-    post_id = get_post_id(url, '/posts/', '?')
-
-    if not post_id:
-        return
-
-    post = await board_search(post_id=post_id)
-
-    if not post:
-        return
-
-    on_nsfw_channel = channel.is_nsfw()
-
-    if post['rating'] is not 's' and not on_nsfw_channel:
-        embed = discord.Embed()
-        embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
-        content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
-        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
-
-    if post['has_children']:
-        search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
-    elif post['parent_id']:
-        search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
-    else:
-        if danbooru_post_has_missing_preview(post):
-            if post['rating'] is 's' or on_nsfw_channel:
-                await send_board_posts(channel, post)
-        return
-
-    posts = await board_search(tags=search, include_nsfw=on_nsfw_channel)
-
-    post_included_in_results = False
-    if danbooru_post_has_missing_preview(post) and posts:
-        if post['rating'] is 's' or on_nsfw_channel:
-            post_included_in_results = True
-            post = [post]
-            post.extend(posts)
-            posts = post
-
-    if posts:
-        if post_included_in_results:
-            await send_board_posts(channel, posts, show_nsfw=on_nsfw_channel, max_posts=5)
-        else:
-            await send_board_posts(channel, posts, show_nsfw=on_nsfw_channel)
-
-    else:
-        if post['rating'] is 's':
-            content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
-        else:
-            content = random.choice(bot.quotes['rude_cannot_show_nsfw_gallery'])
-
-        await koa_is_typing_a_message(channel, content=content, rnd_duration=[1, 2])
+    await get_board_gallery(msg.channel, msg, url, id_start='/posts/', id_end='?')
 
 
 async def get_twitter_gallery(msg, url):
@@ -839,17 +786,30 @@ async def get_pixiv_gallery(msg, url):
     print('DONE PIXIV!')
 
 
-async def get_e621_gallery(msg, url):
-    """Automatically fetch a bigger preview and gallery from e621"""
+async def get_board_gallery(channel, msg, url, **kwargs):
+    """Automatically automatic
+    Keywords:
+        board::str
+            The board to handle. Default is 'danbooru'
+        id_start::str
+            The point at which an url is stripped from
+        id_end::str
+            The point at which an url is stripped to
+        end_regex::bool
+            Whether or not id_end is regex. Default is False
+    """
 
-    channel = msg.channel
+    board = kwargs.get('board', 'danbooru')
+    id_start = kwargs.get('id_start')
+    id_end = kwargs.get('id_end')
+    end_regex = kwargs.get('end_regex', False)
 
-    post_id = get_post_id(url, '/show/', r'^[0-9]+', has_regex=True)
+    post_id = get_post_id(url, id_start, id_end, has_regex=end_regex)
 
     if not post_id:
         return
 
-    post = await board_search(board='e621', post_id=post_id)
+    post = await board_search(board=board, post_id=post_id)
 
     if not post:
         return
@@ -858,23 +818,24 @@ async def get_e621_gallery(msg, url):
 
     if post['rating'] is not 's' and not on_nsfw_channel:
         embed = discord.Embed()
-        embed.set_image(url=bot.assets['e621']['nsfw_placeholder'])
+        embed.set_image(url=bot.assets[board]['nsfw_placeholder'])
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
         await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
     if post['has_children']:
-        search = 'parent:%s' % post['id']
+        search = board == 'danbooru' and 'parent:%s order:id -id:%s' % (post['id'], post['id']) or 'parent:%s' % post['id']
     elif post['parent_id']:
-        search = 'id:%s' % post['parent_id']
+        search = board == 'danbooru' and 'parent:%s order:id -id:%s' % (post['parent_id'], post['id']) or 'id:%s' % post['parent_id']
     else:
-        if post['rating'] is 's' or on_nsfw_channel:
-            await send_board_posts(channel, post, board='e621')
+        if board == 'danbooru' and danbooru_post_has_missing_preview(post) or board == 'e621':
+            if post['rating'] is 's' or on_nsfw_channel:
+                await send_board_posts(channel, post, board=board)
         return
 
-    posts = await board_search(board='e621', tags=search, include_nsfw=on_nsfw_channel)
+    posts = await board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
 
     post_included_in_results = False
-    if posts:
+    if board == 'danbooru' and danbooru_post_has_missing_preview(post) and posts or board == 'e621' and posts:
         if post['rating'] is 's' or on_nsfw_channel:
             post_included_in_results = True
             post = [post]
@@ -883,9 +844,9 @@ async def get_e621_gallery(msg, url):
 
     if posts:
         if post_included_in_results:
-            await send_board_posts(channel, posts, board='e621', show_nsfw=on_nsfw_channel, max_posts=5)
+            await send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
         else:
-            await send_board_posts(channel, posts, board='e621', show_nsfw=on_nsfw_channel)
+            await send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
     else:
         if post['rating'] is 's':
             content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
@@ -893,6 +854,11 @@ async def get_e621_gallery(msg, url):
             content = random.choice(bot.quotes['rude_cannot_show_nsfw_gallery'])
 
         await koa_is_typing_a_message(channel, content=content, rnd_duration=[1, 2])
+
+
+async def get_e621_gallery(msg, url):
+    """Automatically fetch a bigger preview and gallery from e621"""
+    await get_board_gallery(msg.channel, msg, url, board='e621', id_start='/show/', id_end=r'^[0-9]+', end_regex=True)
 
 
 async def get_deviantart_post(msg, url):

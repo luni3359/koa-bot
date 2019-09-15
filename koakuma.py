@@ -774,66 +774,70 @@ async def get_pixiv_gallery(msg, url):
         return
 
     print(illust_json)
-    if 'error' in illust_json:
+    if 'illust' not in illust_json:
         # too bad
         print('Invalid Pixiv id #' + post_id)
         return
 
     print('Pixiv auth passed! (for #%s)' % post_id)
 
-    illust = illust_json.illust
-    meta_dir = None
-
-    if illust['meta_single_page']:
-        meta_dir = 'meta_single_page'
-    elif illust['meta_pages']:
-        meta_dir = 'meta_pages'
-    else:
-        await channel.send('Sorry, sorry, sorry! Link missing data!')
-        return
-
-    total_illust_pictures = len(illust[meta_dir])
-    if total_illust_pictures <= 1:
-        illust[meta_dir] = [illust[meta_dir]]
-
-    temp_wait = await channel.send('***%s***' % random.choice(bot.quotes['processing_long_task']))
+    temp_message = await channel.send('***%s***' % random.choice(bot.quotes['processing_long_task']))
     async with channel.typing():
-        pictures_processed = 0
-        for picture in illust[meta_dir][:4]:
-            pictures_processed += 1
+        illust = illust_json.illust
+        total_illust_pictures = illust.page_count
+
+        if total_illust_pictures > 1:
+            pictures_processed = 0
+            for picture in illust.meta_pages[:4]:
+                pictures_processed += 1
+                print('Retrieving picture from #%s...' % post_id)
+
+                img_url = picture.image_urls.medium
+                image_filename = get_file_name(img_url)
+                image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
+                print('Retrieved more from #%s (maybe)' % post_id)
+
+                embed = discord.Embed()
+                embed.set_author(
+                    name=illust.user.name,
+                    url='https://www.pixiv.net/member.php?id=%i' % illust.user.id
+                )
+                embed.set_image(url='attachment://' + image_filename)
+
+                if pictures_processed >= min(4, total_illust_pictures):
+                    remaining_footer = ''
+
+                    if total_illust_pictures > 4:
+                        remaining_footer = '%i+ remaining' % (total_illust_pictures - 4)
+                    else:
+                        remaining_footer = bot.assets['pixiv']['name']
+
+                    embed.set_footer(
+                        text=remaining_footer,
+                        icon_url=bot.assets['pixiv']['favicon']
+                    )
+                await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
+        else:
             print('Retrieving picture from #%s...' % post_id)
 
-            if hasattr(picture, 'image_urls'):
-                img_url = picture.image_urls['medium']
-            else:
-                img_url = illust.image_urls['medium']
-
-            image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
-
-            print('Retrieved more from #%s (maybe)' % post_id)
+            img_url = illust.image_urls.medium
             image_filename = get_file_name(img_url)
+            image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
+            print('Retrieved more from #%s (maybe)' % post_id)
+
             embed = discord.Embed()
             embed.set_author(
-                name=illust['user']['name'],
-                url='https://www.pixiv.net/member.php?id=%i' % illust['user']['id']
+                name=illust.user.name,
+                url='https://www.pixiv.net/member.php?id=%i' % illust.user.id
             )
             embed.set_image(url='attachment://' + image_filename)
-
-            if pictures_processed >= min(4, total_illust_pictures):
-                remaining_footer = ''
-
-                if total_illust_pictures > 4:
-                    remaining_footer = '%i+ remaining' % (total_illust_pictures - 4)
-                else:
-                    remaining_footer = bot.assets['pixiv']['name']
-
-                embed.set_footer(
-                    text=remaining_footer,
-                    icon_url=bot.assets['pixiv']['favicon']
-                )
+            embed.set_footer(
+                text=bot.assets['pixiv']['name'],
+                icon_url=bot.assets['pixiv']['favicon']
+            )
             await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
 
-    await temp_wait.delete()
+    await temp_message.delete()
     print('DONE PIXIV!')
 
 

@@ -801,37 +801,30 @@ async def get_pixiv_gallery(msg, url):
         total_illust_pictures = illust.page_count
 
         if total_illust_pictures > 1:
-            pictures_processed = 0
-            for picture in illust.meta_pages[:4]:
-                pictures_processed += 1
-                print('Retrieving picture from #%s...' % post_id)
-
-                (embed, image, filename) = await generate_pixiv_embed(picture, illust.user)
-                print('Retrieved more from #%s (maybe)' % post_id)
-
-                if pictures_processed >= min(4, total_illust_pictures):
-                    remaining_footer = ''
-
-                    if total_illust_pictures > 4:
-                        remaining_footer = '%i+ remaining' % (total_illust_pictures - 4)
-                    else:
-                        remaining_footer = bot.assets['pixiv']['name']
-
-                    embed.set_footer(
-                        text=remaining_footer,
-                        icon_url=bot.assets['pixiv']['favicon']
-                    )
-                await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
+            pictures = illust.meta_pages
         else:
+            pictures = [illust]
+
+        pictures_processed = 0
+        for picture in pictures[:4]:
+            pictures_processed += 1
             print('Retrieving picture from #%s...' % post_id)
 
-            (embed, image, filename) = await generate_pixiv_embed(illust, illust.user)
+            (embed, image, filename) = await generate_pixiv_embed(picture, illust.user)
             print('Retrieved more from #%s (maybe)' % post_id)
 
-            embed.set_footer(
-                text=bot.assets['pixiv']['name'],
-                icon_url=bot.assets['pixiv']['favicon']
-            )
+            if pictures_processed >= min(4, total_illust_pictures):
+                remaining_footer = ''
+
+                if total_illust_pictures > 4:
+                    remaining_footer = '%i+ remaining' % (total_illust_pictures - 4)
+                else:
+                    remaining_footer = bot.assets['pixiv']['name']
+
+                embed.set_footer(
+                    text=remaining_footer,
+                    icon_url=bot.assets['pixiv']['favicon']
+                )
             await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
 
     await temp_message.delete()

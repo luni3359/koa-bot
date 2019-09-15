@@ -749,9 +749,16 @@ async def get_pixiv_gallery(msg, url):
 
     print('Pixiv auth passed! (for #%s)' % post_id)
 
+    illust = illust_json.illust
+    if illust.x_restrict != 0 and not channel.is_nsfw():
+        embed = discord.Embed()
+        embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
+        content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
+        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+        return
+
     temp_message = await channel.send('***%s***' % random.choice(bot.quotes['processing_long_task']))
     async with channel.typing():
-        illust = illust_json.illust
         total_illust_pictures = illust.page_count
 
         if total_illust_pictures > 1:

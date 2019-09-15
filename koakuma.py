@@ -750,6 +750,20 @@ async def get_twitter_gallery(msg, url):
         await channel.send(embed=embed)
 
 
+async def generate_pixiv_embed(post, user):
+    img_url = post.image_urls.medium
+    image_filename = get_file_name(img_url)
+    image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
+
+    embed = discord.Embed()
+    embed.set_author(
+        name=user.name,
+        url='https://www.pixiv.net/member.php?id=%i' % user.id
+    )
+    embed.set_image(url='attachment://' + image_filename)
+    return embed, image, image_filename
+
+
 async def get_pixiv_gallery(msg, url):
     """Automatically fetch and post any image galleries from pixiv"""
 
@@ -792,17 +806,8 @@ async def get_pixiv_gallery(msg, url):
                 pictures_processed += 1
                 print('Retrieving picture from #%s...' % post_id)
 
-                img_url = picture.image_urls.medium
-                image_filename = get_file_name(img_url)
-                image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
+                (embed, image, filename) = await generate_pixiv_embed(picture, illust.user)
                 print('Retrieved more from #%s (maybe)' % post_id)
-
-                embed = discord.Embed()
-                embed.set_author(
-                    name=illust.user.name,
-                    url='https://www.pixiv.net/member.php?id=%i' % illust.user.id
-                )
-                embed.set_image(url='attachment://' + image_filename)
 
                 if pictures_processed >= min(4, total_illust_pictures):
                     remaining_footer = ''
@@ -816,26 +821,18 @@ async def get_pixiv_gallery(msg, url):
                         text=remaining_footer,
                         icon_url=bot.assets['pixiv']['favicon']
                     )
-                await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
+                await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
         else:
             print('Retrieving picture from #%s...' % post_id)
 
-            img_url = illust.image_urls.medium
-            image_filename = get_file_name(img_url)
-            image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
+            (embed, image, filename) = await generate_pixiv_embed(illust, illust.user)
             print('Retrieved more from #%s (maybe)' % post_id)
 
-            embed = discord.Embed()
-            embed.set_author(
-                name=illust.user.name,
-                url='https://www.pixiv.net/member.php?id=%i' % illust.user.id
-            )
-            embed.set_image(url='attachment://' + image_filename)
             embed.set_footer(
                 text=bot.assets['pixiv']['name'],
                 icon_url=bot.assets['pixiv']['favicon']
             )
-            await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
+            await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
 
     await temp_message.delete()
     print('DONE PIXIV!')

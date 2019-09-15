@@ -751,6 +751,14 @@ async def get_twitter_gallery(msg, url):
 
 
 async def generate_pixiv_embed(post, user):
+    """Generate embeds for pixiv urls
+    Arguments:
+        post
+            The post object
+        user
+            The artist of the post
+    """
+
     img_url = post.image_urls.medium
     image_filename = get_file_name(img_url)
     image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})

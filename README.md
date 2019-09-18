@@ -6,8 +6,12 @@
 Eager to serve the sleepy.
 
 **Features:**
-+ Display image albums from tweets or pixiv posts.
++ Display missing link previews and albums from image links, based on channel type.
+    + Pixiv, Twitter, Deviantart, among other image boards are supported.
 + Reminds you to move to a different channel.
++ Look up dictionary definitions in English and Japanese.
++ View post results searching directly from image boards.
++ Get unit conversions on the fly.
 + Periodically does assigned tasks.
 
 

@@ -7,4 +7,4 @@ Pint==0.9
 PixivPy==3.4.0
 pylint==2.3.1
 rope==0.14.0
-tweepy==3.7.0
+tweepy==3.8.0

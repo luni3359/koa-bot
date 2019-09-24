@@ -723,7 +723,7 @@ async def get_pixiv_gallery(msg, url):
 
     channel = msg.channel
 
-    post_id = get_post_id(url, 'illust_id=', '&')
+    post_id = get_post_id(url, ['illust_id=', '/artworks/'], '&')
     if not post_id:
         return
 
@@ -903,15 +903,29 @@ async def get_deviantart_post(msg, url):
 
 
 def get_post_id(url, word_to_match, trim_to, has_regex=False):
-    """Get post id from url"""
+    """Get post id from url
+    Arguments:
+        url::str
+        word_to_match::str or list
+        trim_to::str or regex
+        has_regex::bool
+    """
 
-    if not word_to_match in url:
-        return False
+    if not isinstance(word_to_match, typing.List):
+        word_to_match = [word_to_match]
+
+    matching_word = False
+    for v in word_to_match:
+        if v in url:
+            matching_word = v
+
+    if not matching_word:
+        return
 
     if has_regex:
         return re.findall(trim_to, url.split(word_to_match)[1])[0]
     else:
-        return url.split(word_to_match)[1].split(trim_to)[0]
+        return url.split(matching_word)[1].split(trim_to)[0]
 
 
 def combine_tags(tags):

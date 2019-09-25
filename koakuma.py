@@ -923,7 +923,7 @@ def get_post_id(url, word_to_match, trim_to, has_regex=False):
         return
 
     if has_regex:
-        return re.findall(trim_to, url.split(word_to_match)[1])[0]
+        return re.findall(trim_to, url.split(matching_word)[1])[0]
     else:
         return url.split(matching_word)[1].split(trim_to)[0]
 

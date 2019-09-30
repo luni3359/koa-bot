@@ -8,6 +8,8 @@ Eager to serve the sleepy.
 **Features:**
 + Display missing link previews and albums from image links, based on channel type.
     + Pixiv, Twitter, Deviantart, among other image boards are supported.
+    + Also get previews from streams that lack a preview.
++ Keep track of the status of select Twitch streamers.
 + Reminds you to move to a different channel.
 + Look up dictionary definitions in English and Japanese.
 + View post results searching directly from image boards.

@@ -902,6 +902,30 @@ async def get_deviantart_post(msg, url):
     await channel.send(embed=embed)
 
 
+async def get_picarto_stream_preview(msg, url):
+    """Automatically fetch a preview of the running stream"""
+
+    channel = msg.channel
+    post_id = get_post_id(url, '.tv/', '&')
+
+    if not post_id:
+        return
+
+    picarto_request = await net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
+
+    if not picarto_request['online']:
+        return
+
+    image = await net.fetch_image(picarto_request['thumbnails']['web'])
+    filename = get_file_name(picarto_request['thumbnails']['web'])
+
+    embed = discord.Embed()
+    embed.set_author(name=post_id, url='https://picarto.tv/' + post_id, icon_url=picarto_request['avatar'])
+    embed.description = '**%s**' % picarto_request['title']
+    embed.set_image(url='attachment://' + filename)
+    embed.set_footer(text=bot.assets['picarto']['name'], icon_url=bot.assets['picarto']['favicon'])
+    await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
+
 def get_post_id(url, word_to_match, trim_to, has_regex=False):
     """Get post id from url
     Arguments:
@@ -1243,6 +1267,9 @@ async def on_message(msg):
 
             if bot.assets['deviantart']['domain'] in domain:
                 await get_deviantart_post(msg, urls[i])
+
+            if bot.assets['picarto']['domain'] in domain:
+                await get_picarto_stream_preview(msg, urls[i])
 
     if channel_activity.last_channel != channel.id or urls or msg.attachments:
         channel_activity.last_channel = channel.id

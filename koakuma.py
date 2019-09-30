@@ -1075,6 +1075,81 @@ async def koa_is_typing_a_message(ctx, **kwargs):
             await ctx.send(content)
 
 
+async def check_live_streamers():
+    """Checks every so often for streamers that have gone online"""
+
+    await bot.wait_until_ready()
+
+    online_streamers = []
+
+    while not bot.is_closed():
+        temp_online = []
+        for streamer in online_streamers:
+            if streamer['preserve']:
+                streamer['preserve'] = False
+                temp_online.append(streamer)
+
+        online_streamers = temp_online
+
+        twitch_search = 'https://api.twitch.tv/helix/streams?'
+
+        for streamer in bot.tasks['streamer_activity']['streamers']:
+            if streamer['platform'] == 'twitch':
+                twitch_search += 'user_id=%s&' % streamer['user_id']
+
+        twitch_query = await net.http_request(twitch_search, headers={'Client-ID': bot.auth_keys['twitch']['client_id']}, json=True)
+
+        for streamer in twitch_query['data']:
+            already_online = False
+
+            for on_streamer in online_streamers:
+                if streamer['id'] == on_streamer['streamer']['id']:
+                    # streamer is already online, and it was already reported
+                    on_streamer['preserve'] = True
+                    on_streamer['announced'] = True
+                    already_online = True
+
+            if already_online:
+                continue
+
+            for config_streamers in bot.tasks['streamer_activity']['streamers']:
+                if streamer['user_id'] == str(config_streamers['user_id']):
+                    natural_name = 'casual_name' in config_streamers and config_streamers['casual_name'] or streamer['user_name']
+                    break
+
+            online_streamers.append({'platform': 'twitch', 'streamer': streamer, 'name': natural_name, 'preserve': True, 'announced': False})
+
+        stream_announcements = []
+        for streamer in online_streamers:
+            if streamer['announced']:
+                continue
+
+            embed = discord.Embed()
+            embed.set_author(name=streamer['streamer']['user_name'], url='https://www.twitch.tv/' + streamer['streamer']['user_name'])
+            embed.set_footer(text=bot.assets['twitch']['name'], icon_url=bot.assets['twitch']['favicon'])
+
+            # setting thumbnail size
+            thumbnail_url = streamer['streamer']['thumbnail_url']
+            thumbnail_url = thumbnail_url.replace('{width}', '600')
+            thumbnail_url = thumbnail_url.replace('{height}', '350')
+            thumbnail_file_name = get_file_name(thumbnail_url)
+            image = await net.fetch_image(thumbnail_url)
+            embed.set_image(url='attachment://' + thumbnail_file_name)
+
+            stream_announcements.append({'message': '%s is now live!' % streamer['name'], 'embed': embed, 'image': image, 'filename': thumbnail_file_name})
+
+        for channel in bot.tasks['streamer_activity']['channels_to_announce_on']:
+            for batch in stream_announcements:
+                channel = bot.get_channel(channel)
+                if 'image' in batch:
+                    await channel.send(batch['message'], file=discord.File(fp=batch['image'], filename=batch['filename']), embed=batch['embed'])
+                else:
+                    await channel.send(batch['message'], embed=batch['embed'])
+
+        # check every 5 minutes
+        await asyncio.sleep(60)
+
+
 async def change_presence_periodically():
     """Changes presence at X time, once per day"""
 
@@ -1192,5 +1267,6 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
 
 # bot.loop.create_task(lookup_pending_posts())
+bot.loop.create_task(check_live_streamers())
 bot.loop.create_task(change_presence_periodically())
 bot.run(bot.auth_keys['discord']['token'])

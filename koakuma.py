@@ -912,6 +912,36 @@ async def get_e621_gallery(msg, url):
     await get_board_gallery(msg.channel, msg, url, board='e621', id_start='/show/', id_end=r'^[0-9]+', end_regex=True)
 
 
+async def get_sankaku_post(msg, url):
+    """Automatically fetch a bigger preview and gallery from Sankaku Complex"""
+
+    channel = msg.channel
+
+    post_id = get_post_id(url, '/show/', '?')
+    if not post_id:
+        return
+
+    login = bot.auth_keys['sankaku']['login']
+    p_hash = bot.auth_keys['sankaku']['password_hash']
+    search_url = bot.assets['sankaku']['id_search_url'] + post_id
+    api_result = await net.http_request(search_url, auth=aiohttp.BasicAuth(login=login, password=p_hash), json=True)
+
+    if not api_result or 'code' in api_result:
+        print('Sankaku error\nCode #{}'.format(api_result['code']))
+        return
+
+    embed = discord.Embed()
+    embed.set_image(
+        url=api_result['preview_url']
+    )
+    embed.set_footer(
+        text=bot.assets['sankaku']['name'],
+        icon_url=bot.assets['sankaku']['favicon']
+    )
+
+    await channel.send(embed=embed)
+
+
 async def get_deviantart_post(msg, url):
     """Automatically fetch post from deviantart"""
 
@@ -1324,6 +1354,9 @@ async def on_message(msg):
 
             if bot.assets['picarto']['domain'] in domain:
                 await get_picarto_stream_preview(msg, urls[i])
+
+            if bot.assets['sankaku']['domain'] in domain:
+                await get_sankaku_post(msg, urls[i])
 
     if channel_activity.last_channel != channel.id or urls or msg.attachments:
         channel_activity.last_channel = channel.id

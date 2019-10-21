@@ -696,6 +696,51 @@ async def get_twitter_gallery(msg, url):
         await channel.send(embed=embed)
 
 
+async def get_imgur_gallery(msg, url):
+    """Automatically fetch and post any image galleries from imgur"""
+
+    channel = msg.channel
+
+    album_id = get_post_id(url, '/a/', '?')
+    if not album_id:
+        return
+
+    search_url = bot.assets['imgur']['album_url'].format(album_id)
+    api_result = await net.http_request(search_url, headers={'Authorization': 'Client-ID ' + bot.auth_keys['imgur']['client_id']}, json=True)
+
+    if not api_result or api_result['status'] != 200:
+        return
+
+    total_album_pictures = len(api_result['data']) - 1
+
+    if total_album_pictures < 1:
+        return
+
+    pictures_processed = 0
+    for image in api_result['data'][1:5]:
+        pictures_processed += 1
+
+        embed = discord.Embed()
+        embed.set_image(
+            url=image['link']
+        )
+
+        if pictures_processed >= min(4, total_album_pictures):
+            remaining_footer = ''
+
+            if total_album_pictures > 4:
+                remaining_footer = '%i+ remaining' % (total_album_pictures - 4)
+            else:
+                remaining_footer = bot.assets['imgur']['name']
+
+            embed.set_footer(
+                text=remaining_footer,
+                icon_url=bot.assets['imgur']['favicon']
+            )
+
+        await channel.send(embed=embed)
+
+
 async def generate_pixiv_embed(post, user):
     """Generate embeds for pixiv urls
     Arguments:
@@ -925,6 +970,7 @@ async def get_picarto_stream_preview(msg, url):
     embed.set_image(url='attachment://' + filename)
     embed.set_footer(text=bot.assets['picarto']['name'], icon_url=bot.assets['picarto']['favicon'])
     await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
+
 
 def get_post_id(url, word_to_match, trim_to, has_regex=False):
     """Get post id from url
@@ -1267,6 +1313,9 @@ async def on_message(msg):
 
             if bot.assets['deviantart']['domain'] in domain:
                 await get_deviantart_post(msg, urls[i])
+
+            if bot.assets['imgur']['domain'] in domain:
+                await get_imgur_gallery(msg, urls[i])
 
             if bot.assets['picarto']['domain'] in domain:
                 await get_picarto_stream_preview(msg, urls[i])

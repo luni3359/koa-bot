@@ -1291,6 +1291,13 @@ async def on_message(msg):
 
     channel = msg.channel
 
+    # Reference channels together
+    for mentioned_channel in msg.channel_mentions:
+        embed = discord.Embed()
+        embed.description = 'Mention by {} from {}\nGo there:\n{}.'.format(msg.author.mention, channel.mention, msg.jump_url)
+
+        await mentioned_channel.send(embed=embed)
+
     # Test for units
     await convert_units(msg)
 

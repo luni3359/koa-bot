@@ -701,7 +701,7 @@ async def get_imgur_gallery(msg, url):
 
     channel = msg.channel
 
-    album_id = get_post_id(url, '/a/', '?')
+    album_id = get_post_id(url, ['/a/', '/gallery/'], '?')
     if not album_id:
         return
 

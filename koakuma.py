@@ -939,20 +939,20 @@ async def get_picarto_stream_preview(msg, url):
     await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
 
 
-def get_post_id(url, word_to_match, trim_to, has_regex=False):
+def get_post_id(url, words_to_match, trim_to, has_regex=False):
     """Get post id from url
     Arguments:
         url::str
-        word_to_match::str or list
+        words_to_match::str or list
         trim_to::str or regex
         has_regex::bool
     """
 
-    if not isinstance(word_to_match, typing.List):
-        word_to_match = [word_to_match]
+    if not isinstance(words_to_match, typing.List):
+        words_to_match = [words_to_match]
 
     matching_word = False
-    for v in word_to_match:
+    for v in words_to_match:
         if v in url:
             matching_word = v
 
@@ -961,8 +961,8 @@ def get_post_id(url, word_to_match, trim_to, has_regex=False):
 
     if has_regex:
         return re.findall(trim_to, url.split(matching_word)[1])[0]
-    else:
-        return url.split(matching_word)[1].split(trim_to)[0]
+
+    return url.split(matching_word)[1].split(trim_to)[0]
 
 
 def combine_tags(tags):

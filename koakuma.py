@@ -635,67 +635,6 @@ async def get_danbooru_gallery(msg, url):
     await get_board_gallery(msg.channel, msg, url, id_start='/posts/', id_end='?')
 
 
-async def get_twitter_gallery(msg, url):
-    """Automatically fetch and post any image galleries from twitter"""
-
-    channel = msg.channel
-
-    post_id = get_post_id(url, '/status/', '?')
-    if not post_id:
-        return
-
-    tweet = twitter_api.get_status(post_id, tweet_mode='extended')
-
-    art.last_artist = art.Gaka()
-    art.last_artist.twitter_id = tweet.author.id
-    art.last_artist.twitter_name = tweet.author.name
-    art.last_artist.twitter_screen_name = tweet.author.screen_name
-    art.last_artist.twitter_profile_image_url_https = tweet.author.profile_image_url_https
-
-    if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
-        print('Preview gallery not applicable.')
-        return
-
-    print(msg.embeds)
-    for e in msg.embeds:
-        print(str(datetime.now()))
-        print(dir(e))
-        print(e.url)
-
-    if not msg.embeds:
-        print('I wouldn\'t have worked. Embeds report as 0 on the first try after inactivity on message #%i at %s.' % (msg.id, str(datetime.now())))
-        # await channel.send('I wouldn't have worked')
-
-    gallery_pics = []
-    for picture in tweet.extended_entities['media'][1:]:
-        if picture['type'] != 'photo':
-            return
-
-        # Appending :orig to get a better image quality
-        gallery_pics.append(picture['media_url_https'] + ':orig')
-
-    total_gallery_pics = len(gallery_pics)
-    for picture in gallery_pics:
-        total_gallery_pics -= 1
-
-        embed = discord.Embed()
-        embed.set_author(
-            name='%s (@%s)' % (tweet.author.name, tweet.author.screen_name),
-            url='https://twitter.com/' + tweet.author.screen_name,
-            icon_url=tweet.author.profile_image_url_https
-        )
-        embed.set_image(url=picture)
-
-        # If it's the last picture to show, add a brand footer
-        if total_gallery_pics <= 0:
-            embed.set_footer(
-                text=bot.assets['twitter']['name'],
-                icon_url=bot.assets['twitter']['favicon']
-            )
-
-        await channel.send(embed=embed)
-
-
 async def get_imgur_gallery(msg, url):
     """Automatically fetch and post any image galleries from imgur"""
 
@@ -1332,9 +1271,6 @@ async def on_message(msg):
     if urls:
         domains = get_domains(urls)
         for i, domain in enumerate(domains):
-            if bot.assets['twitter']['domain'] in domain:
-                await get_twitter_gallery(msg, urls[i])
-
             if bot.assets['pixiv']['domain'] in domain:
                 await get_pixiv_gallery(msg, urls[i])
 

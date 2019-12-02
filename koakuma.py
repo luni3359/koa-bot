@@ -18,9 +18,7 @@ import tweepy
 from discord.ext import commands
 
 import converter
-import gaka as art
 import net
-import urusai as channel_activity
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(SOURCE_DIR, 'config.jsonc')) as json_file:
@@ -40,6 +38,10 @@ danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], p
 e621_auth = aiohttp.BasicAuth(login=bot.auth_keys['e621']['username'], password=bot.auth_keys['e621']['key'])
 
 mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
+
+last_channel = 0
+last_channel_message_count = 0
+last_channel_warned = False
 
 
 @bot.command(name='jisho', aliases=['j'])
@@ -487,7 +489,7 @@ async def report_bot_temp(ctx):
 @bot.command(name='last')
 async def talk_status(ctx):
     """Mention a brief summary of the last used channel"""
-    await ctx.send('Last channel: %s\nCurrent count there: %s' % (channel_activity.last_channel, channel_activity.count))
+    await ctx.send('Last channel: %s\nCurrent count there: %s' % (last_channel, last_channel_message_count))
 
 
 @bot.command(aliases=['ava'])
@@ -1250,15 +1252,16 @@ async def on_message(msg):
             # if bot.assets['sankaku']['domain'] in domain:
             #     await get_sankaku_post(msg, urls[i])
 
-    if channel_activity.last_channel != channel.id or urls or msg.attachments:
-        channel_activity.last_channel = channel.id
-        channel_activity.count = 0
+    if last_channel != channel.id or urls or msg.attachments:
+        global last_channel, last_channel_message_count, last_channel_warned
+        last_channel = channel.id
+        last_channel_message_count = 0
     else:
-        channel_activity.count += 1
+        last_channel_message_count += 1
 
     if str(channel.id) in bot.rules['quiet_channels']:
-        if not channel_activity.warned and channel_activity.count >= bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
-            channel_activity.warned = True
+        if not last_channel_warned and last_channel_message_count >= bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
+            last_channel_warned = True
             await koa_is_typing_a_message(channel, content=random.choice(bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
 
     await bot.process_commands(msg)

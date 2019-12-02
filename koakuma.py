@@ -42,48 +42,6 @@ e621_auth = aiohttp.BasicAuth(login=bot.auth_keys['e621']['username'], password=
 mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
 
 
-@bot.group(aliases=['art'])
-async def artist(ctx):
-    """Get info about an artist based on a previous immediate message containing a valid url
-    from either twitter, danbooru or pixiv."""
-
-    if ctx.invoked_subcommand is None:
-        if art.last_artist is None:
-            # Better change this to attempt to look back instead of giving up right away
-            await ctx.send('I\'m not aware of anybody at the moment...')
-            return
-
-
-@artist.command(aliases=['twit'])
-async def twitter(ctx):
-    """Display artist's twitter"""
-
-    embed = discord.Embed()
-    embed.set_author(
-        name='%s (@%s)' % (art.last_artist.twitter_name, art.last_artist.twitter_screen_name),
-        url='https://twitter.com/' + art.last_artist.twitter_screen_name,
-        icon_url=art.last_artist.twitter_profile_image_url_https
-    )
-    embed.set_thumbnail(url=art.last_artist.twitter_profile_image_url_https)
-    embed.set_footer(
-        text=bot.assets['twitter']['name'],
-        icon_url=bot.assets['twitter']['favicon']
-    )
-    await ctx.send(embed=embed)
-
-
-@artist.command(aliases=['dan'])
-async def danbooru(ctx):
-    """Display artist's art from danbooru"""
-    pass
-
-
-@artist.command(aliases=['pix'])
-async def pixiv(ctx):
-    """Display something from pixiv"""
-    pass
-
-
 @bot.command(name='jisho', aliases=['j'])
 async def search_jisho(ctx, *word):
     """Search a term in the japanese dictionary jisho"""
@@ -1314,7 +1272,6 @@ async def on_ready():
     # Change play status to something fitting
     await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
 
-# bot.loop.create_task(lookup_pending_posts())
 bot.loop.create_task(check_live_streamers())
 bot.loop.create_task(change_presence_periodically())
 bot.run(bot.auth_keys['discord']['token'])

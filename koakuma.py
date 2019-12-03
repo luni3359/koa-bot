@@ -8,6 +8,7 @@ import subprocess
 import typing
 import urllib
 from datetime import datetime
+from itertools import dropwhile
 
 import aiohttp
 import commentjson
@@ -19,6 +20,7 @@ from discord.ext import commands
 
 import converter
 import net
+from patterns import *
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(SOURCE_DIR, 'config.jsonc')) as json_file:
@@ -811,7 +813,7 @@ async def get_e621_gallery(msg, url):
     await get_board_gallery(msg.channel, msg, url, board='e621', id_start='/show/', id_end=r'^[0-9]+', end_regex=True)
 
 
-async def get_sankaku_post(msg, url):
+async def get_sankaku_gallery(msg, url):
     """Automatically fetch a bigger preview and gallery from Sankaku Complex"""
 
     channel = msg.channel
@@ -944,14 +946,6 @@ def combine_tags(tags):
     return ''.join(tag_list).strip().replace('_', ' ')
 
 
-def get_urls(string):
-    """findall() has been used with valid conditions for urls in string"""
-
-    regex_exp = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-    matching_urls = re.findall(regex_exp, string)
-    return matching_urls
-
-
 def get_domains(lst):
     """Get domains from a link
     thanks dude https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868"""
@@ -970,7 +964,7 @@ def get_file_name(url):
     return url.split('/')[-1]
 
 
-async def convert_units(msg):
+async def convert_units(ctx, units):
     """Convert units found to their opposite (SI <-> imp)"""
 
     imperial_units = [
@@ -986,13 +980,9 @@ async def convert_units(msg):
         'kilograms'
     ]
 
-    # Find all units
-    units = converter.find_units(msg.content)
-
     if not units:
         return
 
-    channel = msg.channel
     conversion_str = random.choice(bot.quotes['converting_units']) + '```'
 
     for quantity in units:
@@ -1028,7 +1018,7 @@ async def convert_units(msg):
     else:
         conversion_str += '```'
 
-    await channel.send(conversion_str)
+    await ctx.send(conversion_str)
 
 
 async def koa_is_typing_a_message(ctx, **kwargs):
@@ -1210,8 +1200,8 @@ async def lookup_pending_posts():
 
 @bot.event
 async def on_message(msg):
-    global last_channel, last_channel_message_count, last_channel_warned
     """Searches messages for urls and certain keywords"""
+    global last_channel, last_channel_message_count, last_channel_warned
 
     # Prevent bot from spamming itself
     if msg.author.bot:
@@ -1224,36 +1214,51 @@ async def on_message(msg):
         target_channel_msg = await mentioned_channel.send('Mention by {} from {}\n\nGo there:\n<{}>'.format(msg.author.mention, channel.mention, msg.jump_url))
         await channel.send('Mention by {} to {}\n\nGo there:\n<{}>'.format(msg.author.mention, mentioned_channel.mention, target_channel_msg.jump_url))
 
-    # Test for units
-    await convert_units(msg)
+    url_matches = []
+    unit_matches = []
+    i = 0
+    while i < len(msg.content):
+        url_match = URL_PATTERN.match(msg.content, i)
+        if url_match:
+            url_matches.append(('url', url_match.group()))
+            i = url_match.end()
+            continue
 
-    # Test for image urls
-    urls = get_urls(msg.content)
-    if urls:
-        domains = get_domains(urls)
-        for i, domain in enumerate(domains):
-            if bot.assets['pixiv']['domain'] in domain:
-                await get_pixiv_gallery(msg, urls[i])
+        ftin_match = SPECIAL_UNIT_PATTERN_TUPLE[1].match(msg.content, i)
+        if ftin_match:
+            unit_matches.append((SPECIAL_UNIT_PATTERN_TUPLE[0], float(ftin_match.group(1), float(ftin_match.group(2)))))
+            # unit_matches.append((unit_name, value in feet, value in inches))
+            i = ftin_match.end()
+            continue
 
-            if bot.assets['danbooru']['domain'] in domain:
-                await get_danbooru_gallery(msg, urls[i])
+        num_match = NUMBER_PATTERN.match(msg.content, i)
+        if num_match:
+            i = num_match.end()
+            def match(u): return (u[0], u[1].match(msg.content, i))
+            def falsey(x): return not x[1]
+            unit = next(dropwhile(falsey, map(match, iter(UNIT_PATTERN_TUPLE))), None)
+            if unit:
+                (unit, unit_match) = unit
+                unit_matches.append((unit, float(num_match.group(1))))
+                i = unit_match.end()
 
-            if bot.assets['e621']['domain'] in domain:
-                await get_e621_gallery(msg, urls[i])
+        i += 1
 
-            if bot.assets['deviantart']['domain'] in domain:
-                await get_deviantart_post(msg, urls[i])
+    # What is this, my head hurts
+    if url_matches:
+        for (_, url) in url_matches:
+            for key, prop in bot.assets.items():
+                if 'domain' in bot.assets[key] and prop['domain'] in url:
+                    if 'type' in prop:
+                        if prop['type'] == 'gallery':
+                            await globals()['get_{}_gallery'.format(key)](msg, url)
+                        elif prop['type'] == 'stream' and key == 'picarto':
+                            await get_picarto_stream_preview(msg, url)
 
-            if bot.assets['imgur']['domain'] in domain:
-                await get_imgur_gallery(msg, urls[i])
+    if unit_matches:
+        await convert_units(channel, unit_matches)
 
-            if bot.assets['picarto']['domain'] in domain:
-                await get_picarto_stream_preview(msg, urls[i])
-
-            # if bot.assets['sankaku']['domain'] in domain:
-            #     await get_sankaku_post(msg, urls[i])
-
-    if last_channel != channel.id or urls or msg.attachments:
+    if last_channel != channel.id or url_matches or msg.attachments:
         last_channel = channel.id
         last_channel_message_count = 0
     else:
@@ -1271,7 +1276,7 @@ async def on_message(msg):
 async def on_ready():
     """On bot start"""
 
-    print('ready!')
+    print('Ready!')
     # Change play status to something fitting
     await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
 

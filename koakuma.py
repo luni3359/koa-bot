@@ -1226,7 +1226,7 @@ async def on_message(msg):
 
         ftin_match = SPECIAL_UNIT_PATTERN_TUPLE[1].match(msg.content, i)
         if ftin_match:
-            unit_matches.append((SPECIAL_UNIT_PATTERN_TUPLE[0], float(ftin_match.group(1), float(ftin_match.group(2)))))
+            unit_matches.append((SPECIAL_UNIT_PATTERN_TUPLE[0], float(ftin_match.group(1)), float(ftin_match.group(2))))
             # unit_matches.append((unit_name, value in feet, value in inches))
             i = ftin_match.end()
             continue

@@ -1210,6 +1210,7 @@ async def lookup_pending_posts():
 
 @bot.event
 async def on_message(msg):
+    global last_channel, last_channel_message_count, last_channel_warned
     """Searches messages for urls and certain keywords"""
 
     # Prevent bot from spamming itself
@@ -1253,7 +1254,6 @@ async def on_message(msg):
             #     await get_sankaku_post(msg, urls[i])
 
     if last_channel != channel.id or urls or msg.attachments:
-        global last_channel, last_channel_message_count, last_channel_warned
         last_channel = channel.id
         last_channel_message_count = 0
     else:

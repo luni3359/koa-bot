@@ -21,6 +21,7 @@ from discord.ext import commands
 import converter
 import net
 from patterns import *
+from num2words import num2words
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(SOURCE_DIR, 'config.jsonc')) as json_file:
@@ -46,9 +47,43 @@ last_channel_message_count = 0
 last_channel_warned = False
 
 
+@bot.command()
+async def roll(ctx, *dice):
+    """Rolls one or many dice"""
+
+    dice_matches = re.findall(DICE_PATTERN, ' '.join(dice))
+    message = '>>> {} rolled the {}.\n'.format(ctx.author.mention, len(dice) > 1 and 'dice' or 'die')
+    pip_sum = 0
+
+    for die in dice_matches:
+        quantity = die[0] and int(die[0]) or 1
+        pips = die[1] and int(die[1]) or 1
+        message += '{} {}-pip {} for a '.format(num2words(quantity).capitalize(), pips, quantity > 1 and 'dice' or 'die')
+
+        for i in range(0, quantity):
+            die_roll = random.randint(1, pips)
+
+            if i == quantity - 1:
+                if quantity == 1:
+                    message += '{}.\n'.format(die_roll)
+                else:
+                    message += 'and a {}.\n'.format(die_roll)
+            elif i == quantity - 2:
+                message += '{} '.format(die_roll)
+            else:
+                message += '{}, '.format(die_roll)
+
+            pip_sum += die_roll
+
+    message += 'For a total of **{}.**'.format(pip_sum)
+
+    await ctx.send(message)
+
+
 @bot.command(name='jisho', aliases=['j'])
 async def search_jisho(ctx, *word):
     """Search a term in the japanese dictionary jisho"""
+
     words = ' '.join(word).lower()
     word_encoded = urllib.parse.quote_plus(words)
     user_search = bot.assets['jisho']['search_url'] + word_encoded

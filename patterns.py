@@ -15,3 +15,5 @@ UNIT_PATTERN_TUPLE = [
     ('kilograms', re.compile(r' *(kilograms?|kgs?)(?!\w)')),
 ]
 SPECIAL_UNIT_PATTERN_TUPLE = ('footinches', re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)\'(\.\d+|\d[,\d]*(?:\.\d+)?)"?'))
+
+DICE_PATTERN = r'(\d*)d(\d+)'

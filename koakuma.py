@@ -58,7 +58,7 @@ async def roll(ctx, *dice):
     for die in dice_matches:
         quantity = die[0] and int(die[0]) or 1
         pips = die[1] and int(die[1]) or 1
-        message += '{} {}-pip {} for a '.format(num2words(quantity).capitalize(), pips, quantity > 1 and 'dice' or 'die')
+        message += '{} {}-sided {} for a '.format(num2words(quantity).capitalize(), pips, quantity > 1 and 'dice' or 'die')
 
         for i in range(0, quantity):
             die_roll = random.randint(1, pips)

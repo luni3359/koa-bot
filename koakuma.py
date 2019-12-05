@@ -17,11 +17,11 @@ import mysql.connector as mariadb
 import pixivpy3
 import tweepy
 from discord.ext import commands
+from num2words import num2words
 
 import converter
 import net
 from patterns import *
-from num2words import num2words
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(SOURCE_DIR, 'config.jsonc')) as json_file:

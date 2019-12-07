@@ -1307,6 +1307,27 @@ async def on_message(msg):
     await bot.process_commands(msg)
 
 
+@bot.command()
+async def test(ctx):
+    """Mic test"""
+
+    source = discord.FFmpegPCMAudio(bot.testing['vc']['music-file'])
+
+    if not ctx.voice_client:
+        vc = await bot.get_channel(bot.testing['vc']['voice-channel']).connect()
+    else:
+        vc = ctx.voice_client
+
+    if vc.is_playing():
+        vc.stop()
+
+    vc.play(source, after=lambda e: print('done', e))
+
+    # vc.pause()
+    # vc.resume()
+    # vc.stop()
+
+
 @bot.event
 async def on_ready():
     """On bot start"""

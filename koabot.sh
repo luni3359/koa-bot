@@ -47,7 +47,7 @@ function update_dependencies() {
     if [ ! -n "$1" ]; then
         test_conectivity
     fi
-    exit 1
+
     PIP_OUTPUT=$(ssh ${KOAKUMA_CONNSTR} 'source ~/.profile; pip3 install -r $KOAKUMA_HOME/requirements.txt')
     echo $PIP_OUTPUT
 }
@@ -72,11 +72,21 @@ function run() {
     python3 ${KOAKUMA_HOME}/koakuma.py
 }
 
+function install() {
+    # TODO
+    exit 1
+
+    python -V
+    python3 -V
+    source venv/bin/activate
+    pip install -r requirements.txt
+}
 
 # If there's options
 if [ -n "$1" ]; then
     while [ -n "$1" ]; do
         case "$1" in
+            -i|--install) install;;
             -uU|-Uu)
                 test_conectivity
                 update "skip_conn_test"

@@ -44,23 +44,26 @@ function test_conectivity() {
 function update_dependencies() {
     echo "Updating bot dependencies..."
 
-    test_conectivity
-
+    if [ ! -n "$1" ]; then
+        test_conectivity
+    fi
+    exit 1
     PIP_OUTPUT=$(ssh ${KOAKUMA_CONNSTR} 'source ~/.profile; pip3 install -r $KOAKUMA_HOME/requirements.txt')
     echo $PIP_OUTPUT
-
-    update
 }
 
 function update() {
     # Automatically sends updates to the bot. In the future it should also restart the running instance.
     echo "Updating bot files..."
 
-    test_conectivity
+    if [ ! -n "$1" ]; then
+        test_conectivity
+    fi
 
     echo "Transferring from ${KOAKUMA_HOME} to ${TARGET}"
 
     rsync -aXv --include=.python-version --exclude=.* --exclude=__pycache__ --exclude=venv --progress ${KOAKUMA_HOME}/ ${TARGET}
+    echo
 }
 
 function run() {
@@ -74,6 +77,11 @@ function run() {
 if [ -n "$1" ]; then
     while [ -n "$1" ]; do
         case "$1" in
+            -uU|-Uu)
+                test_conectivity
+                update "skip_conn_test"
+                update_dependencies "skip_conn_test"
+            ;;
             -u|--update) update;;
             -U|--update-dependencies) update_dependencies;;
             -r|--restart) ;;

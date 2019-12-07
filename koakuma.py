@@ -1359,18 +1359,24 @@ async def test(ctx):
     source = discord.FFmpegPCMAudio(bot.testing['vc']['music-file'])
 
     if not ctx.voice_client:
-        vc = await bot.get_channel(bot.testing['vc']['voice-channel']).connect()
+        if ctx.guild.voice_channels:
+            for voice_channel in ctx.guild.voice_channels:
+                try:
+                    vc = await voice_channel.connect()
+                    break
+                except Exception:
+                    continue
+
     else:
         vc = ctx.voice_client
+
+    if not vc:
+        return
 
     if vc.is_playing():
         vc.stop()
 
     vc.play(source, after=lambda e: print('done', e))
-
-    # vc.pause()
-    # vc.resume()
-    # vc.stop()
 
 
 @bot.event

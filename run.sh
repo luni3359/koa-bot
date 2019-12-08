@@ -68,8 +68,8 @@ function update() {
 
 function run() {
     echo "Starting bot..."
-
-    python3 ${KOAKUMA_HOME}/koakuma.py
+    cd ${KOAKUMA_HOME}
+    python3 -m koabot
 }
 
 function package_is_not_installed() {

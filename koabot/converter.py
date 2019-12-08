@@ -1,10 +1,10 @@
 """Measurement finder by Moonatic (ThatsNoMoon#0175 on Discord)"""
-import re
 from itertools import dropwhile
 
 from pint import UnitRegistry
 
-from patterns import NUMBER_PATTERN, UNIT_PATTERN_TUPLE, SPECIAL_UNIT_PATTERN_TUPLE
+from koabot.patterns import (NUMBER_PATTERN, SPECIAL_UNIT_PATTERN_TUPLE,
+                      UNIT_PATTERN_TUPLE)
 
 ureg = UnitRegistry()
 ureg.default_format = '~P.3f'

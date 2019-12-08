@@ -19,32 +19,11 @@ import tweepy
 from discord.ext import commands
 from num2words import num2words
 
-import converter
-import net
-from patterns import *
-
-SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(SOURCE_DIR, 'config.jsonc')) as json_file:
-    data = commentjson.load(json_file)
+from koabot import converter, net
+from koabot.patterns import *
 
 bot = commands.Bot(command_prefix='!', description='')
-bot.launch_time = datetime.utcnow()
-bot.__dict__.update(data)
-
-twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
-twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
-twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
-
-pixiv_api = pixivpy3.AppPixivAPI()
-
-danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
-e621_auth = aiohttp.BasicAuth(login=bot.auth_keys['e621']['username'], password=bot.auth_keys['e621']['key'])
-
-mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
-
-last_channel = 0
-last_channel_message_count = 0
-last_channel_warned = False
+SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 @bot.command()
@@ -526,7 +505,7 @@ async def report_bot_temp(ctx):
 @bot.command(name='last')
 async def talk_status(ctx):
     """Mention a brief summary of the last used channel"""
-    await ctx.send('Last channel: %s\nCurrent count there: %s' % (last_channel, last_channel_message_count))
+    await ctx.send('Last channel: %s\nCurrent count there: %s' % (bot.last_channel, bot.last_channel_message_count))
 
 
 @bot.command(aliases=['ava'])
@@ -600,21 +579,21 @@ async def board_search(**kwargs):
 
         if post_id:
             url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
-            return await net.http_request(url, auth=danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
+            return await net.http_request(url, auth=bot.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
         elif tags:
             if include_nsfw:
                 url = 'https://danbooru.donmai.us'
             else:
                 url = 'https://safebooru.donmai.us'
 
-            return await net.http_request(url + '/posts.json', auth=danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
+            return await net.http_request(url + '/posts.json', auth=bot.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
     elif board == 'e621':
         # e621 requires to know the User-Agent
         headers = {'User-Agent': bot.auth_keys['e621']['user-agent']}
 
         if post_id:
             url = 'https://e621.net/post/show/%s.json' % post_id
-            return await net.http_request(url, auth=e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
+            return await net.http_request(url, auth=bot.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
         elif tags:
             if include_nsfw:
                 url = 'https://e621.net'
@@ -622,7 +601,7 @@ async def board_search(**kwargs):
                 url = 'https://e926.net'
 
             headers['Content-Type'] = 'application/json'
-            return await net.http_request(url + '/post/index.json', auth=e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
+            return await net.http_request(url + '/post/index.json', auth=bot.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
     else:
         raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 
@@ -641,7 +620,7 @@ async def get_twitter_gallery(msg, url):
     if not post_id:
         return
 
-    tweet = twitter_api.get_status(post_id, tweet_mode='extended')
+    tweet = bot.twitter_api.get_status(post_id, tweet_mode='extended')
 
     if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
         print('Preview gallery not applicable.')
@@ -755,13 +734,13 @@ async def get_pixiv_gallery(msg, url):
 
     print('Now starting to process pixiv link #' + post_id)
     # Login
-    if pixiv_api.access_token is None:
-        pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
+    if bot.pixiv_api.access_token is None:
+        bot.pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
     else:
-        pixiv_api.auth()
+        bot.pixiv_api.auth()
 
     try:
-        illust_json = pixiv_api.illust_detail(post_id, req_auth=True)
+        illust_json = bot.pixiv_api.illust_detail(post_id, req_auth=True)
     except pixivpy3.PixivError as e:
         await channel.send('Odd...')
         print(e)
@@ -1281,7 +1260,6 @@ async def lookup_pending_posts():
 @bot.event
 async def on_message(msg):
     """Searches messages for urls and certain keywords"""
-    global last_channel, last_channel_message_count, last_channel_warned
 
     # Prevent bot from spamming itself
     if msg.author.bot:
@@ -1338,15 +1316,15 @@ async def on_message(msg):
     if unit_matches:
         await convert_units(channel, unit_matches)
 
-    if last_channel != channel.id or url_matches or msg.attachments:
-        last_channel = channel.id
-        last_channel_message_count = 0
+    if bot.last_channel != channel.id or url_matches or msg.attachments:
+        bot.last_channel = channel.id
+        bot.last_channel_message_count = 0
     else:
-        last_channel_message_count += 1
+        bot.last_channel_message_count += 1
 
     if str(channel.id) in bot.rules['quiet_channels']:
-        if not last_channel_warned and last_channel_message_count >= bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
-            last_channel_warned = True
+        if not bot.last_channel_warned and bot.last_channel_message_count >= bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
+            bot.last_channel_warned = True
             await koa_is_typing_a_message(channel, content=random.choice(bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
 
     await bot.process_commands(msg)
@@ -1356,7 +1334,7 @@ async def on_message(msg):
 async def test(ctx):
     """Mic test"""
 
-    source = discord.FFmpegPCMAudio(os.path.join(SOURCE_DIR, bot.testing['vc']['music-file']))
+    source = discord.FFmpegPCMAudio(os.path.join(bot.SOURCE_DIR, 'assets', bot.testing['vc']['music-file']))
 
     if not ctx.voice_client:
         if ctx.guild.voice_channels:
@@ -1387,6 +1365,36 @@ async def on_ready():
     # Change play status to something fitting
     await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
 
-bot.loop.create_task(check_live_streamers())
-bot.loop.create_task(change_presence_periodically())
-bot.run(bot.auth_keys['discord']['token'])
+
+def start(testing=False):
+    """Start bot"""
+
+    if testing:
+        config_file = 'beta.jsonc'
+    else:
+        config_file = 'config.jsonc'
+
+    with open(os.path.join(SOURCE_DIR, 'config', config_file)) as json_file:
+        data = commentjson.load(json_file)
+
+    bot.launch_time = datetime.utcnow()
+    bot.__dict__.update(data)
+
+    twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
+    twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
+    bot.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
+
+    bot.pixiv_api = pixivpy3.AppPixivAPI()
+
+    bot.danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
+    bot.e621_auth = aiohttp.BasicAuth(login=bot.auth_keys['e621']['username'], password=bot.auth_keys['e621']['key'])
+
+    bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
+
+    bot.last_channel = 0
+    bot.last_channel_message_count = 0
+    bot.last_channel_warned = False
+
+    bot.loop.create_task(check_live_streamers())
+    bot.loop.create_task(change_presence_periodically())
+    bot.run(bot.auth_keys['discord']['token'])

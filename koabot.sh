@@ -72,13 +72,39 @@ function run() {
     python3 ${KOAKUMA_HOME}/koakuma.py
 }
 
-function install() {
-    # TODO
-    exit 1
+function package_is_not_installed() {
+    if ! dpkg -l $1 >/dev/null 2>&1; then
+        echo "$1 is not installed in the system."
+        return 1
+    else
+        echo "$1 is already installed."
+        return 0
+    fi
+}
 
-    python -V
-    python3 -V
-    source venv/bin/activate
+function install_package() {
+    echo "Installing $1..."
+    # sudo apt install $1
+    echo "$1 has been installed."
+}
+
+function install() {
+    # Necessary package to play music
+    package_is_not_installed ffmpeg
+    if [ ! $? ]; then
+        install_package ffmpeg
+    fi
+
+    package_is_not_installed python3
+    if [ ! $? ]; then
+        python3 -V
+    else
+        package_is_not_installed python
+        if [ ! $? ]; then
+            python -V
+        fi
+    fi
+
     pip install -r requirements.txt
 }
 

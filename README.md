@@ -1,7 +1,7 @@
 # Koa bot
 ### A Koakuma bot for our server!
 
-![Koakuma](avatar.png)
+![Koakuma](koabot/assets/avatar.png)
 
 Eager to serve the sleepy.
 
@@ -15,6 +15,7 @@ Eager to serve the sleepy.
 + View post results searching directly from image boards.
 + Get unit conversions on the fly.
 + Periodically does assigned tasks.
++ Plays music
 
 
 ## How to setup

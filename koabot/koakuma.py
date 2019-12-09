@@ -1340,7 +1340,7 @@ async def on_message(msg):
 async def test(ctx):
     """Mic test"""
 
-    source = discord.FFmpegPCMAudio(os.path.join(bot.SOURCE_DIR, 'assets', bot.testing['vc']['music-file']))
+    source = discord.FFmpegPCMAudio(os.path.join(SOURCE_DIR, 'assets', bot.testing['vc']['music-file']))
 
     if not ctx.voice_client:
         if ctx.guild.voice_channels:

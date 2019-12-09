@@ -1265,6 +1265,12 @@ async def on_message(msg):
     if msg.author.bot:
         return
 
+    beta_bot = msg.guild.get_member(bot.koa['beta_id'])
+    if beta_bot and beta_bot.status == discord.Status.online and msg.guild.me.id != bot.koa['beta_id']:
+        # Beta bot overrides me in the servers we share
+        return
+
+
     channel = msg.channel
 
     # Reference channels together

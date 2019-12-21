@@ -916,17 +916,28 @@ async def get_deviantart_post(msg, url):
     if not api_result['deviation']['isMature']:
         return
 
-    for file in api_result['deviation']['files']:
-        if file['type'] == 'preview':
-            preview_url = file['src']
+    if 'token' in api_result['deviation']['media']:
+        token = api_result['deviation']['media']['token'][0]
+    else:
+        print('No token!!!!')
+
+    baseUri = api_result['deviation']['media']['baseUri']
+    prettyName = api_result['deviation']['media']['prettyName']
+
+    for type in api_result['deviation']['media']['types']:
+        if type['t'] == 'preview':
+            preview_url = type['c'].replace('<prettyName>', prettyName)
             break
+
+    image_url = baseUri + preview_url + '?token=' + token
+    print(image_url)
 
     embed = discord.Embed()
     embed.set_author(
         name=api_result['deviation']['author']['username'],
         url='https://www.deviantart.com/' + api_result['deviation']['author']['username'],
         icon_url=api_result['deviation']['author']['usericon'])
-    embed.set_image(url=preview_url)
+    embed.set_image(url=image_url)
     embed.set_footer(
         text=bot.assets['deviantart']['name'],
         icon_url=bot.assets['deviantart']['favicon']
@@ -1270,7 +1281,6 @@ async def on_message(msg):
         # Beta bot overrides me in the servers we share
         return
 
-
     channel = msg.channel
 
     # Reference channels together
@@ -1315,7 +1325,10 @@ async def on_message(msg):
                 if 'domain' in bot.assets[key] and prop['domain'] in url:
                     if 'type' in prop:
                         if prop['type'] == 'gallery':
-                            await globals()['get_{}_gallery'.format(key)](msg, url)
+                            if key == 'deviantart':
+                                await globals()['get_{}_post'.format(key)](msg, url)
+                            else:
+                                await globals()['get_{}_gallery'.format(key)](msg, url)
                         elif prop['type'] == 'stream' and key == 'picarto':
                             await get_picarto_stream_preview(msg, url)
 

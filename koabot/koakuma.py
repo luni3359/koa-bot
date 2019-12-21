@@ -37,6 +37,8 @@ async def roll(ctx, *dice):
     for die in dice_matches:
         quantity = die[0] and int(die[0]) or 1
         pips = die[1] and int(die[1]) or 1
+        bonus_points = die[2] and int(die[2]) or 0
+
         message += '{} {}-sided {} for a '.format(num2words(quantity).capitalize(), pips, quantity > 1 and 'dice' or 'die')
 
         for i in range(0, quantity):
@@ -44,9 +46,19 @@ async def roll(ctx, *dice):
 
             if i == quantity - 1:
                 if quantity == 1:
-                    message += '{}.\n'.format(die_roll)
+                    message += '{}.'.format(die_roll)
                 else:
-                    message += 'and a {}.\n'.format(die_roll)
+                    message += 'and a {}.'.format(die_roll)
+
+                if bonus_points:
+                    pip_sum += bonus_points
+
+                    if bonus_points > 0:
+                        message += ' +{}'.format(bonus_points)
+                    else:
+                        message += ' {}'.format(bonus_points)
+
+                    message += '\n'
             elif i == quantity - 2:
                 message += '{} '.format(die_roll)
             else:

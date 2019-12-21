@@ -58,7 +58,7 @@ async def roll(ctx, *dice):
                     else:
                         message += ' {}'.format(bonus_points)
 
-                    message += '\n'
+                message += '\n'
             elif i == quantity - 2:
                 message += '{} '.format(die_roll)
             else:

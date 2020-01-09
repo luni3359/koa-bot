@@ -95,6 +95,11 @@ function install() {
         install_package ffmpeg
     fi
 
+    package_is_not_installed mariadb-server
+    if [ ! $? ]; then
+        install_package mariadb-server
+    fi
+
     package_is_not_installed python3
     if [ ! $? ]; then
         python3 -V

@@ -4,3 +4,4 @@ config*
 venv
 *.webm
 db
+*example.json

@@ -936,9 +936,9 @@ async def get_deviantart_post(msg, url):
     baseUri = api_result['deviation']['media']['baseUri']
     prettyName = api_result['deviation']['media']['prettyName']
 
-    for type in api_result['deviation']['media']['types']:
-        if type['t'] == 'preview':
-            preview_url = type['c'].replace('<prettyName>', prettyName)
+    for media_type in api_result['deviation']['media']['types']:
+        if media_type['t'] == 'preview':
+            preview_url = media_type['c'].replace('<prettyName>', prettyName)
             break
 
     image_url = baseUri + preview_url + '?token=' + token

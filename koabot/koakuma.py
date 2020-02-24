@@ -13,6 +13,7 @@ from itertools import dropwhile
 import aiohttp
 import commentjson
 import discord
+import forex_python.converter as currency
 import mysql.connector as mariadb
 import pixivpy3
 import tweepy
@@ -313,6 +314,17 @@ def formatDictionaryOddities(txt, which):
             txt = txt.replace(match[0], '[%s](%s%s)' % (match[1], bot.assets['urban_dictionary']['dictionary_url'], urllib.parse.quote(match[1])))
 
         return txt
+
+
+@bot.command(name='exchange', aliases=['currency', 'xc', 'c'])
+async def convert_currency(ctx, amount, currency_type1, _, currency_type2):
+    """Convert currency to others"""
+
+    currency_type1 = currency_type1.upper()
+    currency_type2 = currency_type2.upper()
+    converted_amount = bot.currency.convert(currency_type1, currency_type2, float(amount))
+
+    await ctx.send('```%s %s → %0.2f %s```' % (amount, currency_type1, converted_amount, currency_type2))
 
 
 @bot.command(name='e621', aliases=['e6'])
@@ -1438,6 +1450,8 @@ def start(testing=False):
     bot.last_channel = 0
     bot.last_channel_message_count = 0
     bot.last_channel_warned = False
+
+    bot.currency = currency.CurrencyRates()
 
     bot.loop.create_task(check_live_streamers())
     bot.loop.create_task(change_presence_periodically())

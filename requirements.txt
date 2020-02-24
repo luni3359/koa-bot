@@ -2,6 +2,7 @@ aiohttp==3.6.2
 autopep8==1.4.4
 commentjson>=0.8.2
 discord.py[voice]==1.2.5
+forex-python==1.5
 mysql-connector-python>=8.0.18
 num2words>=0.5.10
 Pint==0.9

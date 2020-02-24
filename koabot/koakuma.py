@@ -1306,12 +1306,22 @@ async def on_message(msg):
     url_matches = []
     unit_matches = []
     i = 0
+    escaped_url = False
     while i < len(msg.content):
+        if msg.content[i] == '<':
+            escaped_url = True
+            i += 1
+            continue
+
         url_match = URL_PATTERN.match(msg.content, i)
         if url_match:
-            url_matches.append(('url', url_match.group()))
+            if not escaped_url or url_match.end() >= len(msg.content) or url_match.end() < len(msg.content) and msg.content[url_match.end()] != '>':
+                url_matches.append(('url', url_match.group()))
+
             i = url_match.end()
             continue
+
+        escaped_url = False
 
         ftin_match = SPECIAL_UNIT_PATTERN_TUPLE[1].match(msg.content, i)
         if ftin_match:

@@ -876,6 +876,8 @@ async def get_board_gallery(channel, msg, url, **kwargs):
             post = [post]
             post.extend(posts)
             posts = post
+    elif board == 'e621':
+        await send_board_posts(channel, post, board=board)
 
     if posts:
         if post_included_in_results:

@@ -981,7 +981,12 @@ async def get_picarto_stream_preview(msg, url):
 
     picarto_request = await net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
 
+    if not picarto_request:
+        await channel.send(random.choice(bot.quotes['stream_preview_failed']))
+        return
+
     if not picarto_request['online']:
+        await channel.send(random.choice(bot.quotes['stream_preview_offline']))
         return
 
     image = await net.fetch_image(picarto_request['thumbnails']['web'])

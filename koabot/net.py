@@ -1,4 +1,5 @@
 """Handle network requests"""
+import datetime
 import io
 
 import aiohttp
@@ -16,7 +17,7 @@ async def http_request(url, **kwargs):
     async with aiohttp.ClientSession(auth=auth) as session:
         async with session.get(url, data=data, headers=headers) as response:
             if response.status != 200:
-                print('[%i] %s' % (response.status, err_msg))
+                print('%s\nFailed connecting to %s\n[Network status %i]: %s' % (datetime.datetime.now(), url, response.status, err_msg))
                 return False
 
             if json:

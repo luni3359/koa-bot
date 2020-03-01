@@ -416,7 +416,7 @@ async def send_board_posts(ctx, posts, **kwargs):
         print('Parsing post #%i (%i/%i)...' % (post['id'], posts_processed, min(total_posts, max_posts)))
 
         denied_ext = ['webm']
-        if post['file_ext'] in denied_ext:
+        if 'file_ext' in post and post['file_ext'] in denied_ext:
             if board == 'danbooru':
                 url = 'https://danbooru.donmai.us/posts/%i' % post['id']
             elif board == 'e621':
@@ -443,7 +443,11 @@ async def send_board_posts(ctx, posts, **kwargs):
                     )
 
         if not show_nsfw and post['rating'] is not 's':
-            embed.set_image(url=bot.assets[board]['nsfw_placeholder'])
+            if 'nsfw_placeholder' in bot.assets[board]:
+                embed.set_image(url=bot.assets[board]['nsfw_placeholder'])
+            else:
+                embed.set_image(url=bot.assets['default']['nsfw_placeholder'])
+
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
             if board == 'danbooru':
@@ -502,7 +506,10 @@ def generate_board_embed(post, **kwargs):
         embed.title = '#%s: %s - e621' % (post['id'], combine_tags(post['artist']))
         embed.url = 'https://e621.net/post/show/%i' % post['id']
 
-    fileurl = bot.koa['failed_post_preview']
+    if 'failed_post_preview' in bot.assets[board]:
+        fileurl = bot.assets[board]['failed_post_preview']
+    else:
+        fileurl = bot.assets['default']['failed_post_preview']
 
     valid_urls_keys = ['large_file_url', 'sample_url', 'file_url']
     for key in valid_urls_keys:
@@ -600,7 +607,6 @@ async def board_search(**kwargs):
     }
 
     if board == 'danbooru':
-
         if post_id:
             url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
             return await net.http_request(url, auth=bot.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
@@ -613,7 +619,7 @@ async def board_search(**kwargs):
             return await net.http_request(url + '/posts.json', auth=bot.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
     elif board == 'e621':
         # e621 requires to know the User-Agent
-        headers = {'User-Agent': bot.auth_keys['e621']['user-agent']}
+        headers = bot.assets['e621']['headers']
 
         if post_id:
             url = 'https://e621.net/post/show/%s.json' % post_id
@@ -781,7 +787,12 @@ async def get_pixiv_gallery(msg, url):
     illust = illust_json.illust
     if illust.x_restrict != 0 and not channel.is_nsfw():
         embed = discord.Embed()
-        embed.set_image(url=bot.assets['danbooru']['nsfw_placeholder'])
+
+        if 'nsfw_placeholder' in bot.assets['pixiv']:
+            embed.set_image(url=bot.assets['pixiv']['nsfw_placeholder'])
+        else:
+            embed.set_image(url=bot.assets['default']['nsfw_placeholder'])
+
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
         await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
         return
@@ -853,7 +864,11 @@ async def get_board_gallery(channel, msg, url, **kwargs):
 
     if post['rating'] is not 's' and not on_nsfw_channel:
         embed = discord.Embed()
-        embed.set_image(url=bot.assets[board]['nsfw_placeholder'])
+        if 'nsfw_placeholder' in bot.assets[board]:
+            embed.set_image(url=bot.assets[board]['nsfw_placeholder'])
+        else:
+            embed.set_image(url=bot.assets['default']['nsfw_placeholder'])
+
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
         await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
@@ -1308,8 +1323,8 @@ async def on_message(msg):
     if msg.author.bot:
         return
 
-    beta_bot = msg.guild.get_member(bot.koa['beta_id'])
-    if beta_bot and beta_bot.status == discord.Status.online and msg.guild.me.id != bot.koa['beta_id']:
+    beta_bot = msg.guild.get_member(bot.koa['discord_user']['beta_id'])
+    if beta_bot and beta_bot.status == discord.Status.online and msg.guild.me.id != bot.koa['discord_user']['beta_id']:
         # Beta bot overrides me in the servers we share
         return
 
@@ -1378,7 +1393,6 @@ async def on_message(msg):
                             picarto_preview_shown = await get_picarto_stream_preview(msg, url)
                             if picarto_preview_shown and msg.content[0] == '!':
                                 await msg.delete()
-
 
     if unit_matches:
         await convert_units(channel, unit_matches)

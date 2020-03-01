@@ -998,6 +998,7 @@ async def get_picarto_stream_preview(msg, url):
     embed.set_image(url='attachment://' + filename)
     embed.set_footer(text=bot.assets['picarto']['name'], icon_url=bot.assets['picarto']['favicon'])
     await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
+    return True
 
 
 def get_post_id(url, words_to_match, trim_to, has_regex=False):
@@ -1372,7 +1373,10 @@ async def on_message(msg):
                             else:
                                 await globals()['get_{}_gallery'.format(key)](msg, url)
                         elif prop['type'] == 'stream' and key == 'picarto':
-                            await get_picarto_stream_preview(msg, url)
+                            picarto_preview_shown = await get_picarto_stream_preview(msg, url)
+                            if picarto_preview_shown and msg.content[0] == '!':
+                                await msg.delete()
+
 
     if unit_matches:
         await convert_units(channel, unit_matches)

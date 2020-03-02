@@ -1,5 +1,6 @@
 aiohttp==3.6.2
 autopep8==1.4.4
+BASC-py4chan==0.6.5
 commentjson>=0.8.2
 discord.py[voice]==1.2.5
 forex-python==1.5

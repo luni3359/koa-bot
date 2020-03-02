@@ -10,7 +10,6 @@ import subprocess
 import typing
 import urllib
 from datetime import datetime
-from itertools import dropwhile
 
 import aiohttp
 import basc_py4chan
@@ -625,9 +624,9 @@ async def report_bot_temp(ctx):
     """Show the bot's current temperature"""
 
     try:
-        current_temp = subprocess.run(['vcgencmd', 'measure_temp'], stdout=subprocess.PIPE, universal_newlines=True)
+        current_temp = subprocess.run(['vcgencmd', 'measure_temp'], stdout=subprocess.PIPE, check=True, universal_newlines=True)
     except FileNotFoundError:
-        current_temp = subprocess.run(['sensors'], stdout=subprocess.PIPE, universal_newlines=True)
+        current_temp = subprocess.run(['sensors'], stdout=subprocess.PIPE, check=True, universal_newlines=True)
 
     await ctx.send(current_temp.stdout)
 
@@ -1469,7 +1468,7 @@ async def on_message(msg):
             i = num_match.end()
             def match(u): return (u[0], u[1].match(msg.content, i))
             def falsey(x): return not x[1]
-            unit = next(dropwhile(falsey, map(match, iter(UNIT_PATTERN_TUPLE))), None)
+            unit = next(itertools.dropwhile(falsey, map(match, iter(UNIT_PATTERN_TUPLE))), None)
             if unit:
                 (unit, unit_match) = unit
                 unit_matches.append((unit, float(num_match.group(1))))

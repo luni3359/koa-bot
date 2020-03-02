@@ -11,6 +11,7 @@ from datetime import datetime
 from itertools import dropwhile
 
 import aiohttp
+import basc_py4chan
 import commentjson
 import discord
 import forex_python.converter as currency
@@ -325,6 +326,25 @@ async def convert_currency(ctx, amount, currency_type1, _, currency_type2):
     converted_amount = bot.currency.convert(currency_type1, currency_type2, float(amount))
 
     await ctx.send('```%s %s → %0.2f %s```' % (amount, currency_type1, converted_amount, currency_type2))
+
+
+@bot.command(name='4chan', aliases=['4c'])
+async def get_4chan_picture(ctx, user_board='u'):
+    """Get a random picture from a specific board"""
+
+    board = basc_py4chan.Board(user_board, https=True)
+    threads = board.get_threads()[:2]
+    links = []
+
+    for thread in threads:
+        thumb_count = 0
+        for thumb in thread.thumbs():
+            thumb_count += 1
+            links.append(thumb)
+            if thumb_count > 1:
+                break
+
+    await ctx.send('\n'.join(links))
 
 
 @bot.command(name='e621', aliases=['e6'])

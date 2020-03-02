@@ -594,7 +594,7 @@ def generate_board_embed(post, **kwargs):
         if not post_char and not post_copy and not post_artist:
             embed_post_title += '#%i' % post['id']
 
-        embed_post_title += ' - Danbooru'
+        embed_post_title += ' | Danbooru'
         if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
             embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 

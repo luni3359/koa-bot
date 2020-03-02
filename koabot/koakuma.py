@@ -1,5 +1,6 @@
 """Koakuma bot"""
 import asyncio
+import itertools
 import math
 import os
 import random
@@ -333,18 +334,58 @@ async def get_4chan_picture(ctx, user_board='u'):
     """Get a random picture from a specific board"""
 
     board = basc_py4chan.Board(user_board, https=True)
-    threads = board.get_threads()[:2]
-    links = []
+    threads = board.get_threads()
+    max_threads = 2
+    max_posts_per_thread = 2
 
+    threads_ready = []
     for thread in threads:
-        thumb_count = 0
-        for thumb in thread.thumbs():
-            thumb_count += 1
-            links.append(thumb)
-            if thumb_count > 1:
-                break
+        if thread.sticky:
+            continue
 
-    await ctx.send('\n'.join(links))
+        posts_ready = []
+        fallback_post = None
+        for post in thread.posts:
+            if post.has_file:
+                embed = discord.Embed()
+                if len(posts_ready) == 0:
+                    embed.title = thread.topic.subject
+                    embed.url = thread.topic.url
+
+                embed.set_author(name='%s @ %s' % (post.name, post.datetime), url=post.semantic_url)
+                embed.add_field(name='No.%s' % post.post_id, value='\u200b')
+                embed.description = post.text_comment
+                embed.set_image(url=post.file_url)
+                posts_ready.append(embed)
+
+                if len(posts_ready) >= max_posts_per_thread:
+                    break
+            elif not fallback_post:
+                fallback_post = post
+
+        if len(posts_ready) > 0:
+            if len(posts_ready) < max_posts_per_thread and fallback_post:
+                embed = discord.Embed()
+                embed.set_author(name='%s @ %s' % (fallback_post.name, fallback_post.datetime), url=fallback_post.semantic_url)
+                embed.add_field(name='No.%s' % fallback_post.post_id, value='\u200b')
+                embed.description = fallback_post.text_comment
+                posts_ready.append(embed)
+
+            posts_ready[len(posts_ready) - 1].set_footer(
+                text=bot.assets['4chan']['name'],
+                icon_url=bot.assets['4chan']['favicon'])
+            threads_ready.append(posts_ready)
+
+        if len(threads_ready) >= max_threads:
+            break
+
+    for post in list(itertools.chain.from_iterable(threads_ready)):
+        if post.image.url:
+            print(post.author.url + '\n' + post.image.url + '\n\n')
+        else:
+            print(post.author.url + '\nNo image\n\n')
+
+        await ctx.send(embed=post)
 
 
 @bot.command(name='e621', aliases=['e6'])

@@ -1089,7 +1089,7 @@ async def get_deviantart_post(msg, url):
             preview_url = media_type['c'].replace('<prettyName>', prettyName)
             break
 
-    image_url = baseUri + preview_url + '?token=' + token
+    image_url = '%s/%s?token=%s' % (baseUri, preview_url, token)
     print(image_url)
 
     embed = discord.Embed()
@@ -1100,8 +1100,7 @@ async def get_deviantart_post(msg, url):
     embed.set_image(url=image_url)
     embed.set_footer(
         text=bot.assets['deviantart']['name'],
-        icon_url=bot.assets['deviantart']['favicon']
-    )
+        icon_url=bot.assets['deviantart']['favicon'])
 
     await channel.send(embed=embed)
 
@@ -1589,7 +1588,7 @@ def start(testing=False):
     bot.danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
     bot.e621_auth = aiohttp.BasicAuth(login=bot.auth_keys['e621']['username'], password=bot.auth_keys['e621']['key'])
 
-    bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
+    # bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
 
     bot.last_channel = 0
     bot.last_channel_message_count = 0

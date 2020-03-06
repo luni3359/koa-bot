@@ -149,21 +149,20 @@ async def search_urbandictionary(ctx, *word):
     embed.url = bot.assets['urban_dictionary']['dictionary_url'] + word_encoded
     embed.description = ''
     definition_embeds.append(embed)
+    index_placeholder = '<<INDEX>>'
 
-    i = 0
-    for entry in js['list'][:3]:
-        i += 1
+    for i, entry in enumerate(js['list'][:3]):
         definition = entry['definition']
         example = entry['example']
 
-        string_to_add = '**%i. %s**\n\n' % (i, formatDictionaryOddities(definition, 'urban'))
+        string_to_add = '**%s. %s**\n\n' % (index_placeholder, formatDictionaryOddities(definition, 'urban'))
         string_to_add += formatDictionaryOddities(example, 'urban') + '\n\n'
 
-        if len(string_to_add) > 2048:
+        if len(string_to_add) - len(index_placeholder) + 1 > 2048:
             string_to_add = string_to_add[:2048]
             await ctx.send('What a massive definition...')
 
-        if i > 1 and len(embed.description) + len(string_to_add) > 2048:
+        if i > 0 and len(embed.description) + len(string_to_add) - len(index_placeholder) + 1 > 2048:
             extra_embed = discord.Embed()
             extra_embed.description = string_to_add
             definition_embeds.append(extra_embed)
@@ -174,7 +173,16 @@ async def search_urbandictionary(ctx, *word):
         text=bot.assets['urban_dictionary']['name'],
         icon_url=bot.assets['urban_dictionary']['favicon']['size16'])
 
+    i = 0
     for embed in definition_embeds:
+        previous_desc = ''
+        while True:
+            i += 1
+            previous_desc = embed.description
+            embed.description = embed.description.replace(index_placeholder, str(i), 1)
+            if len(previous_desc) == len(embed.description):
+                i -= 1
+                break
         await ctx.send(embed=embed)
 
 

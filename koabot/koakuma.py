@@ -290,7 +290,7 @@ async def search_english_word(ctx, *word):
         embeds_sent = 0
 
         dictionary_definitions = embed.description
-        embed.description = dictionary_definitions[0:2048]
+        embed.description = dictionary_definitions[:2048]
 
         await ctx.send(embed=embed)
 
@@ -300,8 +300,13 @@ async def search_english_word(ctx, *word):
 
             embed = discord.Embed()
             embed.description = dictionary_definitions[2048 * embeds_sent:2048 * (embeds_sent + 1)]
+
+            if embeds_sent == embeds_to_send:
+                embed.set_footer(text=bot.assets['merriam-webster']['name'], icon_url=bot.assets['merriam-webster']['favicon'])
+
             await ctx.send(embed=embed)
     else:
+        embed.set_footer(text=bot.assets['merriam-webster']['name'], icon_url=bot.assets['merriam-webster']['favicon'])
         await ctx.send(embed=embed)
 
 

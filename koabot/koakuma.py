@@ -139,24 +139,40 @@ async def search_urbandictionary(ctx, *word):
         await ctx.send(random.choice(bot.quotes['dictionary_no_results']))
         return
 
+    definition_embeds = []
     embed = discord.Embed()
     embed.title = words
     embed.url = bot.assets['urban_dictionary']['dictionary_url'] + word_encoded
     embed.description = ''
+    definition_embeds.append(embed)
 
     i = 0
     for entry in js['list'][:3]:
-        i = i + 1
+        i += 1
         definition = entry['definition']
         example = entry['example']
 
-        embed.description += '**%i. %s**\n\n' % (i, formatDictionaryOddities(definition, 'urban'))
-        embed.description += formatDictionaryOddities(example, 'urban') + '\n\n'
+        string_to_add = '**%i. %s**\n\n' % (i, formatDictionaryOddities(definition, 'urban'))
+        string_to_add += formatDictionaryOddities(example, 'urban') + '\n\n'
 
-    if len(embed.description) > 2048:
-        embed.description = embed.description[:2048]
+        if len(string_to_add) > 2048:
+            string_to_add = string_to_add[:2048]
+            await ctx.send('What a massive definition...')
 
-    await ctx.send(embed=embed)
+        if i > 1 and len(embed.description) + len(string_to_add) > 2048:
+            extra_embed = discord.Embed()
+            extra_embed.description = string_to_add
+            definition_embeds.append(extra_embed)
+        else:
+            embed.description += string_to_add
+
+    definition_embeds[len(definition_embeds) - 1].set_footer(
+        text=bot.assets['urban_dictionary']['name'],
+        icon_url=bot.assets['urban_dictionary']['favicon']
+    )
+
+    for embed in definition_embeds:
+        await ctx.send(embed=embed)
 
 
 @bot.command(name='word', aliases=['w', 'dictionary'])

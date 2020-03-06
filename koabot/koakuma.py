@@ -168,8 +168,7 @@ async def search_urbandictionary(ctx, *word):
 
     definition_embeds[len(definition_embeds) - 1].set_footer(
         text=bot.assets['urban_dictionary']['name'],
-        icon_url=bot.assets['urban_dictionary']['favicon']
-    )
+        icon_url=bot.assets['urban_dictionary']['favicon'])
 
     for embed in definition_embeds:
         await ctx.send(embed=embed)
@@ -302,11 +301,15 @@ async def search_english_word(ctx, *word):
             embed.description = dictionary_definitions[2048 * embeds_sent:2048 * (embeds_sent + 1)]
 
             if embeds_sent == embeds_to_send:
-                embed.set_footer(text=bot.assets['merriam-webster']['name'], icon_url=bot.assets['merriam-webster']['favicon'])
+                embed.set_footer(
+                    text=bot.assets['merriam-webster']['name'],
+                    icon_url=bot.assets['merriam-webster']['favicon'])
 
             await ctx.send(embed=embed)
     else:
-        embed.set_footer(text=bot.assets['merriam-webster']['name'], icon_url=bot.assets['merriam-webster']['favicon'])
+        embed.set_footer(
+            text=bot.assets['merriam-webster']['name'],
+            icon_url=bot.assets['merriam-webster']['favicon'])
         await ctx.send(embed=embed)
 
 
@@ -371,7 +374,9 @@ async def get_4chan_picture(ctx, user_board='u', thread_id=''):
                 embed.title = html.unescape(thread.topic.subject)
                 embed.url = thread.topic.url
 
-            embed.set_author(name='%s @ %s' % (post.name, post.datetime), url=post.semantic_url)
+            embed.set_author(
+                name='%s @ %s' % (post.name, post.datetime),
+                url=post.semantic_url)
             embed.add_field(name='No.%s' % post.post_id, value='\u200b')
             embed.description = post.text_comment
 
@@ -410,7 +415,9 @@ async def get_4chan_picture(ctx, user_board='u', thread_id=''):
                         embed.title = html.unescape(thread.topic.subject)
                         embed.url = thread.topic.url
 
-                    embed.set_author(name='%s @ %s' % (post.name, post.datetime), url=post.semantic_url)
+                    embed.set_author(
+                        name='%s @ %s' % (post.name, post.datetime),
+                        url=post.semantic_url)
                     embed.add_field(name='No.%s' % post.post_id, value='\u200b')
                     embed.description = post.text_comment
                     embed.set_image(url=post.file_url)
@@ -424,7 +431,9 @@ async def get_4chan_picture(ctx, user_board='u', thread_id=''):
             if len(posts_ready) > 0:
                 if len(posts_ready) < max_posts_per_thread and fallback_post:
                     embed = discord.Embed()
-                    embed.set_author(name='%s @ %s' % (fallback_post.name, fallback_post.datetime), url=fallback_post.semantic_url)
+                    embed.set_author(
+                        name='%s @ %s' % (fallback_post.name, fallback_post.datetime),
+                        url=fallback_post.semantic_url)
                     embed.add_field(name='No.%s' % fallback_post.post_id, value='\u200b')
                     embed.description = fallback_post.text_comment
                     posts_ready.append(embed)
@@ -553,13 +562,11 @@ async def send_board_posts(ctx, posts, **kwargs):
                 if total_posts > max_posts:
                     embed.set_footer(
                         text='%i+ remaining' % (total_posts - max_posts),
-                        icon_url=bot.assets[board]['favicon']
-                    )
+                        icon_url=bot.assets[board]['favicon'])
                 else:
                     embed.set_footer(
                         text=bot.assets[board]['name'],
-                        icon_url=bot.assets[board]['favicon']
-                    )
+                        icon_url=bot.assets[board]['favicon'])
 
         if not show_nsfw and post['rating'] is not 's':
             if 'nsfw_placeholder' in bot.assets[board]:
@@ -668,16 +675,14 @@ async def avatar(ctx):
             embed.set_image(url=mention.avatar_url)
             embed.set_author(
                 name='%s #%i' % (mention.name, int(mention.discriminator)),
-                icon_url=mention.avatar_url
-            )
+                icon_url=mention.avatar_url)
             await ctx.send(embed=embed)
     else:
         embed = discord.Embed()
         embed.set_image(url=ctx.message.author.avatar_url)
         embed.set_author(
             name='%s #%i' % (ctx.message.author.name, int(ctx.message.author.discriminator)),
-            icon_url=ctx.message.author.avatar_url
-        )
+            icon_url=ctx.message.author.avatar_url)
         await ctx.send(embed=embed)
 
 
@@ -791,16 +796,14 @@ async def get_twitter_gallery(msg, url):
         embed.set_author(
             name='%s (@%s)' % (tweet.author.name, tweet.author.screen_name),
             url='https://twitter.com/' + tweet.author.screen_name,
-            icon_url=tweet.author.profile_image_url_https
-        )
+            icon_url=tweet.author.profile_image_url_https)
         embed.set_image(url=picture)
 
         # If it's the last picture to show, add a brand footer
         if total_gallery_pics <= 0:
             embed.set_footer(
                 text=bot.assets['twitter']['name'],
-                icon_url=bot.assets['twitter']['favicon']
-            )
+                icon_url=bot.assets['twitter']['favicon'])
 
         await channel.send(embed=embed)
 
@@ -830,9 +833,7 @@ async def get_imgur_gallery(msg, url):
         pictures_processed += 1
 
         embed = discord.Embed()
-        embed.set_image(
-            url=image['link']
-        )
+        embed.set_image(url=image['link'])
 
         if pictures_processed >= min(4, total_album_pictures):
             remaining_footer = ''
@@ -844,8 +845,7 @@ async def get_imgur_gallery(msg, url):
 
             embed.set_footer(
                 text=remaining_footer,
-                icon_url=bot.assets['imgur']['favicon']
-            )
+                icon_url=bot.assets['imgur']['favicon'])
 
         await channel.send(embed=embed)
 
@@ -866,8 +866,7 @@ async def generate_pixiv_embed(post, user):
     embed = discord.Embed()
     embed.set_author(
         name=user.name,
-        url='https://www.pixiv.net/member.php?id=%i' % user.id
-    )
+        url='https://www.pixiv.net/member.php?id=%i' % user.id)
     embed.set_image(url='attachment://' + image_filename)
     return embed, image, image_filename
 
@@ -943,8 +942,7 @@ async def get_pixiv_gallery(msg, url):
 
                 embed.set_footer(
                     text=remaining_footer,
-                    icon_url=bot.assets['pixiv']['favicon']
-                )
+                    icon_url=bot.assets['pixiv']['favicon'])
             await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
 
     await temp_message.delete()
@@ -1045,17 +1043,14 @@ async def get_sankaku_gallery(msg, url):
     api_result = await net.http_request(search_url, json=True)
 
     if not api_result or 'code' in api_result:
-        print('Sankaku error\nCode #{}'.format(api_result['code']))
+        print('Sankaku error\nCode #%s' % api_result['code'])
         return
 
     embed = discord.Embed()
-    embed.set_image(
-        url=api_result['preview_url']
-    )
+    embed.set_image(url=api_result['preview_url'])
     embed.set_footer(
         text=bot.assets['sankaku']['name'],
-        icon_url=bot.assets['sankaku']['favicon']
-    )
+        icon_url=bot.assets['sankaku']['favicon'])
 
     await channel.send(embed=embed)
 
@@ -1128,10 +1123,15 @@ async def get_picarto_stream_preview(msg, url):
     filename = get_file_name(picarto_request['thumbnails']['web'])
 
     embed = discord.Embed()
-    embed.set_author(name=post_id, url='https://picarto.tv/' + post_id, icon_url=picarto_request['avatar'])
+    embed.set_author(
+        name=post_id,
+        url='https://picarto.tv/' + post_id,
+        icon_url=picarto_request['avatar'])
     embed.description = '**%s**' % picarto_request['title']
     embed.set_image(url='attachment://' + filename)
-    embed.set_footer(text=bot.assets['picarto']['name'], icon_url=bot.assets['picarto']['favicon'])
+    embed.set_footer(
+        text=bot.assets['picarto']['name'],
+        icon_url=bot.assets['picarto']['favicon'])
     await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
     return True
 
@@ -1226,7 +1226,7 @@ async def convert_units(ctx, units):
             value2 = quantity[2]
 
             converted_value = value * converter.ureg.foot + value2 * converter.ureg.inch
-            conversion_str += ('\n{} {} → {}').format(value * converter.ureg.foot, value2 * converter.ureg.inch, converted_value.to_base_units())
+            conversion_str += '\n%s %s → %s' % (value * converter.ureg.foot, value2 * converter.ureg.inch, converted_value.to_base_units())
             continue
 
         (unit, value) = quantity
@@ -1245,7 +1245,7 @@ async def convert_units(ctx, units):
             else:
                 converted_value = value.to(converter.ureg.feet)
 
-        conversion_str += ('\n{} → {}').format(value, converted_value)
+        conversion_str += '\n%s → %s' % (value, converted_value)
 
     # Random chance for final quote ([0..4])
     if random.randint(0, 4) == 4:
@@ -1347,8 +1347,12 @@ async def check_live_streamers():
                 continue
 
             embed = discord.Embed()
-            embed.set_author(name=streamer['streamer']['user_name'], url='https://www.twitch.tv/' + streamer['streamer']['user_name'])
-            embed.set_footer(text=bot.assets['twitch']['name'], icon_url=bot.assets['twitch']['favicon'])
+            embed.set_author(
+                name=streamer['streamer']['user_name'],
+                url='https://www.twitch.tv/' + streamer['streamer']['user_name'])
+            embed.set_footer(
+                text=bot.assets['twitch']['name'],
+                icon_url=bot.assets['twitch']['favicon'])
 
             # setting thumbnail size
             thumbnail_url = streamer['streamer']['thumbnail_url']

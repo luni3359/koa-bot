@@ -117,6 +117,10 @@ async def search_jisho(ctx, *word):
     if len(embed.description) > 2048:
         embed.description = embed.description[:2048]
 
+    embed.set_footer(
+        text=bot.assets['jisho']['name'],
+        icon_url=bot.assets['jisho']['favicon']['size16'])
+
     await ctx.send(embed=embed)
 
 
@@ -168,7 +172,7 @@ async def search_urbandictionary(ctx, *word):
 
     definition_embeds[len(definition_embeds) - 1].set_footer(
         text=bot.assets['urban_dictionary']['name'],
-        icon_url=bot.assets['urban_dictionary']['favicon'])
+        icon_url=bot.assets['urban_dictionary']['favicon']['size16'])
 
     for embed in definition_embeds:
         await ctx.send(embed=embed)
@@ -204,12 +208,16 @@ async def search_english_word(ctx, *word):
 
             embed = discord.Embed()
             embed.description = '*%s*' % '\n\n'.join(suggestions)
+            embed.set_footer(
+                text=bot.assets['merriam-webster']['name'],
+                icon_url=bot.assets['merriam-webster']['favicon'])
             await ctx.send(random.choice(bot.quotes['dictionary_try_this']), embed=embed)
             return
         # If there's suggestions to a different grammatical tense
         else:
             tense = js[0]['cxs'][0]
             suggested_tense_word = tense['cxtis'][0]['cxt']
+            await ctx.send('Hmm... Let\'s see...')
             await ctx.invoke(bot.get_command('word'), suggested_tense_word)
             return
 
@@ -562,11 +570,11 @@ async def send_board_posts(ctx, posts, **kwargs):
                 if total_posts > max_posts:
                     embed.set_footer(
                         text='%i+ remaining' % (total_posts - max_posts),
-                        icon_url=bot.assets[board]['favicon'])
+                        icon_url=bot.assets[board]['favicon']['size16'])
                 else:
                     embed.set_footer(
                         text=bot.assets[board]['name'],
-                        icon_url=bot.assets[board]['favicon'])
+                        icon_url=bot.assets[board]['favicon']['size16'])
 
         if not show_nsfw and post['rating'] is not 's':
             if 'nsfw_placeholder' in bot.assets[board]:
@@ -845,7 +853,7 @@ async def get_imgur_gallery(msg, url):
 
             embed.set_footer(
                 text=remaining_footer,
-                icon_url=bot.assets['imgur']['favicon'])
+                icon_url=bot.assets['imgur']['favicon']['size32'])
 
         await channel.send(embed=embed)
 

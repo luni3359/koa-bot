@@ -518,9 +518,22 @@ def list_contains(lst, items_to_be_matched):
     return False
 
 
-def danbooru_post_has_missing_preview(post):
-    """Determine whether or not a post misses its preview"""
-    return list_contains(post['tag_string_general'].split(), bot.rules['no_preview_tags']) or post['is_banned']
+def post_is_missing_preview(post, **kwargs):
+    """Determine whether or not a post misses its preview
+    Arguments:
+        post::json object
+
+    Keywords:
+        board::str
+            The board to check the rules with. Default is 'danbooru'
+    """
+
+    board = kwargs.get('board', 'danbooru')
+
+    if board == 'e621':
+        return list_contains(post['tags']['general'], bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
+
+    return list_contains(post['tag_string_general'].split(), bot.rules['no_preview_tags'][board]) or post['is_banned']
 
 
 async def send_board_posts(ctx, posts, **kwargs):
@@ -595,7 +608,7 @@ async def send_board_posts(ctx, posts, **kwargs):
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
             if board == 'danbooru':
-                if danbooru_post_has_missing_preview(post) or last_post:
+                if post_is_missing_preview(post, board=board) or last_post:
                     await ctx.send('<%s>' % embed.url, embed=embed)
                 else:
                     await ctx.send(embed.url)
@@ -1016,12 +1029,13 @@ async def get_board_gallery(channel, msg, url, **kwargs):
 
     if board == 'e621':
         if post['relationships']['has_active_children']:
-            search = 'parent:%s' % post['id']
+            search = 'parent:%s order:id' % post['id']
         elif post['relationships']['parent_id']:
-            search = 'id:%s' % post['parent_id']
+            search = 'parent:%s order:id' % post['relationships']['parent_id']
         else:
-            if post['rating'] is 's' or on_nsfw_channel:
-                await send_board_posts(channel, post, board=board)
+            if post_is_missing_preview(post, board=board):
+                if post['rating'] is 's' or on_nsfw_channel:
+                    await send_board_posts(channel, post, board=board)
             return
     else:
         if post['has_children']:
@@ -1029,7 +1043,7 @@ async def get_board_gallery(channel, msg, url, **kwargs):
         elif post['parent_id']:
             search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
         else:
-            if board == 'danbooru' and danbooru_post_has_missing_preview(post):
+            if post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:
                     await send_board_posts(channel, post, board=board)
             return
@@ -1040,14 +1054,12 @@ async def get_board_gallery(channel, msg, url, **kwargs):
         posts = posts['posts']
 
     post_included_in_results = False
-    if board == 'danbooru' and danbooru_post_has_missing_preview(post) and posts or board == 'e621' and posts:
+    if post_is_missing_preview(post, board=board) and posts:
         if post['rating'] is 's' or on_nsfw_channel:
             post_included_in_results = True
             post = [post]
             post.extend(posts)
             posts = post
-    elif board == 'e621':
-        await send_board_posts(channel, post, board=board)
 
     if posts:
         if post_included_in_results:

@@ -1031,7 +1031,10 @@ async def get_board_gallery(channel, msg, url, **kwargs):
         if post['relationships']['has_active_children']:
             search = 'parent:%s order:id' % post['id']
         elif post['relationships']['parent_id']:
-            search = 'parent:%s order:id' % post['relationships']['parent_id']
+            search = [
+                'id:%s' % post['relationships']['parent_id'],
+                'parent:%s order:id -id:%s' % (post['relationships']['parent_id'], post['id'])
+                ]
         else:
             if post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:
@@ -1048,7 +1051,14 @@ async def get_board_gallery(channel, msg, url, **kwargs):
                     await send_board_posts(channel, post, board=board)
             return
 
-    posts = await board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
+    # If there's multiple searches, put them all in the posts list
+    if isinstance(search, typing.List):
+        posts = []
+        for query in search:
+            results = await board_search(board=board, tags=query, include_nsfw=on_nsfw_channel)
+            posts.extend(results['posts'])
+    else:
+        posts = await board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
 
     if 'posts' in posts:
         posts = posts['posts']

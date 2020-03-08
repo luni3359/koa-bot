@@ -369,7 +369,7 @@ async def convert_currency(ctx, amount, currency_type1, _, currency_type2):
     await ctx.send('```%s %s → %0.2f %s```' % (amount, currency_type1, converted_amount, currency_type2))
 
 
-@bot.command(name='4chan', aliases=['4c'])
+@bot.command(name='4chan', aliases=['4c', '4ch'])
 async def get_4chan_picture(ctx, user_board='u', thread_id=''):
     """Get a random picture from a specific board"""
 
@@ -387,7 +387,10 @@ async def get_4chan_picture(ctx, user_board='u', thread_id=''):
             embed = discord.Embed()
 
             if len(posts_ready) == 0:
-                embed.title = html.unescape(thread.topic.subject)
+                if thread.topic.subject:
+                    embed.title = html.unescape(thread.topic.subject)
+                else:
+                    embed.title = '/%s/ thread' % user_board
                 embed.url = thread.topic.url
 
             embed.set_author(
@@ -428,7 +431,11 @@ async def get_4chan_picture(ctx, user_board='u', thread_id=''):
                     embed = discord.Embed()
 
                     if len(posts_ready) == 0:
-                        embed.title = html.unescape(thread.topic.subject)
+                        if thread.topic.subject:
+                            embed.title = html.unescape(thread.topic.subject)
+                        else:
+                            embed.title = '/%s/ thread' % user_board
+
                         embed.url = thread.topic.url
 
                     embed.set_author(
@@ -1034,7 +1041,7 @@ async def get_board_gallery(channel, msg, url, **kwargs):
             search = [
                 'id:%s' % post['relationships']['parent_id'],
                 'parent:%s order:id -id:%s' % (post['relationships']['parent_id'], post['id'])
-                ]
+            ]
         else:
             if post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:

@@ -555,6 +555,8 @@ async def send_board_posts(ctx, posts, **kwargs):
     if max_posts != 0:
         posts = posts[:max_posts]
 
+    print('Sending %s posts' % board)
+
     for post in posts:
         posts_processed += 1
         print('Parsing post #%i (%i/%i)...' % (post['id'], posts_processed, min(total_posts, max_posts)))
@@ -564,7 +566,7 @@ async def send_board_posts(ctx, posts, **kwargs):
             if board == 'danbooru':
                 url = 'https://danbooru.donmai.us/posts/%i' % post['id']
             elif board == 'e621':
-                url = 'https://e621.net/post/show/%i' % post['id']
+                url = 'https://e621.net/posts/%i' % post['id']
 
             await ctx.send(url)
             continue
@@ -645,18 +647,22 @@ def generate_board_embed(post, **kwargs):
         embed.title = embed_post_title
         embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
     elif board == 'e621':
-        embed.title = '#%s: %s - e621' % (post['id'], combine_tags(post['artist']))
-        embed.url = 'https://e621.net/post/show/%i' % post['id']
+        embed.title = '#%s: %s - e621' % (post['id'], combine_tags(post['tags']['artist']))
+        embed.url = 'https://e621.net/posts/%i' % post['id']
 
     if 'failed_post_preview' in bot.assets[board]:
         fileurl = bot.assets[board]['failed_post_preview']
     else:
         fileurl = bot.assets['default']['failed_post_preview']
 
-    valid_urls_keys = ['large_file_url', 'sample_url', 'file_url']
+    valid_urls_keys = ['large_file_url', 'file_url', 'preview_file_url', 'sample', 'file', 'preview']
     for key in valid_urls_keys:
         if key in post:
-            fileurl = post[key]
+            if board == 'e621':
+                fileurl = post[key]['url']
+            else:
+                fileurl = post[key]
+
             break
 
     embed.set_image(url=fileurl)
@@ -762,7 +768,7 @@ async def board_search(**kwargs):
         headers = bot.assets['e621']['headers']
 
         if post_id:
-            url = 'https://e621.net/post/show/%s.json' % post_id
+            url = 'https://e621.net/posts/%s.json' % post_id
             return await net.http_request(url, auth=bot.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
         elif tags:
             if include_nsfw:
@@ -771,7 +777,7 @@ async def board_search(**kwargs):
                 url = 'https://e926.net'
 
             headers['Content-Type'] = 'application/json'
-            return await net.http_request(url + '/post/index.json', auth=bot.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
+            return await net.http_request(url + '/posts.json', auth=bot.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
     else:
         raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 
@@ -995,6 +1001,9 @@ async def get_board_gallery(channel, msg, url, **kwargs):
 
     on_nsfw_channel = channel.is_nsfw()
 
+    if 'post' in post:
+        post = post['post']
+
     if post['rating'] is not 's' and not on_nsfw_channel:
         embed = discord.Embed()
         if 'nsfw_placeholder' in bot.assets[board]:
@@ -1005,17 +1014,30 @@ async def get_board_gallery(channel, msg, url, **kwargs):
         content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
         await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
-    if post['has_children']:
-        search = board == 'danbooru' and 'parent:%s order:id -id:%s' % (post['id'], post['id']) or 'parent:%s' % post['id']
-    elif post['parent_id']:
-        search = board == 'danbooru' and 'parent:%s order:id -id:%s' % (post['parent_id'], post['id']) or 'id:%s' % post['parent_id']
-    else:
-        if board == 'danbooru' and danbooru_post_has_missing_preview(post) or board == 'e621':
+    if board == 'e621':
+        if post['relationships']['has_active_children']:
+            search = 'parent:%s' % post['id']
+        elif post['relationships']['parent_id']:
+            search = 'id:%s' % post['parent_id']
+        else:
             if post['rating'] is 's' or on_nsfw_channel:
                 await send_board_posts(channel, post, board=board)
-        return
+            return
+    else:
+        if post['has_children']:
+            search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
+        elif post['parent_id']:
+            search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
+        else:
+            if board == 'danbooru' and danbooru_post_has_missing_preview(post):
+                if post['rating'] is 's' or on_nsfw_channel:
+                    await send_board_posts(channel, post, board=board)
+            return
 
     posts = await board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
+
+    if 'posts' in posts:
+        posts = posts['posts']
 
     post_included_in_results = False
     if board == 'danbooru' and danbooru_post_has_missing_preview(post) and posts or board == 'e621' and posts:
@@ -1043,7 +1065,7 @@ async def get_board_gallery(channel, msg, url, **kwargs):
 
 async def get_e621_gallery(msg, url):
     """Automatically fetch a bigger preview and gallery from e621"""
-    await get_board_gallery(msg.channel, msg, url, board='e621', id_start='/show/', id_end=r'^[0-9]+', end_regex=True)
+    await get_board_gallery(msg.channel, msg, url, board='e621', id_start=['/show/', '/posts/'], id_end=r'^[0-9]+', end_regex=True)
 
 
 async def get_sankaku_gallery(msg, url):

@@ -22,7 +22,7 @@ import tweepy
 from discord.ext import commands
 from num2words import num2words
 
-from koabot import converter, net
+import koabot
 from koabot.patterns import *
 
 bot = commands.Bot(command_prefix='!', description='')
@@ -82,7 +82,7 @@ async def search_jisho(ctx, *word):
     word_encoded = urllib.parse.quote_plus(words)
     user_search = bot.assets['jisho']['search_url'] + word_encoded
 
-    js = await net.http_request(user_search, json=True)
+    js = await koabot.net.http_request(user_search, json=True)
 
     if not js:
         await ctx.send('Error retrieving data from server.')
@@ -132,7 +132,7 @@ async def search_urbandictionary(ctx, *word):
     word_encoded = urllib.parse.quote_plus(words)
     user_search = bot.assets['urban_dictionary']['search_url'] + word_encoded
 
-    js = await net.http_request(user_search, json=True)
+    js = await koabot.net.http_request(user_search, json=True)
 
     if not js:
         await ctx.send('Error retrieving data from server.')
@@ -194,7 +194,7 @@ async def search_english_word(ctx, *word):
     word_encoded = urllib.parse.quote(words)
     user_search = '%s/%s?key=%s' % (bot.assets['merriam-webster']['search_url'], word_encoded, bot.auth_keys['merriam-webster']['key'])
 
-    js = await net.http_request(user_search, json=True)
+    js = await koabot.net.http_request(user_search, json=True)
 
     if not js:
         await ctx.send('Oops. What?')
@@ -481,39 +481,13 @@ async def get_4chan_picture(ctx, user_board='u', thread_id=''):
 @bot.command(name='e621', aliases=['e6'])
 async def search_e621(ctx, *args):
     """Search on e621!"""
-    await search_board(ctx, args, board='e621')
+    await koabot.board.search_board(ctx, args, board='e621')
 
 
 @bot.command(name='danbooru', aliases=['dan'])
 async def search_danbooru(ctx, *args):
     """Search on danbooru!"""
-    await search_board(ctx, args)
-
-
-async def search_board(ctx, tags, board='danbooru'):
-    """Search on image boards!
-    Arguments:
-        ctx
-            The context to interact with the discord API
-        tags::*args (list)
-            List of the tags sent by the user
-        board::str
-            The board to manage. Default is 'danbooru'
-    """
-
-    search = ' '.join(tags)
-    print('User searching for: ' + search)
-
-    on_nsfw_channel = ctx.channel.is_nsfw()
-
-    async with ctx.typing():
-        posts = await board_search(board=board, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
-
-    if not posts:
-        await ctx.send('Sorry, nothing found!')
-        return
-
-    await send_board_posts(ctx, posts, board=board)
+    await koabot.board.search_board(ctx, args)
 
 
 def list_contains(lst, items_to_be_matched):
@@ -523,106 +497,6 @@ def list_contains(lst, items_to_be_matched):
             return True
 
     return False
-
-
-def post_is_missing_preview(post, **kwargs):
-    """Determine whether or not a post misses its preview
-    Arguments:
-        post::json object
-
-    Keywords:
-        board::str
-            The board to check the rules with. Default is 'danbooru'
-    """
-
-    board = kwargs.get('board', 'danbooru')
-
-    if board == 'e621':
-        return list_contains(post['tags']['general'], bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
-
-    return list_contains(post['tag_string_general'].split(), bot.rules['no_preview_tags'][board]) or post['is_banned']
-
-
-async def send_board_posts(ctx, posts, **kwargs):
-    """Handle sending posts retrieved from image boards
-    Arguments:
-        ctx
-            The context to interact with the discord API
-        posts::list or json object
-            The post(s) to be sent to a channel
-
-    Keywords:
-        board::str
-            The board to manage. Default is 'danbooru'
-        show_nsfw::bool
-            Whether or not nsfw posts should have their previews shown. Default is True
-        max_posts::int
-            How many posts should be shown before showing how many of them were cut-off.
-            If max_posts is set to 0 then no footer will be shown and no posts will be omitted.
-    """
-
-    board = kwargs.get('board', 'danbooru')
-    show_nsfw = kwargs.get('show_nsfw', True)
-    max_posts = kwargs.get('max_posts', 4)
-
-    if not isinstance(posts, typing.List):
-        posts = [posts]
-
-    total_posts = len(posts)
-    posts_processed = 0
-    last_post = False
-
-    if max_posts != 0:
-        posts = posts[:max_posts]
-
-    print('Sending %s posts' % board)
-
-    for post in posts:
-        posts_processed += 1
-        print('Parsing post #%i (%i/%i)...' % (post['id'], posts_processed, min(total_posts, max_posts)))
-
-        denied_ext = ['webm']
-        if 'file_ext' in post and post['file_ext'] in denied_ext:
-            if board == 'danbooru':
-                url = 'https://danbooru.donmai.us/posts/%i' % post['id']
-            elif board == 'e621':
-                url = 'https://e621.net/posts/%i' % post['id']
-
-            await ctx.send(url)
-            continue
-
-        embed = generate_board_embed(post, board=board)
-
-        if max_posts != 0:
-            if posts_processed >= min(max_posts, total_posts):
-                last_post = True
-
-                if total_posts > max_posts:
-                    embed.set_footer(
-                        text='%i+ remaining' % (total_posts - max_posts),
-                        icon_url=bot.assets[board]['favicon']['size16'])
-                else:
-                    embed.set_footer(
-                        text=bot.assets[board]['name'],
-                        icon_url=bot.assets[board]['favicon']['size16'])
-
-        if not show_nsfw and post['rating'] is not 's':
-            if 'nsfw_placeholder' in bot.assets[board]:
-                embed.set_image(url=bot.assets[board]['nsfw_placeholder'])
-            else:
-                embed.set_image(url=bot.assets['default']['nsfw_placeholder'])
-
-            await ctx.send('<%s>' % embed.url, embed=embed)
-        else:
-            if board == 'danbooru':
-                if post_is_missing_preview(post, board=board) or last_post:
-                    await ctx.send('<%s>' % embed.url, embed=embed)
-                else:
-                    await ctx.send(embed.url)
-            elif board == 'e621':
-                await ctx.send('<%s>' % embed.url, embed=embed)
-
-        print('Post #%i complete' % post['id'])
 
 
 def generate_board_embed(post, **kwargs):
@@ -739,69 +613,6 @@ async def uptime(ctx):
     await ctx.send('I\'ve been running for %i days, %i hours, %i minutes and %i seconds.' % (days, hours, minutes, seconds))
 
 
-async def board_search(**kwargs):
-    """Board searches handler
-    Keywords:
-        board::str
-            Specify what board to search on. Default is 'danbooru'
-        post_id::int
-            Used for searching by post id on a board
-        tags::str
-            Used for searching with tags on a board
-        limit::int
-            How many images to retrieve. Default is 5
-        random::bool
-            Pick at random from results. Default is False
-        include_nsfw::bool
-            Whether or not the search will use safe versions of boards. Default is False
-
-    Returns:
-        json::dict
-    """
-
-    board = kwargs.get('board', 'danbooru')
-    post_id = kwargs.get('post_id')
-    tags = kwargs.get('tags')
-    limit = kwargs.get('limit', 5)
-    random_arg = kwargs.get('random', False)
-    include_nsfw = kwargs.get('include_nsfw', False)
-
-    data_arg = {
-        'tags': tags,
-        'limit': limit,
-        'random': random_arg
-    }
-
-    if board == 'danbooru':
-        if post_id:
-            url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
-            return await net.http_request(url, auth=bot.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
-        elif tags:
-            if include_nsfw:
-                url = 'https://danbooru.donmai.us'
-            else:
-                url = 'https://safebooru.donmai.us'
-
-            return await net.http_request(url + '/posts.json', auth=bot.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
-    elif board == 'e621':
-        # e621 requires to know the User-Agent
-        headers = bot.assets['e621']['headers']
-
-        if post_id:
-            url = 'https://e621.net/posts/%s.json' % post_id
-            return await net.http_request(url, auth=bot.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
-        elif tags:
-            if include_nsfw:
-                url = 'https://e621.net'
-            else:
-                url = 'https://e926.net'
-
-            headers['Content-Type'] = 'application/json'
-            return await net.http_request(url + '/posts.json', auth=bot.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
-    else:
-        raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
-
-
 async def get_danbooru_gallery(msg, url):
     """Automatically fetch and post any image galleries from danbooru"""
     await get_board_gallery(msg.channel, msg, url, id_start='/posts/', id_end='?')
@@ -860,7 +671,7 @@ async def get_imgur_gallery(msg, url):
         return
 
     search_url = bot.assets['imgur']['album_url'].format(album_id)
-    api_result = await net.http_request(search_url, headers={'Authorization': 'Client-ID ' + bot.auth_keys['imgur']['client_id']}, json=True)
+    api_result = await koabot.net.http_request(search_url, headers={'Authorization': 'Client-ID ' + bot.auth_keys['imgur']['client_id']}, json=True)
 
     if not api_result or api_result['status'] != 200:
         return
@@ -903,7 +714,7 @@ async def generate_pixiv_embed(post, user):
 
     img_url = post.image_urls.medium
     image_filename = get_file_name(img_url)
-    image = await net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
+    image = await koabot.net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
 
     embed = discord.Embed()
     embed.set_author(
@@ -1014,7 +825,7 @@ async def get_board_gallery(channel, msg, url, **kwargs):
     if not post_id:
         return
 
-    post = await board_search(board=board, post_id=post_id)
+    post = await koabot.board.board_search(board=board, post_id=post_id)
 
     if not post:
         return
@@ -1043,9 +854,9 @@ async def get_board_gallery(channel, msg, url, **kwargs):
                 'parent:%s order:id -id:%s' % (post['relationships']['parent_id'], post['id'])
             ]
         else:
-            if post_is_missing_preview(post, board=board):
+            if koabot.board.post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:
-                    await send_board_posts(channel, post, board=board)
+                    await koabot.board.send_board_posts(channel, post, board=board)
             return
     else:
         if post['has_children']:
@@ -1053,25 +864,25 @@ async def get_board_gallery(channel, msg, url, **kwargs):
         elif post['parent_id']:
             search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
         else:
-            if post_is_missing_preview(post, board=board):
+            if koabot.board.post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:
-                    await send_board_posts(channel, post, board=board)
+                    await koabot.board.send_board_posts(channel, post, board=board)
             return
 
     # If there's multiple searches, put them all in the posts list
     if isinstance(search, typing.List):
         posts = []
         for query in search:
-            results = await board_search(board=board, tags=query, include_nsfw=on_nsfw_channel)
+            results = await koabot.board.board_search(board=board, tags=query, include_nsfw=on_nsfw_channel)
             posts.extend(results['posts'])
     else:
-        posts = await board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
+        posts = await koabot.board.board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
 
     if 'posts' in posts:
         posts = posts['posts']
 
     post_included_in_results = False
-    if post_is_missing_preview(post, board=board) and posts:
+    if koabot.board.post_is_missing_preview(post, board=board) and posts:
         if post['rating'] is 's' or on_nsfw_channel:
             post_included_in_results = True
             post = [post]
@@ -1080,9 +891,9 @@ async def get_board_gallery(channel, msg, url, **kwargs):
 
     if posts:
         if post_included_in_results:
-            await send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
+            await koabot.board.send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
         else:
-            await send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
+            await koabot.board.send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
     else:
         if post['rating'] is 's':
             content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
@@ -1107,7 +918,7 @@ async def get_sankaku_gallery(msg, url):
         return
 
     search_url = bot.assets['sankaku']['id_search_url'] + post_id
-    api_result = await net.http_request(search_url, json=True)
+    api_result = await koabot.net.http_request(search_url, json=True)
 
     if not api_result or 'code' in api_result:
         print('Sankaku error\nCode #%s' % api_result['code'])
@@ -1133,7 +944,7 @@ async def get_deviantart_post(msg, url):
 
     search_url = bot.assets['deviantart']['search_url_extended'].format(post_id)
 
-    api_result = await net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
+    api_result = await koabot.net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
 
     if not api_result['deviation']['isMature']:
         return
@@ -1176,7 +987,7 @@ async def get_picarto_stream_preview(msg, url):
     if not post_id:
         return
 
-    picarto_request = await net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
+    picarto_request = await koabot.net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
 
     if not picarto_request:
         await channel.send(random.choice(bot.quotes['stream_preview_failed']))
@@ -1186,7 +997,7 @@ async def get_picarto_stream_preview(msg, url):
         await channel.send(random.choice(bot.quotes['stream_preview_offline']))
         return
 
-    image = await net.fetch_image(picarto_request['thumbnails']['web'])
+    image = await koabot.net.fetch_image(picarto_request['thumbnails']['web'])
     filename = get_file_name(picarto_request['thumbnails']['web'])
 
     embed = discord.Embed()
@@ -1292,25 +1103,25 @@ async def convert_units(ctx, units):
             value = quantity[1]
             value2 = quantity[2]
 
-            converted_value = value * converter.ureg.foot + value2 * converter.ureg.inch
-            conversion_str += '\n%s %s → %s' % (value * converter.ureg.foot, value2 * converter.ureg.inch, converted_value.to_base_units())
+            converted_value = value * koabot.converter.ureg.foot + value2 * koabot.converter.ureg.inch
+            conversion_str += '\n%s %s → %s' % (value * koabot.converter.ureg.foot, value2 * koabot.converter.ureg.inch, converted_value.to_base_units())
             continue
 
         (unit, value) = quantity
-        value = value * converter.ureg[unit]
+        value = value * koabot.converter.ureg[unit]
 
         if unit in imperial_units:
             converted_value = value.to_base_units()
             converted_value = converted_value.to_compact()
         elif unit in si_units:
             if unit == 'kilometers':
-                converted_value = value.to(converter.ureg.miles)
+                converted_value = value.to(koabot.converter.ureg.miles)
             elif unit == 'kilograms':
-                converted_value = value.to(converter.ureg.pounds)
+                converted_value = value.to(koabot.converter.ureg.pounds)
             elif value.magnitude >= 300:
-                converted_value = value.to(converter.ureg.yards)
+                converted_value = value.to(koabot.converter.ureg.yards)
             else:
-                converted_value = value.to(converter.ureg.feet)
+                converted_value = value.to(koabot.converter.ureg.feet)
 
         conversion_str += '\n%s → %s' % (value, converted_value)
 
@@ -1386,7 +1197,7 @@ async def check_live_streamers():
             if streamer['platform'] == 'twitch':
                 twitch_search += 'user_id=%s&' % streamer['user_id']
 
-        twitch_query = await net.http_request(twitch_search, headers={'Client-ID': bot.auth_keys['twitch']['client_id']}, json=True)
+        twitch_query = await koabot.net.http_request(twitch_search, headers={'Client-ID': bot.auth_keys['twitch']['client_id']}, json=True)
 
         for streamer in twitch_query['data']:
             already_online = False
@@ -1426,7 +1237,7 @@ async def check_live_streamers():
             thumbnail_url = thumbnail_url.replace('{width}', '600')
             thumbnail_url = thumbnail_url.replace('{height}', '350')
             thumbnail_file_name = get_file_name(thumbnail_url)
-            image = await net.fetch_image(thumbnail_url)
+            image = await koabot.net.fetch_image(thumbnail_url)
             embed.set_image(url='attachment://' + thumbnail_file_name)
 
             stream_announcements.append({'message': '%s is now live!' % streamer['name'], 'embed': embed, 'image': image, 'filename': thumbnail_file_name})
@@ -1476,7 +1287,7 @@ async def lookup_pending_posts():
             channel_categories[channel_category].append(bot.get_channel(int(channel)))
 
     while not bot.is_closed():
-        posts = await board_search(tags=bot.tasks['danbooru']['tag_list'], limit=5, random=True)
+        posts = await koabot.board.board_search(tags=bot.tasks['danbooru']['tag_list'], limit=5, random=True)
 
         safe_posts = []
         nsfw_posts = []

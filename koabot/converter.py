@@ -1,37 +1,67 @@
-"""Measurement finder by Moonatic (ThatsNoMoon#0175 on Discord)"""
-from itertools import dropwhile
+"""Unit manager"""
+import random
 
 from pint import UnitRegistry
 
-from koabot.patterns import (NUMBER_PATTERN, SPECIAL_UNIT_PATTERN_TUPLE,
-                      UNIT_PATTERN_TUPLE)
+import koabot
 
 ureg = UnitRegistry()
 ureg.default_format = '~P.3f'
 Q_ = ureg.Quantity
 
 
-def find_units(s):
-    """Get units from a string"""
-    results = []
-    i = 0
-    while i < len(s):
-        special_case_match = SPECIAL_UNIT_PATTERN_TUPLE[1].match(s, i)
-        if special_case_match:
-            results.append((SPECIAL_UNIT_PATTERN_TUPLE[0], float(special_case_match.group(1)), float(special_case_match.group(2))))
-            i = special_case_match.end()
-        else:
-            num_match = NUMBER_PATTERN.match(s, i)
-            if num_match:
-                i = num_match.end()
-                match = lambda u: (u[0], u[1].match(s, i))
-                falsey = lambda x: not x[1]
-                unit = next(dropwhile(falsey, map(match, iter(UNIT_PATTERN_TUPLE))), None)
-                if unit:
-                    (unit, unit_match) = unit
-                    results.append((unit, float(num_match.group(1))))
-                    i = unit_match.end()
-            else:
-                i += 1
+async def convert_units(ctx, units):
+    """Convert units found to their opposite (SI <-> imp)"""
 
-    return results
+    imperial_units = [
+        'feet',
+        'inches',
+        'miles',
+        'pounds',
+    ]
+    si_units = [
+        'meters',
+        'centimeters',
+        'kilometers',
+        'kilograms'
+    ]
+
+    if not units:
+        return
+
+    conversion_str = random.choice(koabot.koakuma.bot.quotes['converting_units']) + '```'
+
+    for quantity in units:
+        if quantity[0] == 'footinches':
+            value = quantity[1]
+            value2 = quantity[2]
+
+            converted_value = value * ureg.foot + value2 * ureg.inch
+            conversion_str += '\n%s %s → %s' % (value * ureg.foot, value2 * ureg.inch, converted_value.to_base_units())
+            continue
+
+        (unit, value) = quantity
+        value = value * ureg[unit]
+
+        if unit in imperial_units:
+            converted_value = value.to_base_units()
+            converted_value = converted_value.to_compact()
+        elif unit in si_units:
+            if unit == 'kilometers':
+                converted_value = value.to(ureg.miles)
+            elif unit == 'kilograms':
+                converted_value = value.to(ureg.pounds)
+            elif value.magnitude >= 300:
+                converted_value = value.to(ureg.yards)
+            else:
+                converted_value = value.to(ureg.feet)
+
+        conversion_str += '\n%s → %s' % (value, converted_value)
+
+    # Random chance for final quote ([0..4])
+    if random.randint(0, 4) == 4:
+        conversion_str += '```\n' + random.choice(koabot.koakuma.bot.quotes['converting_units_modest'])
+    else:
+        conversion_str += '```'
+
+    await ctx.send(conversion_str)

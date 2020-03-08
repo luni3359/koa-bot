@@ -499,70 +499,6 @@ def list_contains(lst, items_to_be_matched):
     return False
 
 
-def generate_board_embed(post, **kwargs):
-    """Generate embeds for image board post urls
-    Arguments:
-        post
-            The post object
-
-    Keywords:
-        board::str
-            The board to handle. Default is 'danbooru'
-    """
-
-    board = kwargs.get('board', 'danbooru')
-    embed = discord.Embed()
-
-    if board == 'danbooru':
-        post_char = re.sub(r' \(.*?\)', '', combine_tags(post['tag_string_character']))
-        post_copy = combine_tags(post['tag_string_copyright'])
-        post_artist = combine_tags(post['tag_string_artist'])
-        embed_post_title = ''
-
-        if post_char:
-            embed_post_title += post_char
-
-        if post_copy:
-            if not post_char:
-                embed_post_title += post_copy
-            else:
-                embed_post_title += ' (%s)' % post_copy
-
-        if post_artist:
-            embed_post_title += ' drawn by ' + post_artist
-
-        if not post_char and not post_copy and not post_artist:
-            embed_post_title += '#%i' % post['id']
-
-        embed_post_title += ' | Danbooru'
-        if len(embed_post_title) >= bot.assets['danbooru']['max_embed_title_length']:
-            embed_post_title = embed_post_title[:bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
-
-        embed.title = embed_post_title
-        embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
-    elif board == 'e621':
-        embed.title = '#%s: %s - e621' % (post['id'], combine_tags(post['tags']['artist']))
-        embed.url = 'https://e621.net/posts/%i' % post['id']
-
-    if 'failed_post_preview' in bot.assets[board]:
-        fileurl = bot.assets[board]['failed_post_preview']
-    else:
-        fileurl = bot.assets['default']['failed_post_preview']
-
-    valid_urls_keys = ['large_file_url', 'file_url', 'preview_file_url', 'sample', 'file', 'preview']
-    for key in valid_urls_keys:
-        if key in post:
-            if board == 'e621':
-                fileurl = post[key]['url']
-            else:
-                fileurl = post[key]
-
-            break
-
-    embed.set_image(url=fileurl)
-    return embed
-
-
 @bot.command(name='temperature', aliases=['temp'])
 async def report_bot_temp(ctx):
     """Show the bot's current temperature"""
@@ -1077,63 +1013,6 @@ def get_file_name(url):
     return url.split('/')[-1]
 
 
-async def convert_units(ctx, units):
-    """Convert units found to their opposite (SI <-> imp)"""
-
-    imperial_units = [
-        'feet',
-        'inches',
-        'miles',
-        'pounds',
-    ]
-    si_units = [
-        'meters',
-        'centimeters',
-        'kilometers',
-        'kilograms'
-    ]
-
-    if not units:
-        return
-
-    conversion_str = random.choice(bot.quotes['converting_units']) + '```'
-
-    for quantity in units:
-        if quantity[0] == 'footinches':
-            value = quantity[1]
-            value2 = quantity[2]
-
-            converted_value = value * koabot.converter.ureg.foot + value2 * koabot.converter.ureg.inch
-            conversion_str += '\n%s %s → %s' % (value * koabot.converter.ureg.foot, value2 * koabot.converter.ureg.inch, converted_value.to_base_units())
-            continue
-
-        (unit, value) = quantity
-        value = value * koabot.converter.ureg[unit]
-
-        if unit in imperial_units:
-            converted_value = value.to_base_units()
-            converted_value = converted_value.to_compact()
-        elif unit in si_units:
-            if unit == 'kilometers':
-                converted_value = value.to(koabot.converter.ureg.miles)
-            elif unit == 'kilograms':
-                converted_value = value.to(koabot.converter.ureg.pounds)
-            elif value.magnitude >= 300:
-                converted_value = value.to(koabot.converter.ureg.yards)
-            else:
-                converted_value = value.to(koabot.converter.ureg.feet)
-
-        conversion_str += '\n%s → %s' % (value, converted_value)
-
-    # Random chance for final quote ([0..4])
-    if random.randint(0, 4) == 4:
-        conversion_str += '```\n' + random.choice(bot.quotes['converting_units_modest'])
-    else:
-        conversion_str += '```'
-
-    await ctx.send(conversion_str)
-
-
 async def koa_is_typing_a_message(ctx, **kwargs):
     """Make Koakuma seem alive with a 'is typing' delay
 
@@ -1395,7 +1274,7 @@ async def on_message(msg):
                                 await msg.delete()
 
     if unit_matches:
-        await convert_units(channel, unit_matches)
+        await koabot.converter.convert_units(channel, unit_matches)
 
     if bot.last_channel != channel.id or url_matches or msg.attachments:
         bot.last_channel = channel.id

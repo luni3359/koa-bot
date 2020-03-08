@@ -1,4 +1,5 @@
 """Manage image board operations"""
+import random
 import re
 import typing
 
@@ -6,6 +7,107 @@ import commentjson
 import discord
 
 import koabot
+
+
+async def get_board_gallery(channel, msg, url, **kwargs):
+    """Automatically automatic
+    Keywords:
+        board::str
+            The board to handle. Default is 'danbooru'
+        id_start::str
+            The point at which an url is stripped from
+        id_end::str
+            The point at which an url is stripped to
+        end_regex::bool
+            Whether or not id_end is regex. Default is False
+    """
+
+    board = kwargs.get('board', 'danbooru')
+    id_start = kwargs.get('id_start')
+    id_end = kwargs.get('id_end')
+    end_regex = kwargs.get('end_regex', False)
+
+    post_id = koabot.koakuma.get_post_id(url, id_start, id_end, has_regex=end_regex)
+
+    if not post_id:
+        return
+
+    post = await koabot.board.board_search(board=board, post_id=post_id)
+
+    if not post:
+        return
+
+    on_nsfw_channel = channel.is_nsfw()
+
+    if 'post' in post:
+        post = post['post']
+
+    if post['rating'] is not 's' and not on_nsfw_channel:
+        embed = discord.Embed()
+        if 'nsfw_placeholder' in koabot.koakuma.bot.assets[board]:
+            embed.set_image(url=koabot.koakuma.bot.assets[board]['nsfw_placeholder'])
+        else:
+            embed.set_image(url=koabot.koakuma.bot.assets['default']['nsfw_placeholder'])
+
+        content = '%s %s' % (msg.author.mention, random.choice(koabot.koakuma.bot.quotes['improper_content_reminder']))
+        await koabot.koakuma.koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+
+    if board == 'e621':
+        if post['relationships']['has_active_children']:
+            search = 'parent:%s order:id' % post['id']
+        elif post['relationships']['parent_id']:
+            search = [
+                'id:%s' % post['relationships']['parent_id'],
+                'parent:%s order:id -id:%s' % (post['relationships']['parent_id'], post['id'])
+            ]
+        else:
+            if koabot.board.post_is_missing_preview(post, board=board):
+                if post['rating'] is 's' or on_nsfw_channel:
+                    await koabot.board.send_board_posts(channel, post, board=board)
+            return
+    else:
+        if post['has_children']:
+            search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
+        elif post['parent_id']:
+            search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
+        else:
+            if koabot.board.post_is_missing_preview(post, board=board):
+                if post['rating'] is 's' or on_nsfw_channel:
+                    await koabot.board.send_board_posts(channel, post, board=board)
+            return
+
+    # If there's multiple searches, put them all in the posts list
+    if isinstance(search, typing.List):
+        posts = []
+        for query in search:
+            results = await koabot.board.board_search(board=board, tags=query, include_nsfw=on_nsfw_channel)
+            posts.extend(results['posts'])
+    else:
+        posts = await koabot.board.board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
+
+    if 'posts' in posts:
+        posts = posts['posts']
+
+    post_included_in_results = False
+    if koabot.board.post_is_missing_preview(post, board=board) and posts:
+        if post['rating'] is 's' or on_nsfw_channel:
+            post_included_in_results = True
+            post = [post]
+            post.extend(posts)
+            posts = post
+
+    if posts:
+        if post_included_in_results:
+            await koabot.board.send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
+        else:
+            await koabot.board.send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
+    else:
+        if post['rating'] is 's':
+            content = random.choice(koabot.koakuma.bot.quotes['cannot_show_nsfw_gallery'])
+        else:
+            content = random.choice(koabot.koakuma.bot.quotes['rude_cannot_show_nsfw_gallery'])
+
+        await koabot.koakuma.koa_is_typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
 
 async def search_board(ctx, tags, board='danbooru'):
@@ -30,6 +132,9 @@ async def search_board(ctx, tags, board='danbooru'):
     if not posts:
         await ctx.send('Sorry, nothing found!')
         return
+
+    if 'posts' in posts:
+        posts = posts['posts']
 
     await send_board_posts(ctx, posts, board=board)
 

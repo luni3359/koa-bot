@@ -22,7 +22,9 @@ import tweepy
 from discord.ext import commands
 from num2words import num2words
 
-import koabot
+import koabot.board
+import koabot.converter
+import koabot.net
 from koabot.patterns import *
 
 bot = commands.Bot(command_prefix='!', description='')
@@ -551,7 +553,7 @@ async def uptime(ctx):
 
 async def get_danbooru_gallery(msg, url):
     """Automatically fetch and post any image galleries from danbooru"""
-    await get_board_gallery(msg.channel, msg, url, id_start='/posts/', id_end='?')
+    await koabot.board.get_board_gallery(msg.channel, msg, url, id_start='/posts/', id_end='?')
 
 
 async def get_twitter_gallery(msg, url):
@@ -738,110 +740,9 @@ async def get_pixiv_gallery(msg, url):
     print('DONE PIXIV!')
 
 
-async def get_board_gallery(channel, msg, url, **kwargs):
-    """Automatically automatic
-    Keywords:
-        board::str
-            The board to handle. Default is 'danbooru'
-        id_start::str
-            The point at which an url is stripped from
-        id_end::str
-            The point at which an url is stripped to
-        end_regex::bool
-            Whether or not id_end is regex. Default is False
-    """
-
-    board = kwargs.get('board', 'danbooru')
-    id_start = kwargs.get('id_start')
-    id_end = kwargs.get('id_end')
-    end_regex = kwargs.get('end_regex', False)
-
-    post_id = get_post_id(url, id_start, id_end, has_regex=end_regex)
-
-    if not post_id:
-        return
-
-    post = await koabot.board.board_search(board=board, post_id=post_id)
-
-    if not post:
-        return
-
-    on_nsfw_channel = channel.is_nsfw()
-
-    if 'post' in post:
-        post = post['post']
-
-    if post['rating'] is not 's' and not on_nsfw_channel:
-        embed = discord.Embed()
-        if 'nsfw_placeholder' in bot.assets[board]:
-            embed.set_image(url=bot.assets[board]['nsfw_placeholder'])
-        else:
-            embed.set_image(url=bot.assets['default']['nsfw_placeholder'])
-
-        content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
-        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
-
-    if board == 'e621':
-        if post['relationships']['has_active_children']:
-            search = 'parent:%s order:id' % post['id']
-        elif post['relationships']['parent_id']:
-            search = [
-                'id:%s' % post['relationships']['parent_id'],
-                'parent:%s order:id -id:%s' % (post['relationships']['parent_id'], post['id'])
-            ]
-        else:
-            if koabot.board.post_is_missing_preview(post, board=board):
-                if post['rating'] is 's' or on_nsfw_channel:
-                    await koabot.board.send_board_posts(channel, post, board=board)
-            return
-    else:
-        if post['has_children']:
-            search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
-        elif post['parent_id']:
-            search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
-        else:
-            if koabot.board.post_is_missing_preview(post, board=board):
-                if post['rating'] is 's' or on_nsfw_channel:
-                    await koabot.board.send_board_posts(channel, post, board=board)
-            return
-
-    # If there's multiple searches, put them all in the posts list
-    if isinstance(search, typing.List):
-        posts = []
-        for query in search:
-            results = await koabot.board.board_search(board=board, tags=query, include_nsfw=on_nsfw_channel)
-            posts.extend(results['posts'])
-    else:
-        posts = await koabot.board.board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
-
-    if 'posts' in posts:
-        posts = posts['posts']
-
-    post_included_in_results = False
-    if koabot.board.post_is_missing_preview(post, board=board) and posts:
-        if post['rating'] is 's' or on_nsfw_channel:
-            post_included_in_results = True
-            post = [post]
-            post.extend(posts)
-            posts = post
-
-    if posts:
-        if post_included_in_results:
-            await koabot.board.send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
-        else:
-            await koabot.board.send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
-    else:
-        if post['rating'] is 's':
-            content = random.choice(bot.quotes['cannot_show_nsfw_gallery'])
-        else:
-            content = random.choice(bot.quotes['rude_cannot_show_nsfw_gallery'])
-
-        await koa_is_typing_a_message(channel, content=content, rnd_duration=[1, 2])
-
-
 async def get_e621_gallery(msg, url):
     """Automatically fetch a bigger preview and gallery from e621"""
-    await get_board_gallery(msg.channel, msg, url, board='e621', id_start=['/show/', '/posts/'], id_end=r'^[0-9]+', end_regex=True)
+    await koabot.board.get_board_gallery(msg.channel, msg, url, board='e621', id_start=['/show/', '/posts/'], id_end=r'^[0-9]+', end_regex=True)
 
 
 async def get_sankaku_gallery(msg, url):

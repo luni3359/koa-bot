@@ -1,9 +1,10 @@
 """__main__.py"""
 from sys import argv
 
+import koabot.koakuma
+
 if __name__ == '__main__':
-    from koabot import koakuma
     try:
-        koakuma.start(argv[1] == '--debug')
+        koabot.koakuma.start(argv[1] == '--debug')
     except IndexError:
-        koakuma.start()
+        koabot.koakuma.start()

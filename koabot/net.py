@@ -6,7 +6,23 @@ import aiohttp
 
 
 async def http_request(url, **kwargs):
-    """Make an http request"""
+    """Make an http request
+    Arguments:
+        url::str
+            The url to point to
+
+    Keywords:
+        auth::aiohttp.BasicAuth
+            Authentication object to make the connection with
+        data::json dump str
+            Stringified json object
+        headers::json object
+            object containing headers
+        json::bool
+            true = must return json. false/unset = returns plain text
+        err_msg::str
+            message to display on failure
+    """
 
     auth = kwargs.get('auth')
     data = kwargs.get('data')

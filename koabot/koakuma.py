@@ -1250,7 +1250,10 @@ def start(testing=False):
     bot.danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
     bot.e621_auth = aiohttp.BasicAuth(login=bot.auth_keys['e621']['username'], password=bot.auth_keys['e621']['key'])
 
-    # bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
+    try:
+        bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
+    except mariadb.DatabaseError:
+        print('Could not connect to the database! Functionality will be limited.')
 
     bot.last_channel = 0
     bot.last_channel_message_count = 0

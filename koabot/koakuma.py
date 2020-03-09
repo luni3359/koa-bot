@@ -609,7 +609,7 @@ async def get_imgur_gallery(msg, url):
         return
 
     search_url = bot.assets['imgur']['album_url'].format(album_id)
-    api_result = await koabot.net.http_request(search_url, headers={'Authorization': 'Client-ID ' + bot.auth_keys['imgur']['client_id']}, json=True)
+    api_result = await koabot.net.http_request(search_url, headers=bot.assets['imgur']['headers'], json=True)
 
     if not api_result or api_result['status'] != 200:
         return
@@ -652,7 +652,7 @@ async def generate_pixiv_embed(post, user):
 
     img_url = post.image_urls.medium
     image_filename = get_file_name(img_url)
-    image = await koabot.net.fetch_image(img_url, headers={'Referer': 'https://app-api.pixiv.net/'})
+    image = await koabot.net.fetch_image(img_url, headers=bot.assets['pixiv']['headers'])
 
     embed = discord.Embed()
     embed.set_author(
@@ -977,7 +977,7 @@ async def check_live_streamers():
             if streamer['platform'] == 'twitch':
                 twitch_search += 'user_id=%s&' % streamer['user_id']
 
-        twitch_query = await koabot.net.http_request(twitch_search, headers={'Client-ID': bot.auth_keys['twitch']['client_id']}, json=True)
+        twitch_query = await koabot.net.http_request(twitch_search, headers=bot.assets['twitch']['headers'], json=True)
 
         for streamer in twitch_query['data']:
             already_online = False

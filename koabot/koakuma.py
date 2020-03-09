@@ -551,6 +551,44 @@ async def uptime(ctx):
     await ctx.send('I\'ve been running for %i days, %i hours, %i minutes and %i seconds.' % (days, hours, minutes, seconds))
 
 
+@bot.command(name='twitch')
+async def search_twitch(ctx, *args):
+    if len(args) < 1:
+        print('well it worked...')
+        return
+
+    action = args[0]
+
+    if action == 'get':
+        embed = discord.Embed()
+        embed.description = ''
+        embed.set_footer(
+            text=bot.assets['twitch']['name'],
+            icon_url=bot.assets['twitch']['favicon'])
+
+        if len(args) == 2:
+            item = args[1]
+            if re.findall(r'(^[0-9]+$)', item):
+                # is searching an id
+                search_type = 'user_id'
+            else:
+                # searching an username
+                search_type = 'user_login'
+
+            stream = await koabot.net.http_request('https://api.twitch.tv/helix/streams?%s=%s' % (search_type, item), headers=bot.assets['twitch']['headers'], json=True)
+
+            for strem in stream['data'][:3]:
+                await ctx.send('https://twitch.tv/%s' % strem['user_name'])
+
+        else:
+            streams = await koabot.net.http_request('https://api.twitch.tv/helix/streams', headers=bot.assets['twitch']['headers'], json=True)
+
+            for stream in streams['data'][:5]:
+                embed.description += 'stream "%s"\nstreamer %s (%s)\n\n' % (stream['title'], stream['user_name'], stream['user_id'])
+
+            await ctx.send(embed=embed)
+
+
 async def get_danbooru_gallery(msg, url):
     """Automatically fetch and post any image galleries from danbooru"""
     await koabot.board.get_board_gallery(msg.channel, msg, url, id_start='/posts/', id_end='?')

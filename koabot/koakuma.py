@@ -1190,4 +1190,4 @@ def start(testing=False):
 
     bot.loop.create_task(koabot.tasks.check_live_streamers())
     bot.loop.create_task(koabot.tasks.change_presence_periodically())
-    bot.run(bot.auth_keys['discord']['token'])
+    bot.run(bot.koa['token'])

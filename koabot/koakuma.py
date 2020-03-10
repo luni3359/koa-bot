@@ -1193,11 +1193,15 @@ async def on_message(msg):
         if mentioned_channel == channel:
             continue
 
-        target_embed = discord.Embed()
+        embed_template = discord.Embed()
+        embed_template.set_author(name=msg.author.display_name, icon_url=msg.author.avatar_url)
+        embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon_url)
+
+        target_embed = embed_template.copy()
         target_embed.description = 'Mention by {} from {}\n\n[Click to go there]({})'.format(msg.author.mention, channel.mention, msg.jump_url)
         target_channel_msg = await mentioned_channel.send(embed=target_embed)
 
-        origin_embed = discord.Embed()
+        origin_embed = embed_template.copy()
         origin_embed.description = 'Mention by {} to {}\n\n[Click to go there]({})'.format(msg.author.mention, mentioned_channel.mention, target_channel_msg.jump_url)
         await channel.send(embed=origin_embed)
 

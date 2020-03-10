@@ -1,4 +1,4 @@
-"""_init.py"""
+"""__init.py__"""
 import sys
 
 MIN_PYTHON_VERSION = (3, 5, 3)

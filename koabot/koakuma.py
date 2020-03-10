@@ -590,6 +590,33 @@ async def search_twitch(ctx, *args):
             await ctx.send(embed=embed)
 
 
+@bot.command()
+async def test(ctx):
+    """Mic test"""
+
+    source = discord.FFmpegPCMAudio(os.path.join(SOURCE_DIR, 'assets', bot.testing['vc']['music-file']))
+
+    if not ctx.voice_client:
+        if ctx.guild.voice_channels:
+            for voice_channel in ctx.guild.voice_channels:
+                try:
+                    vc = await voice_channel.connect()
+                    break
+                except Exception:
+                    continue
+
+    else:
+        vc = ctx.voice_client
+
+    if not vc:
+        return
+
+    if vc.is_playing():
+        vc.stop()
+
+    vc.play(source, after=lambda e: print('done', e))
+
+
 async def get_danbooru_gallery(msg, url):
     """Automatically fetch and post any image galleries from danbooru"""
     await koabot.board.get_board_gallery(msg.channel, msg, url, id_start='/posts/', id_end='?')
@@ -1135,6 +1162,18 @@ async def lookup_pending_posts():
 
 
 @bot.event
+async def on_message_edit(before, after):
+    if not before.author.bot:
+        return
+
+    if before.author != before.guild.me:
+        return
+
+    if len(before.embeds) > 0 and len(after.embeds) == 0:
+        await after.edit(suppress=False)
+
+
+@bot.event
 async def on_message(msg):
     """Searches messages for urls and certain keywords"""
 
@@ -1151,15 +1190,15 @@ async def on_message(msg):
 
     # Reference channels together
     for mentioned_channel in msg.channel_mentions:
-        # if mentioned_channel == channel:
-        #     continue
+        if mentioned_channel == channel:
+            continue
 
         target_embed = discord.Embed()
-        target_embed.description = 'Mention by {} from {}\n\nGo there:\n<{}>'.format(msg.author.mention, channel.mention, msg.jump_url)
+        target_embed.description = 'Mention by {} from {}\n\n[Click to go there]({})'.format(msg.author.mention, channel.mention, msg.jump_url)
         target_channel_msg = await mentioned_channel.send(embed=target_embed)
 
         origin_embed = discord.Embed()
-        origin_embed.description = 'Mention by {} to {}\n\nGo there:\n<{}>'.format(msg.author.mention, mentioned_channel.mention, target_channel_msg.jump_url)
+        origin_embed.description = 'Mention by {} to {}\n\n[Click to go there]({})'.format(msg.author.mention, mentioned_channel.mention, target_channel_msg.jump_url)
         await channel.send(embed=origin_embed)
 
     url_matches = []
@@ -1233,33 +1272,6 @@ async def on_message(msg):
             await koa_is_typing_a_message(channel, content=random.choice(bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
 
     await bot.process_commands(msg)
-
-
-@bot.command()
-async def test(ctx):
-    """Mic test"""
-
-    source = discord.FFmpegPCMAudio(os.path.join(SOURCE_DIR, 'assets', bot.testing['vc']['music-file']))
-
-    if not ctx.voice_client:
-        if ctx.guild.voice_channels:
-            for voice_channel in ctx.guild.voice_channels:
-                try:
-                    vc = await voice_channel.connect()
-                    break
-                except Exception:
-                    continue
-
-    else:
-        vc = ctx.voice_client
-
-    if not vc:
-        return
-
-    if vc.is_playing():
-        vc.stop()
-
-    vc.play(source, after=lambda e: print('done', e))
 
 
 @bot.event

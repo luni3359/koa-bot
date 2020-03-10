@@ -6,7 +6,8 @@ import typing
 import commentjson
 import discord
 
-import koabot
+import koabot.koakuma
+import koabot.net
 
 
 async def get_board_gallery(channel, msg, url, **kwargs):
@@ -32,7 +33,7 @@ async def get_board_gallery(channel, msg, url, **kwargs):
     if not post_id:
         return
 
-    post = await koabot.board.board_search(board=board, post_id=post_id)
+    post = await board_search(board=board, post_id=post_id)
 
     if not post:
         return
@@ -61,9 +62,9 @@ async def get_board_gallery(channel, msg, url, **kwargs):
                 'parent:%s order:id -id:%s' % (post['relationships']['parent_id'], post['id'])
             ]
         else:
-            if koabot.board.post_is_missing_preview(post, board=board):
+            if post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:
-                    await koabot.board.send_board_posts(channel, post, board=board)
+                    await send_board_posts(channel, post, board=board)
             return
     else:
         if post['has_children']:
@@ -71,25 +72,25 @@ async def get_board_gallery(channel, msg, url, **kwargs):
         elif post['parent_id']:
             search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
         else:
-            if koabot.board.post_is_missing_preview(post, board=board):
+            if post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:
-                    await koabot.board.send_board_posts(channel, post, board=board)
+                    await send_board_posts(channel, post, board=board)
             return
 
     # If there's multiple searches, put them all in the posts list
     if isinstance(search, typing.List):
         posts = []
         for query in search:
-            results = await koabot.board.board_search(board=board, tags=query, include_nsfw=on_nsfw_channel)
+            results = await board_search(board=board, tags=query, include_nsfw=on_nsfw_channel)
             posts.extend(results['posts'])
     else:
-        posts = await koabot.board.board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
+        posts = await board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
 
     if 'posts' in posts:
         posts = posts['posts']
 
     post_included_in_results = False
-    if koabot.board.post_is_missing_preview(post, board=board) and posts:
+    if post_is_missing_preview(post, board=board) and posts:
         if post['rating'] is 's' or on_nsfw_channel:
             post_included_in_results = True
             post = [post]
@@ -98,9 +99,9 @@ async def get_board_gallery(channel, msg, url, **kwargs):
 
     if posts:
         if post_included_in_results:
-            await koabot.board.send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
+            await send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
         else:
-            await koabot.board.send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
+            await send_board_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
     else:
         if post['rating'] is 's':
             content = random.choice(koabot.koakuma.bot.quotes['cannot_show_nsfw_gallery'])
@@ -274,7 +275,7 @@ async def send_board_posts(ctx, posts, **kwargs):
             await ctx.send('<%s>' % embed.url, embed=embed)
         else:
             if board == 'danbooru':
-                if koabot.board.post_is_missing_preview(post, board=board) or last_post:
+                if post_is_missing_preview(post, board=board) or last_post:
                     await ctx.send('<%s>' % embed.url, embed=embed)
                 else:
                     await ctx.send(embed.url)

@@ -602,7 +602,8 @@ async def test(ctx):
                 try:
                     vc = await voice_channel.connect()
                     break
-                except Exception:
+                except discord.ClientException:
+                    print('Already connected to a voice channel')
                     continue
 
     else:
@@ -1163,6 +1164,7 @@ async def lookup_pending_posts():
 
 @bot.event
 async def on_message_edit(before, after):
+    """Make the embeds created by the bot unsuppressable"""
     if not before.author.bot:
         return
 
@@ -1295,8 +1297,12 @@ def start(testing=False):
     else:
         config_file = 'config.jsonc'
 
-    with open(os.path.join(SOURCE_DIR, 'config', config_file)) as json_file:
-        data = commentjson.load(json_file)
+    config_files = [config_file, 'auth.jsonc']
+    data = {}
+
+    for config_file in config_files:
+        with open(os.path.join(SOURCE_DIR, 'config', config_file)) as json_file:
+            data.update(commentjson.load(json_file))
 
     bot.launch_time = datetime.utcnow()
     bot.__dict__.update(data)

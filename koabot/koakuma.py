@@ -553,6 +553,7 @@ async def uptime(ctx):
 
 @bot.command(name='twitch')
 async def search_twitch(ctx, *args):
+    """Search on Twitch"""
     if len(args) < 1:
         print('well it worked...')
         return
@@ -1150,11 +1151,16 @@ async def on_message(msg):
 
     # Reference channels together
     for mentioned_channel in msg.channel_mentions:
-        if mentioned_channel == channel:
-            continue
+        # if mentioned_channel == channel:
+        #     continue
 
-        target_channel_msg = await mentioned_channel.send('Mention by {} from {}\n\nGo there:\n<{}>'.format(msg.author.mention, channel.mention, msg.jump_url))
-        await channel.send('Mention by {} to {}\n\nGo there:\n<{}>'.format(msg.author.mention, mentioned_channel.mention, target_channel_msg.jump_url))
+        target_embed = discord.Embed()
+        target_embed.description = 'Mention by {} from {}\n\nGo there:\n<{}>'.format(msg.author.mention, channel.mention, msg.jump_url)
+        target_channel_msg = await mentioned_channel.send(embed=target_embed)
+
+        origin_embed = discord.Embed()
+        origin_embed.description = 'Mention by {} to {}\n\nGo there:\n<{}>'.format(msg.author.mention, mentioned_channel.mention, target_channel_msg.jump_url)
+        await channel.send(embed=origin_embed)
 
     url_matches = []
     unit_matches = []

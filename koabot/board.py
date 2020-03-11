@@ -150,7 +150,8 @@ async def board_search(**kwargs):
         tags::str
             Used for searching with tags on a board
         limit::int
-            How many images to retrieve. Default is 5
+            How many images to retrieve. Default is 0.
+            Setting limit to 0 returns as many results as possible.
         random::bool
             Pick at random from results. Default is False
         include_nsfw::bool
@@ -163,15 +164,17 @@ async def board_search(**kwargs):
     board = kwargs.get('board', 'danbooru')
     post_id = kwargs.get('post_id')
     tags = kwargs.get('tags')
-    limit = kwargs.get('limit', 5)
+    limit = kwargs.get('limit', 0)
     random_arg = kwargs.get('random', False)
     include_nsfw = kwargs.get('include_nsfw', False)
 
     data_arg = {
         'tags': tags,
-        'limit': limit,
         'random': random_arg
     }
+
+    if limit and limit > 0:
+        data_arg['limit'] = limit
 
     if board == 'danbooru':
         if post_id:

@@ -28,6 +28,7 @@ async def get_board_gallery(channel, msg, url, **kwargs):
     id_end = kwargs.get('id_end')
     end_regex = kwargs.get('end_regex', False)
 
+    on_nsfw_channel = channel.is_nsfw()
     post_id = koabot.koakuma.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
     if not post_id:
@@ -37,8 +38,6 @@ async def get_board_gallery(channel, msg, url, **kwargs):
 
     if not post:
         return
-
-    on_nsfw_channel = channel.is_nsfw()
 
     if 'post' in post:
         post = post['post']
@@ -53,6 +52,7 @@ async def get_board_gallery(channel, msg, url, **kwargs):
         content = '%s %s' % (msg.author.mention, random.choice(koabot.koakuma.bot.quotes['improper_content_reminder']))
         await koabot.koakuma.koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
+    single_post = False
     if board == 'e621':
         if post['relationships']['has_active_children']:
             search = 'parent:%s order:id' % post['id']
@@ -62,20 +62,20 @@ async def get_board_gallery(channel, msg, url, **kwargs):
                 'parent:%s order:id -id:%s' % (post['relationships']['parent_id'], post['id'])
             ]
         else:
-            if post_is_missing_preview(post, board=board):
-                if post['rating'] is 's' or on_nsfw_channel:
-                    await send_board_posts(channel, post, board=board)
-            return
+            single_post = True
     else:
         if post['has_children']:
             search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
         elif post['parent_id']:
             search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
         else:
-            if post_is_missing_preview(post, board=board):
-                if post['rating'] is 's' or on_nsfw_channel:
-                    await send_board_posts(channel, post, board=board)
-            return
+            single_post = True
+
+    if single_post:
+        if post_is_missing_preview(post, board=board):
+            if post['rating'] is 's' or on_nsfw_channel:
+                await send_board_posts(channel, post, board=board)
+        return
 
     # If there's multiple searches, put them all in the posts list
     if isinstance(search, typing.List):
@@ -86,8 +86,15 @@ async def get_board_gallery(channel, msg, url, **kwargs):
     else:
         posts = await board_search(board=board, tags=search, include_nsfw=on_nsfw_channel)
 
+    # e621 fix for broken API
     if 'posts' in posts:
         posts = posts['posts']
+
+    # Rudimentary fix when NSFW results are returned and it's a safe channel (should actually revert at some point)
+    # Ought to respect the choice to display posts anyway but without thumbnail
+    if not on_nsfw_channel:
+        # filters all safe results into the posts variable
+        posts = [post for post in posts if post['rating'] is 's']
 
     post_included_in_results = False
     if post_is_missing_preview(post, board=board) and posts:

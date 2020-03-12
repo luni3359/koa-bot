@@ -12,6 +12,7 @@ import urllib
 from datetime import datetime
 
 import aiohttp
+import appdirs
 import basc_py4chan
 import commentjson
 import discord
@@ -740,11 +741,24 @@ async def get_pixiv_gallery(msg, url):
         return
 
     print('Now starting to process pixiv link #' + post_id)
+
     # Login
     if bot.pixiv_api.access_token is None:
-        bot.pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
-    else:
-        bot.pixiv_api.auth()
+        token_name = 'pixiv_refresh_token'
+        token_dir = os.path.join(appdirs.user_cache_dir('koa-bot'), token_name)
+
+        if hasattr(bot, token_name):
+            bot.pixiv_api.auth(refresh_token=bot.pixiv_refresh_token)
+        elif os.path.exists(token_dir):
+            with open(token_dir) as token_file:
+                token = token_file.readline()
+                bot.pixiv_refresh_token = token
+                bot.pixiv_api.auth(refresh_token=token)
+        else:
+            bot.pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
+            bot.pixiv_refresh_token = bot.pixiv_api.refresh_token
+            with open(token_dir, 'w') as token_file:
+                token_file.write(bot.pixiv_api.refresh_token)
 
     try:
         illust_json = bot.pixiv_api.illust_detail(post_id, req_auth=True)
@@ -1167,6 +1181,10 @@ def start(testing=False):
 
     bot.launch_time = datetime.utcnow()
     bot.__dict__.update(data)
+
+    # Make cache dir if it doesn't exist
+    cache_dir = appdirs.user_cache_dir('koa-bot')
+    os.makedirs(cache_dir, exist_ok=True)
 
     twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
     twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])

@@ -759,6 +759,8 @@ async def get_pixiv_gallery(msg, url):
             bot.pixiv_refresh_token = bot.pixiv_api.refresh_token
             with open(token_dir, 'w') as token_file:
                 token_file.write(bot.pixiv_api.refresh_token)
+    else:
+        bot.pixiv_api.auth(refresh_token=bot.pixiv_refresh_token)
 
     try:
         illust_json = bot.pixiv_api.illust_detail(post_id, req_auth=True)

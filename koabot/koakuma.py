@@ -1148,24 +1148,20 @@ async def on_message(msg):
             continue
 
         escaped_url = False
-
         i += 1
 
-    # What is this, my head hurts
-    if url_matches:
-        for url in url_matches:
-            for key, prop in bot.assets.items():
-                if 'domain' in bot.assets[key] and prop['domain'] in url:
-                    if 'type' in prop:
-                        if prop['type'] == 'gallery':
-                            if key == 'deviantart':
-                                await globals()['get_{}_post'.format(key)](msg, url)
-                            else:
-                                await globals()['get_{}_gallery'.format(key)](msg, url)
-                        elif prop['type'] == 'stream' and key == 'picarto':
-                            picarto_preview_shown = await get_picarto_stream_preview(msg, url)
-                            if picarto_preview_shown and msg.content[0] == '!':
-                                await msg.delete()
+    for url in url_matches:
+        for domain_name, asset in bot.assets.items():
+            if 'domain' in bot.assets[domain_name] and asset['domain'] in url and 'type' in asset:
+                if asset['type'] == 'gallery':
+                    if domain_name == 'deviantart':
+                        await globals()['get_{}_post'.format(domain_name)](msg, url)
+                    else:
+                        await globals()['get_{}_gallery'.format(domain_name)](msg, url)
+                elif asset['type'] == 'stream' and domain_name == 'picarto':
+                    picarto_preview_shown = await get_picarto_stream_preview(msg, url)
+                    if picarto_preview_shown and msg.content[0] == '!':
+                        await msg.delete()
 
     if bot.last_channel != channel.id or url_matches or msg.attachments:
         bot.last_channel = channel.id

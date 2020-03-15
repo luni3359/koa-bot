@@ -58,10 +58,5 @@ async def convert_units(ctx, units):
 
         conversion_str += '\n%s → %s' % (value, converted_value)
 
-    # Random chance for final quote ([0..4])
-    if random.randint(0, 4) == 4:
-        conversion_str += '```\n' + random.choice(koabot.koakuma.bot.quotes['converting_units_modest'])
-    else:
-        conversion_str += '```'
-
+    conversion_str += '```'
     await ctx.send(conversion_str)

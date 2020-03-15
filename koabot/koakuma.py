@@ -372,6 +372,42 @@ def formatDictionaryOddities(txt, which):
         return txt
 
 
+@bot.command(name='convert', aliases=['conv', 'cv'])
+async def unit_convert(ctx, *units):
+    """Convert units"""
+
+    if len(units) < 1:
+        return
+
+    units = ' '.join(units)
+
+    unit_matches = []
+    i = 0
+    while i < len(units):
+        ftin_match = SPECIAL_UNIT_PATTERN_TUPLE[1].match(units, i)
+        if ftin_match:
+            unit_matches.append((SPECIAL_UNIT_PATTERN_TUPLE[0], float(ftin_match.group(1)), float(ftin_match.group(2))))
+            # unit_matches.append((unit_name, value in feet, value in inches))
+            i = ftin_match.end()
+            continue
+
+        num_match = NUMBER_PATTERN.match(units, i)
+        if num_match:
+            i = num_match.end()
+            def match(u): return (u[0], u[1].match(units, i))
+            def falsey(x): return not x[1]
+            unit = next(itertools.dropwhile(falsey, map(match, iter(UNIT_PATTERN_TUPLE))), None)
+            if unit:
+                (unit, unit_match) = unit
+                unit_matches.append((unit, float(num_match.group(1))))
+                i = unit_match.end()
+
+        i += 1
+
+    if unit_matches:
+        await koabot.converter.convert_units(ctx, unit_matches)
+
+
 @bot.command(name='exchange', aliases=['currency', 'xc', 'c'])
 async def convert_currency(ctx, amount, currency_type1, _, currency_type2):
     """Convert currency to others"""
@@ -1095,9 +1131,8 @@ async def on_message(msg):
         await channel.send(embed=origin_embed)
 
     url_matches = []
-    unit_matches = []
-    i = 0
     escaped_url = False
+    i = 0
     while i < len(msg.content):
         if msg.content[i] == '<':
             escaped_url = True
@@ -1107,36 +1142,18 @@ async def on_message(msg):
         url_match = URL_PATTERN.match(msg.content, i)
         if url_match:
             if not escaped_url or url_match.end() >= len(msg.content) or url_match.end() < len(msg.content) and msg.content[url_match.end()] != '>':
-                url_matches.append(('url', url_match.group()))
+                url_matches.append(url_match.group())
 
             i = url_match.end()
             continue
 
         escaped_url = False
 
-        ftin_match = SPECIAL_UNIT_PATTERN_TUPLE[1].match(msg.content, i)
-        if ftin_match:
-            unit_matches.append((SPECIAL_UNIT_PATTERN_TUPLE[0], float(ftin_match.group(1)), float(ftin_match.group(2))))
-            # unit_matches.append((unit_name, value in feet, value in inches))
-            i = ftin_match.end()
-            continue
-
-        num_match = NUMBER_PATTERN.match(msg.content, i)
-        if num_match:
-            i = num_match.end()
-            def match(u): return (u[0], u[1].match(msg.content, i))
-            def falsey(x): return not x[1]
-            unit = next(itertools.dropwhile(falsey, map(match, iter(UNIT_PATTERN_TUPLE))), None)
-            if unit:
-                (unit, unit_match) = unit
-                unit_matches.append((unit, float(num_match.group(1))))
-                i = unit_match.end()
-
         i += 1
 
     # What is this, my head hurts
     if url_matches:
-        for (_, url) in url_matches:
+        for url in url_matches:
             for key, prop in bot.assets.items():
                 if 'domain' in bot.assets[key] and prop['domain'] in url:
                     if 'type' in prop:
@@ -1149,9 +1166,6 @@ async def on_message(msg):
                             picarto_preview_shown = await get_picarto_stream_preview(msg, url)
                             if picarto_preview_shown and msg.content[0] == '!':
                                 await msg.delete()
-
-    if unit_matches:
-        await koabot.converter.convert_units(channel, unit_matches)
 
     if bot.last_channel != channel.id or url_matches or msg.attachments:
         bot.last_channel = channel.id

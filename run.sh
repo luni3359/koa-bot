@@ -1,19 +1,35 @@
 #!/bin/bash
 # This script is run automatically when the pi runs, directly from /etc/xdg/autostart/koa-bot.desktop
-# env var is set at ~/.profile
+# env var is defined at ~/.profile
+
+function var_is_defined() {
+    if [ -z ${1} ]; then
+        return 0
+    fi
+
+    return 1
+}
+
+function path_is_valid() {
+    if [ ! -d ${1} ]; then
+        return 0
+    fi
+
+    return 1
+}
 
 function check_env_vars() {
-    if [ -z ${KOAKUMA_HOME} ]; then
+    if ! var_is_defined ${KOAKUMA_HOME}; then
         echo "\$KOAKUMA_HOME is not defined. It needs to point to the bot's directory."
         exit 1
     fi
 
-    if [ ! -d ${KOAKUMA_HOME} ]; then
+    if ! path_is_valid ${KOAKUMA_HOME}; then
         echo "Missing bot directory or env var set incorrectly, it points to ${KOAKUMA_HOME}"
         exit 1
     fi
 
-    if [ -z ${KOAKUMA_CONNSTR} ]; then
+    if ! var_is_defined ${KOAKUMA_CONNSTR}; then
         echo "\$KOAKUMA_CONNSTR is not defined. It needs to point to the bot's hosting machine."
         exit 1
     fi
@@ -62,8 +78,13 @@ function update() {
 
     echo "Transferring from ${KOAKUMA_HOME} to ${TARGET}"
 
+    if ! path_is_valid ${TARGET}; then
+        echo "Target is not defined."
+        exit 1
+    fi
+
+    echo "rsync -aXv --include=.python-version --exclude=.* --exclude=__pycache__ --exclude=venv --progress ${KOAKUMA_HOME}/ ${TARGET}"
     rsync -aXv --include=.python-version --exclude=.* --exclude=__pycache__ --exclude=venv --progress ${KOAKUMA_HOME}/ ${TARGET}
-    echo
 }
 
 function run() {
@@ -72,8 +93,12 @@ function run() {
     python3 -m koabot
 }
 
+function command_exists() {
+    command -v $1 1> /dev/null 2>&1;
+}
+
 function package_is_not_installed() {
-    if ! dpkg -l $1 >/dev/null 2>&1; then
+    if ! dpkg -l $1 1> /dev/null 2>&1; then
         echo "$1 is not installed in the system."
         return 1
     else
@@ -89,23 +114,29 @@ function install_package() {
 }
 
 function install() {
-    # Necessary package to play music
-    package_is_not_installed ffmpeg
-    if [ ! $? ]; then
+    package_deps=(ffmpeg mariadb-server)
+    for pdep in ${package_deps[*]}; do
+        if ! command_exists $pdep; then
+            pckgs="${pckgs}${pdep} "
+        fi
+    done
+
+    # dummy string
+    echo "apt install ${pckgs} -y"
+
+    # ffmpeg is necessary to play music
+    if ! command_exists ffmpeg; then
         install_package ffmpeg
     fi
 
-    package_is_not_installed mariadb-server
-    if [ ! $? ]; then
+    if ! command_exists mariadb-server; then
         install_package mariadb-server
     fi
 
-    package_is_not_installed python3
-    if [ ! $? ]; then
+    if ! command_exists python3; then
         python3 -V
     else
-        package_is_not_installed python
-        if [ ! $? ]; then
+        if ! command_exists python; then
             python -V
         fi
     fi
@@ -127,6 +158,7 @@ if [ -n "$1" ]; then
             -U|--update-dependencies) update_dependencies;;
             -r|--restart) ;;
         esac
+
         shift
     done
 else

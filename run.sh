@@ -4,18 +4,16 @@
 
 function var_is_defined() {
     if [ -z ${1} ]; then
-        return 0
+        return 1
     fi
-
-    return 1
+    return 0
 }
 
 function path_is_valid() {
     if [ ! -d ${1} ]; then
-        return 0
+        return 1
     fi
-
-    return 1
+    return 0
 }
 
 function check_env_vars() {
@@ -48,7 +46,7 @@ function test_conectivity() {
         exit 1
     fi
 
-    if [ -z ${REMOTE_HOME} ]; then
+    if ! var_is_defined ${REMOTE_HOME}; then
         echo "The remote \$KOAKUMA_HOME env var is empty or set incorrectly."
         exit 1
     fi
@@ -95,16 +93,6 @@ function run() {
 
 function command_exists() {
     command -v $1 1> /dev/null 2>&1;
-}
-
-function package_is_not_installed() {
-    if ! dpkg -l $1 1> /dev/null 2>&1; then
-        echo "$1 is not installed in the system."
-        return 1
-    else
-        echo "$1 is already installed."
-        return 0
-    fi
 }
 
 function install_package() {

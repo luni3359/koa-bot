@@ -4,16 +4,16 @@
 
 function var_is_defined() {
     if [ -z ${1} ]; then
-        return 1
+        false
     fi
-    return 0
+    true
 }
 
 function path_is_valid() {
     if [ ! -d ${1} ]; then
-        return 1
+        false
     fi
-    return 0
+    true
 }
 
 function check_env_vars() {

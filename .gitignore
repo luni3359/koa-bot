@@ -1,8 +1,8 @@
 __pycache__
 .vscode
-config*
-venv
-*.webm
+.python-version
 db
+config*
+*.webm
 favicons
 *example.json

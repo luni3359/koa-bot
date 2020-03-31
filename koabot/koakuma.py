@@ -373,13 +373,8 @@ def formatDictionaryOddities(txt, which):
 
 
 @bot.command(name='convert', aliases=['conv', 'cv'])
-async def unit_convert(ctx, *units):
+async def unit_convert(ctx, *, units):
     """Convert units"""
-
-    if len(units) < 1:
-        return
-
-    units = ' '.join(units)
 
     unit_matches = []
     i = 0

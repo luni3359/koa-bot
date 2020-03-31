@@ -36,8 +36,9 @@ async def convert_units(ctx, units):
             value = quantity[1]
             value2 = quantity[2]
 
-            converted_value = value * ureg.foot + value2 * ureg.inch
-            conversion_str += '\n%s %s → %s' % (value * ureg.foot, value2 * ureg.inch, converted_value.to_base_units())
+            converted_value = (value * ureg.foot + value2 * ureg.inch).to_base_units()
+            print('%s %s → %s' % (value * ureg.foot, value2 * ureg.inch, converted_value))
+            conversion_str += '\n%s %s → %s' % (value * ureg.foot, value2 * ureg.inch, converted_value)
             continue
 
         (unit, value) = quantity
@@ -56,6 +57,7 @@ async def convert_units(ctx, units):
             else:
                 converted_value = value.to(ureg.feet)
 
+        print('%s → %s' % (value, converted_value))
         conversion_str += '\n%s → %s' % (value, converted_value)
 
     conversion_str += '```'

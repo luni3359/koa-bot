@@ -944,7 +944,7 @@ async def get_picarto_stream_preview(msg, url):
     """Automatically fetch a preview of the running stream"""
 
     channel = msg.channel
-    post_id = get_post_id(url, '.tv/', '&')
+    post_id = get_post_id(url, '.tv/', '?')
 
     if not post_id:
         return

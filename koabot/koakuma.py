@@ -31,6 +31,7 @@ from koabot.patterns import *
 
 bot = commands.Bot(command_prefix='!', description='')
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
+BOT_DIRNAME = 'koa-bot'
 
 
 @bot.command()
@@ -1190,23 +1191,27 @@ async def on_ready():
 def start(testing=False):
     """Start bot"""
 
+    # Make config dir if it doesn't exist
+    config_dir = appdirs.user_config_dir(BOT_DIRNAME)
+    os.makedirs(config_dir, exist_ok=True)
+
     if testing:
         config_file = 'beta.jsonc'
     else:
         config_file = 'config.jsonc'
 
-    config_files = [config_file, 'auth.jsonc']
-    data = {}
+    config_paths = [os.path.join(config_dir, config_file), os.path.join(config_dir, 'auth.jsonc')]
 
-    for config_file in config_files:
-        with open(os.path.join(SOURCE_DIR, 'config', config_file)) as json_file:
-            data.update(commentjson.load(json_file))
+    bot_data = {}
+    for config_path in config_paths:
+        with open(config_path) as json_file:
+            bot_data.update(commentjson.load(json_file))
 
     bot.launch_time = datetime.utcnow()
-    bot.__dict__.update(data)
+    bot.__dict__.update(bot_data)
 
     # Make cache dir if it doesn't exist
-    cache_dir = appdirs.user_cache_dir('koa-bot')
+    cache_dir = appdirs.user_cache_dir(BOT_DIRNAME)
     os.makedirs(cache_dir, exist_ok=True)
 
     twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
@@ -1231,4 +1236,10 @@ def start(testing=False):
 
     bot.loop.create_task(koabot.tasks.check_live_streamers())
     bot.loop.create_task(koabot.tasks.change_presence_periodically())
+
+    extensions = ['boardcog', 'danbooru']
+
+    for ext in extensions:
+        bot.load_extension('koabot.boards.' + ext)
+
     bot.run(bot.koa['token'])

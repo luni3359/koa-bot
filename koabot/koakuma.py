@@ -1230,5 +1230,10 @@ def start(testing=False):
 
     bot.loop.create_task(koabot.tasks.check_live_streamers())
     bot.loop.create_task(koabot.tasks.change_presence_periodically())
-    bot.load_extension('boards.boardcog')
+
+    extensions = ['boardcog', 'danbooru']
+
+    for ext in extensions:
+        bot.load_extension('koabot.boards.' + ext)
+
     bot.run(bot.koa['token'])

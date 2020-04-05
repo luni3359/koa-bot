@@ -660,6 +660,12 @@ async def test(ctx):
 
     vc.play(source, after=lambda e: print('done', e))
 
+@bot.command()
+async def version(ctx):
+    """Show bot's version"""
+
+    commit = subprocess.check_output(['git', 'describe', '--always']).strip()
+    await ctx.send('On commit %s.' % commit)
 
 async def get_danbooru_gallery(msg, url):
     """Automatically fetch and post any image galleries from danbooru"""

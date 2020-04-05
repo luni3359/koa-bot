@@ -1,11 +1,13 @@
 """Koakuma bot"""
 import asyncio
+import glob
 import html
 import itertools
 import math
 import os
 import random
 import re
+import shutil
 import subprocess
 import typing
 import urllib
@@ -32,6 +34,14 @@ from koabot.patterns import *
 bot = commands.Bot(command_prefix='!', description='')
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 BOT_DIRNAME = 'koa-bot'
+
+# Make config dir if it doesn't exist
+CONFIG_DIR = appdirs.user_config_dir(BOT_DIRNAME)
+os.makedirs(CONFIG_DIR, exist_ok=True)
+
+# Make cache dir if it doesn't exist
+CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 
 @bot.command()
@@ -661,12 +671,14 @@ async def test(ctx):
 
     vc.play(source, after=lambda e: print('done', e))
 
+
 @bot.command()
 async def version(ctx):
     """Show bot's version"""
 
     commit = subprocess.check_output(['git', 'describe', '--always']).strip()
     await ctx.send('On commit %s.' % commit)
+
 
 async def get_danbooru_gallery(msg, url):
     """Automatically fetch and post any image galleries from danbooru"""
@@ -1188,19 +1200,41 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
 
 
+def transition_old_config():
+    """Transition any existing config folders to $XDG_CONFIG_HOME/BOT_DIRNAME"""
+
+    old_config = os.path.join(SOURCE_DIR, 'config')
+
+    if os.path.exists(old_config) and os.path.isdir(old_config):
+        if len(os.listdir(old_config)) == 0:
+            os.rmdir(old_config)
+            print('Obsolete config folder deleted.')
+        else:
+            old_config_contents = glob.glob('{}/*'.format(old_config))
+            for path in old_config_contents:
+                print('Moving %s to %s...' % (os.path.basename(path), CONFIG_DIR))
+                shutil.move(path, CONFIG_DIR)
+
+            os.rmdir(old_config)
+            print('The contents of config have been moved to %s.' % CONFIG_DIR)
+    else:
+        print('No config files were moved.')
+
+
 def start(testing=False):
     """Start bot"""
 
-    # Make config dir if it doesn't exist
-    config_dir = appdirs.user_config_dir(BOT_DIRNAME)
-    os.makedirs(config_dir, exist_ok=True)
+    print('Starting Koakuma')
+
+    # Temporarily move config automatically when
+    transition_old_config()
 
     if testing:
         config_file = 'beta.jsonc'
     else:
         config_file = 'config.jsonc'
 
-    config_paths = [os.path.join(config_dir, config_file), os.path.join(config_dir, 'auth.jsonc')]
+    config_paths = [os.path.join(CONFIG_DIR, config_file), os.path.join(CONFIG_DIR, 'auth.jsonc')]
 
     bot_data = {}
     for config_path in config_paths:
@@ -1209,10 +1243,6 @@ def start(testing=False):
 
     bot.launch_time = datetime.utcnow()
     bot.__dict__.update(bot_data)
-
-    # Make cache dir if it doesn't exist
-    cache_dir = appdirs.user_cache_dir(BOT_DIRNAME)
-    os.makedirs(cache_dir, exist_ok=True)
 
     twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
     twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])

@@ -1303,9 +1303,7 @@ def start(testing=False):
 
     try:
         bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
-    except mariadb.InterfaceError:
-        print('Could not connect to the database! Functionality will be limited.')
-    except mariadb.DatabaseError:
+    except (mariadb.InterfaceError, mariadb.DatabaseError):
         print('Could not connect to the database! Functionality will be limited.')
 
     bot.last_channel = 0

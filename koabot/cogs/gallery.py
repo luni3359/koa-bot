@@ -26,4 +26,5 @@ class Gallery(commands.Cog):
 
 
 def setup(bot: commands.Bot):
+    """Initiate cog"""
     bot.add_cog(Gallery(bot))

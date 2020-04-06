@@ -71,22 +71,13 @@ function update() {
         test_conectivity
     fi
 
-    # Appending home of the remote koakuma
     TARGET_KOAHOME="${KOAKUMA_CONNSTR}:${REMOTE_HOME}"
     TARGET_KOACONFIG="${KOAKUMA_CONNSTR}:~/.config/koa-bot"
 
     echo "Transferring source from ${KOAKUMA_HOME} to ${TARGET_KOAHOME}"
-    echo "Transferring config files from ${XDG_CONFIG_HOME}/koa-bot/ to ${TARGET_KOACONFIG}"
-
-    if [[ ! $(path_is_valid ${TARGET_KOAHOME}) || ! $(path_is_valid ${TARGET_KOACONFIG}) ]]; then
-        echo "Target is not defined."
-        exit 1
-    fi
-
-    echo "rsync -aAXv --include=.python-version --exclude=.* --exclude=__pycache__ --progress ${KOAKUMA_HOME}/ ${TARGET_KOAHOME}"
     rsync -aAXv --include=.python-version --exclude=.* --exclude=__pycache__ --exclude=venv --progress "${KOAKUMA_HOME}/" "${TARGET_KOAHOME}"
-
-    echo "rsync -aAXv --progress ${XDG_CONFIG_HOME}/koa-bot/ ${TARGET_KOACONFIG}"
+    echo
+    echo "Transferring config files from ${XDG_CONFIG_HOME}/koa-bot/ to ${TARGET_KOACONFIG}"
     rsync -aAXv --progress "${XDG_CONFIG_HOME}/koa-bot/" "${TARGET_KOACONFIG}"
 }
 

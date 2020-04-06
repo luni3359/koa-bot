@@ -9,6 +9,8 @@ from koabot.patterns import URL_PATTERN
 
 
 class BotEvents(commands.Cog):
+    """BotEvents class"""
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.last_channel = 0
@@ -16,7 +18,7 @@ class BotEvents(commands.Cog):
         self.last_channel_warned = False
 
     @commands.Cog.listener()
-    async def on_message_edit(self, before, after):
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
         """Make the embeds created by the bot unsuppressable"""
         if not before.author.bot:
             return
@@ -28,7 +30,7 @@ class BotEvents(commands.Cog):
             await after.edit(suppress=False)
 
     @commands.Cog.listener()
-    async def on_message(self, msg):
+    async def on_message(self, msg: discord.Message):
         """Searches messages for urls and certain keywords"""
 
         # Prevent bot from spamming itself
@@ -88,10 +90,9 @@ class BotEvents(commands.Cog):
                         else:
                             await globals()['get_{}_gallery'.format(domain_name)](msg, url)
                     elif asset['type'] == 'stream' and domain_name == 'picarto':
-                        pass
-                        # picarto_preview_shown = await get_picarto_stream_preview(msg, url)
-                        # if picarto_preview_shown and msg.content[0] == '!':
-                            # await msg.delete()
+                        picarto_preview_shown = await get_picarto_stream_preview(msg, url)
+                        if picarto_preview_shown and msg.content[0] == '!':
+                            await msg.delete()
 
         if self.last_channel != channel.id or url_matches or msg.attachments:
             self.last_channel = channel.id
@@ -103,8 +104,6 @@ class BotEvents(commands.Cog):
             if not self.last_channel_warned and self.last_channel_message_count >= self.bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
                 self.last_channel_warned = True
                 await koa_is_typing_a_message(channel, content=random.choice(self.bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
-
-        await self.bot.process_commands(msg)
 
     @commands.Cog.listener()
     async def on_ready(self):

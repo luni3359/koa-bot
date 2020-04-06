@@ -8,7 +8,6 @@ import os
 import random
 import re
 import shutil
-import subprocess
 import typing
 import urllib
 from datetime import datetime
@@ -540,12 +539,6 @@ async def search_e621(ctx, *args):
     await koabot.board.search_board(ctx, args, board='e621')
 
 
-@bot.command(name='danbooru', aliases=['dan'])
-async def search_danbooru(ctx, *args):
-    """Search on danbooru!"""
-    await koabot.board.search_board(ctx, args)
-
-
 def list_contains(lst, items_to_be_matched):
     """Helper function for checking if a list contains any elements of another list"""
     for item in items_to_be_matched:
@@ -553,63 +546,6 @@ def list_contains(lst, items_to_be_matched):
             return True
 
     return False
-
-
-@bot.command(name='temperature', aliases=['temp'])
-async def report_bot_temp(ctx):
-    """Show the bot's current temperature"""
-
-    temp_commands = ['vcgencmd measure_temp', 'sensors']
-    for cmd in temp_commands:
-        cmd_parts = cmd.split()
-        temp_command = cmd_parts[0]
-
-        try:
-            current_temp = subprocess.run(cmd_parts, stdout=subprocess.PIPE, check=True, universal_newlines=True)
-            print('Using "%s".' % temp_command)
-            break
-        except FileNotFoundError:
-            print('"%s" is missing in system.' % temp_command)
-
-    try:
-        if temp_command == 'vcgencmd':
-            cpu_temp = re.findall(r'([0-9]+\.[0-9]?)\'C', current_temp.stdout)
-        elif temp_command == 'sensors':
-            cpu_found = False
-            adapter_found = False
-
-            for line in current_temp.stdout.splitlines():
-                if re.search(r'coretemp', line):
-                    cpu_found = True
-                    continue
-
-                if re.search(r'Adapter', line):
-                    if not cpu_found:
-                        continue
-
-                    adapter_found = True
-                    continue
-
-                if re.search(r'Package id|Core 0', line):
-                    if not cpu_found or not adapter_found:
-                        continue
-
-                    cpu_temp = re.findall(r'([0-9]+\.[0-9]?)°C', line)[0]
-                    break
-
-        cpu_temp = float(cpu_temp)
-
-        print('CPU Temp: %f °C' % cpu_temp)
-        await ctx.send('I\'m at %f °C.' % cpu_temp)
-    except NameError:
-        print('Unable to report temperature.')
-        await ctx.send('I can\'t get the temperature...')
-
-
-@bot.command(name='last')
-async def talk_status(ctx):
-    """Mention a brief summary of the last used channel"""
-    await ctx.send('Last channel: %s\nCurrent count there: %s' % (bot.last_channel, bot.last_channel_message_count))
 
 
 @bot.command(aliases=['ava'])
@@ -631,17 +567,6 @@ async def avatar(ctx):
             name='%s #%i' % (ctx.message.author.name, int(ctx.message.author.discriminator)),
             icon_url=ctx.message.author.avatar_url)
         await ctx.send(embed=embed)
-
-
-@bot.command()
-async def uptime(ctx):
-    """Mention the current uptime"""
-
-    delta_uptime = datetime.utcnow() - bot.launch_time
-    hours, remainder = divmod(int(delta_uptime.total_seconds()), 3600)
-    minutes, seconds = divmod(remainder, 60)
-    days, hours = divmod(hours, 24)
-    await ctx.send('I\'ve been running for %i days, %i hours, %i minutes and %i seconds.' % (days, hours, minutes, seconds))
 
 
 @bot.command(name='twitch')
@@ -709,14 +634,6 @@ async def test(ctx):
         vc.stop()
 
     vc.play(source, after=lambda e: print('done', e))
-
-
-@bot.command()
-async def version(ctx):
-    """Show bot's version"""
-
-    commit = subprocess.check_output(['git', 'describe', '--always']).strip()
-    await ctx.send('On commit %s.' % commit.decode('utf-8'))
 
 
 async def get_danbooru_gallery(msg, url):
@@ -819,7 +736,7 @@ async def generate_pixiv_embed(post, user):
     """
 
     img_url = post.image_urls.medium
-    image_filename = get_file_name(img_url)
+    image_filename = koabot.utils.net.get_url_filename(img_url)
     image = await koabot.utils.net.fetch_image(img_url, headers=bot.assets['pixiv']['headers'])
 
     embed = discord.Embed()
@@ -1000,7 +917,6 @@ async def get_deviantart_post(msg, url):
 
 async def get_picarto_stream_preview(msg, url):
     """Automatically fetch a preview of the running stream"""
-
     channel = msg.channel
     post_id = koabot.utils.posts.get_post_id(url, '.tv/', '?')
 
@@ -1018,7 +934,7 @@ async def get_picarto_stream_preview(msg, url):
         return
 
     image = await koabot.utils.net.fetch_image(picarto_request['thumbnails']['web'])
-    filename = get_file_name(picarto_request['thumbnails']['web'])
+    filename = koabot.utils.net.get_url_filename(picarto_request['thumbnails']['web'])
 
     embed = discord.Embed()
     embed.set_author(
@@ -1032,24 +948,6 @@ async def get_picarto_stream_preview(msg, url):
         icon_url=bot.assets['picarto']['favicon'])
     await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
     return True
-
-
-def get_domains(lst):
-    """Get domains from a link
-    thanks dude https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868"""
-
-    domains = []
-
-    for url in lst:
-        domain = url.split('//')[-1].split('/')[0].split('?')[0]
-        domains.append(domain)
-    return domains
-
-
-def get_file_name(url):
-    """Get file name from url"""
-
-    return url.split('/')[-1]
 
 
 async def koa_is_typing_a_message(ctx, **kwargs):
@@ -1095,7 +993,6 @@ async def koa_is_typing_a_message(ctx, **kwargs):
 
 def transition_old_config():
     """Transition any existing config folders to $XDG_CONFIG_HOME/BOT_DIRNAME"""
-
     old_config = os.path.join(SOURCE_DIR, 'config')
 
     if os.path.exists(old_config) and os.path.isdir(old_config):
@@ -1105,16 +1002,16 @@ def transition_old_config():
         else:
             old_config_contents = glob.glob('{}/*'.format(old_config))
             for file_path in old_config_contents:
-                file_name = os.path.basename(file_path)
+                filename = os.path.basename(file_path)
 
-                if os.path.exists(os.path.join(CONFIG_DIR, file_name)):
-                    if os.path.samefile(file_path, os.path.join(CONFIG_DIR, file_name)):
+                if os.path.exists(os.path.join(CONFIG_DIR, filename)):
+                    if os.path.samefile(file_path, os.path.join(CONFIG_DIR, filename)):
                         print('Files are the same!')
                         continue
 
-                    os.remove(os.path.join(CONFIG_DIR, file_name))
+                    os.remove(os.path.join(CONFIG_DIR, filename))
 
-                print('Moving %s to %s...' % (file_name, CONFIG_DIR))
+                print('Moving %s to %s...' % (filename, CONFIG_DIR))
                 shutil.move(file_path, CONFIG_DIR)
 
             os.rmdir(old_config)
@@ -1125,17 +1022,34 @@ def transition_old_config():
 
 def run_periodic_tasks():
     """Bot routines"""
-
     bot.loop.create_task(koabot.tasks.check_live_streamers())
     bot.loop.create_task(koabot.tasks.change_presence_periodically())
 
 
+def load_all_extensions(path: str):
+    """Recursively load all cogs in the project"""
+    cog_prefix = 'koabot.cogs'
+    cog_list = []
+
+    for p, d, f in os.walk(path):
+        for file in f:
+            if file.endswith('.py'):
+                container_dir = p.replace(path, '').replace('/', '.')
+                (filename, file_ext) = os.path.splitext(file)
+                cog_path = cog_prefix + container_dir + '.' + filename
+
+                cog_list.append(cog_path)
+
+    for ext in cog_list:
+        bot.load_extension(ext)
+        print('Loaded "%s".' % ext)
+
+
 def start(testing=False):
     """Start bot"""
-
     print('Initiating configuration...')
 
-    # Temporarily move config automatically when
+    # Temporarily move config automatically in project to ~/.config
     transition_old_config()
 
     if testing:
@@ -1170,15 +1084,6 @@ def start(testing=False):
     bot.currency = currency.CurrencyRates()
 
     run_periodic_tasks()
-
-    extensions = os.listdir(os.path.join(SOURCE_DIR, 'cogs'))
-
-    for file in extensions:
-        (file_name, file_ext) = os.path.splitext(file)
-
-        if file_ext != '.py':
-            continue
-
-        bot.load_extension('koabot.cogs.' + file_name)
+    load_all_extensions(os.path.join(SOURCE_DIR, 'cogs'))
 
     bot.run(bot.koa['token'])

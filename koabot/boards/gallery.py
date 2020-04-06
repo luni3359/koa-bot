@@ -1,10 +1,10 @@
+"""Handles management of galleries"""
 from discord.ext import commands
 
 
-class BaseBoard(commands.Cog):
+class Gallery(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.board = 'danbooru'
 
     async def get_board_gallery(self):
         pass
@@ -26,4 +26,4 @@ class BaseBoard(commands.Cog):
 
 
 def setup(bot: commands.Bot):
-    bot.add_cog(BaseBoard(bot))
+    bot.add_cog(Gallery(bot))

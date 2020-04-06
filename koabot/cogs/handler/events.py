@@ -1,5 +1,4 @@
 """Bot events"""
-import asyncio
 import random
 
 import discord
@@ -90,7 +89,13 @@ class BotEvents(commands.Cog):
                         else:
                             await globals()['get_{}_gallery'.format(domain_name)](msg, url)
                     elif asset['type'] == 'stream' and domain_name == 'picarto':
-                        picarto_preview_shown = await get_picarto_stream_preview(msg, url)
+                        streams_cog = self.bot.get_cog('StreamService')
+
+                        if streams_cog is None:
+                            print('STREAMSERVICE COG WAS MISSING!')
+                            continue
+
+                        picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, url)
                         if picarto_preview_shown and msg.content[0] == '!':
                             await msg.delete()
 
@@ -103,7 +108,14 @@ class BotEvents(commands.Cog):
         if str(channel.id) in self.bot.rules['quiet_channels']:
             if not self.last_channel_warned and self.last_channel_message_count >= self.bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
                 self.last_channel_warned = True
-                await koa_is_typing_a_message(channel, content=random.choice(self.bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
+
+                bot_cog = self.bot.get_cog('BotStatus')
+
+                if bot_cog is None:
+                    print('BOTSTATUS COG WAS MISSING!')
+                    return
+
+                await bot_cog.typing_a_message(channel, content=random.choice(self.bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -112,47 +124,6 @@ class BotEvents(commands.Cog):
         print('Ready!')
         # Change play status to something fitting
         await self.bot.change_presence(activity=discord.Game(name=random.choice(self.bot.quotes['playing_status'])))
-
-
-async def koa_is_typing_a_message(ctx, **kwargs):
-    """Make Koakuma seem alive with a 'is typing' delay
-
-    Keywords:
-        content::str
-            Message to be said.
-        embed::discord.Embed
-            Self-explanatory. Default is None.
-        rnd_duration::list or int
-            A list with two int values of what's the least that should be waited for to the most, chosen at random.
-            If provided an int the 0 will be assumed at the start.
-        min_duration::int
-            The amount of time that will be waited regardless of rnd_duration.
-    """
-
-    content = kwargs.get('content')
-    embed = kwargs.get('embed')
-    rnd_duration = kwargs.get('rnd_duration')
-    min_duration = kwargs.get('min_duration', 0)
-
-    if isinstance(rnd_duration, int):
-        rnd_duration = [0, rnd_duration]
-
-    async with ctx.typing():
-        if rnd_duration:
-            time_to_wait = random.randint(rnd_duration[0], rnd_duration[1])
-            if time_to_wait < min_duration:
-                time_to_wait = min_duration
-            await asyncio.sleep(time_to_wait)
-        else:
-            await asyncio.sleep(min_duration)
-
-        if embed is not None:
-            if content:
-                await ctx.send(content, embed=embed)
-            else:
-                await ctx.send(embed=embed)
-        else:
-            await ctx.send(content)
 
 
 def setup(bot: commands.Bot):

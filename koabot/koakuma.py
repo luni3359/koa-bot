@@ -533,12 +533,6 @@ async def get_4chan_picture(ctx, user_board='u', thread_id=''):
             await ctx.send(embed=post)
 
 
-@bot.command(name='e621', aliases=['e6'])
-async def search_e621(ctx, *args):
-    """Search on e621!"""
-    await koabot.board.search_board(ctx, args, board='e621')
-
-
 def list_contains(lst, items_to_be_matched):
     """Helper function for checking if a list contains any elements of another list"""
     for item in items_to_be_matched:
@@ -567,45 +561,6 @@ async def avatar(ctx):
             name='%s #%i' % (ctx.message.author.name, int(ctx.message.author.discriminator)),
             icon_url=ctx.message.author.avatar_url)
         await ctx.send(embed=embed)
-
-
-@bot.command(name='twitch')
-async def search_twitch(ctx, *args):
-    """Search on Twitch"""
-    if len(args) < 1:
-        print('well it worked...')
-        return
-
-    action = args[0]
-
-    if action == 'get':
-        embed = discord.Embed()
-        embed.description = ''
-        embed.set_footer(
-            text=bot.assets['twitch']['name'],
-            icon_url=bot.assets['twitch']['favicon'])
-
-        if len(args) == 2:
-            item = args[1]
-            if re.findall(r'(^[0-9]+$)', item):
-                # is searching an id
-                search_type = 'user_id'
-            else:
-                # searching an username
-                search_type = 'user_login'
-
-            stream = await koabot.utils.net.http_request('https://api.twitch.tv/helix/streams?%s=%s' % (search_type, item), headers=bot.assets['twitch']['headers'], json=True)
-
-            for strem in stream['data'][:3]:
-                await ctx.send('https://twitch.tv/%s' % strem['user_name'])
-
-        else:
-            streams = await koabot.utils.net.http_request('https://api.twitch.tv/helix/streams', headers=bot.assets['twitch']['headers'], json=True)
-
-            for stream in streams['data'][:5]:
-                embed.description += 'stream "%s"\nstreamer %s (%s)\n\n' % (stream['title'], stream['user_name'], stream['user_id'])
-
-            await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -948,47 +903,6 @@ async def get_picarto_stream_preview(msg, url):
         icon_url=bot.assets['picarto']['favicon'])
     await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
     return True
-
-
-async def koa_is_typing_a_message(ctx, **kwargs):
-    """Make Koakuma seem alive with a 'is typing' delay
-
-    Keywords:
-        content::str
-            Message to be said.
-        embed::discord.Embed
-            Self-explanatory. Default is None.
-        rnd_duration::list or int
-            A list with two int values of what's the least that should be waited for to the most, chosen at random.
-            If provided an int the 0 will be assumed at the start.
-        min_duration::int
-            The amount of time that will be waited regardless of rnd_duration.
-    """
-
-    content = kwargs.get('content')
-    embed = kwargs.get('embed')
-    rnd_duration = kwargs.get('rnd_duration')
-    min_duration = kwargs.get('min_duration', 0)
-
-    if isinstance(rnd_duration, int):
-        rnd_duration = [0, rnd_duration]
-
-    async with ctx.typing():
-        if rnd_duration:
-            time_to_wait = random.randint(rnd_duration[0], rnd_duration[1])
-            if time_to_wait < min_duration:
-                time_to_wait = min_duration
-            await asyncio.sleep(time_to_wait)
-        else:
-            await asyncio.sleep(min_duration)
-
-        if embed is not None:
-            if content:
-                await ctx.send(content, embed=embed)
-            else:
-                await ctx.send(embed=embed)
-        else:
-            await ctx.send(content)
 
 
 def transition_old_config():

@@ -1,3 +1,4 @@
+"""Search and gallery operations for art websites"""
 from discord.ext import commands
 
 
@@ -8,29 +9,26 @@ class ImageBoard(commands.Cog):
         self.bot = bot
 
     @commands.command(name='danbooru', aliases=['dan'])
-    async def danbooru(self, ctx, *tags, board='danbooru'):
-        """Search danbooru"""
-
+    async def search_danbooru(self, ctx, *tags):
+        """Search on danbooru!"""
         board_cog = self.bot.get_cog('Board')
+
         if board_cog is None:
+            print('BOARD COG WAS MISSING!')
             return
 
-        search = ' '.join(tags)
-        print('User searching for: ' + search)
+        await board_cog.search_board(ctx, tags)
 
-        on_nsfw_channel = ctx.channel.is_nsfw()
+    @commands.command(name='e621', aliases=['e6'])
+    async def search_e621(self, ctx, *tags):
+        """Search on e621!"""
+        board_cog = self.bot.get_cog('Board')
 
-        async with ctx.typing():
-            posts = await board_cog.search_query(board=board, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
-
-        if not posts:
-            await ctx.send('Sorry, nothing found!')
+        if board_cog is None:
+            print('BOARD COG WAS MISSING!')
             return
 
-        if 'posts' in posts:
-            posts = posts['posts']
-
-        await board_cog.send_posts(ctx, posts, board=board)
+        await board_cog.search_board(ctx, tags, board='e621')
 
 
 def setup(bot: commands.Bot):

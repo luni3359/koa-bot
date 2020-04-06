@@ -51,7 +51,13 @@ async def get_board_gallery(channel, msg, url, **kwargs):
             embed.set_image(url=koabot.koakuma.bot.assets['default']['nsfw_placeholder'])
 
         content = '%s %s' % (msg.author.mention, random.choice(koabot.koakuma.bot.quotes['improper_content_reminder']))
-        await koabot.koakuma.koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+
+        bot_cog = koabot.koakuma.bot.get_cog('BotStatus')
+
+        if bot_cog is None:
+            print('BOTSTATUS COG WAS MISSING!')
+
+        await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
     single_post = False
     if board == 'e621':
@@ -116,7 +122,12 @@ async def get_board_gallery(channel, msg, url, **kwargs):
         else:
             content = random.choice(koabot.koakuma.bot.quotes['rude_cannot_show_nsfw_gallery'])
 
-        await koabot.koakuma.koa_is_typing_a_message(channel, content=content, rnd_duration=[1, 2])
+        bot_cog = koabot.koakuma.bot.get_cog('BotStatus')
+
+        if bot_cog is None:
+            print('BOTSTATUS COG WAS MISSING!')
+
+        await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
 
 async def search_board(ctx, tags, board='danbooru'):

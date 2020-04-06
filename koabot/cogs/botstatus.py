@@ -1,3 +1,6 @@
+"""Bot-related commands and features"""
+import asyncio
+import random
 import re
 import subprocess
 from datetime import datetime
@@ -82,6 +85,46 @@ class BotStatus(commands.Cog):
 
         commit = subprocess.check_output(['git', 'describe', '--always']).strip()
         await ctx.send('On commit %s.' % commit.decode('utf-8'))
+
+    async def typing_a_message(self, ctx, **kwargs):
+        """Make Koakuma seem alive with a 'is typing' delay
+
+        Keywords:
+            content::str
+                Message to be said.
+            embed::discord.Embed
+                Self-explanatory. Default is None.
+            rnd_duration::list or int
+                A list with two int values of what's the least that should be waited for to the most, chosen at random.
+                If provided an int the 0 will be assumed at the start.
+            min_duration::int
+                The amount of time that will be waited regardless of rnd_duration.
+        """
+
+        content = kwargs.get('content')
+        embed = kwargs.get('embed')
+        rnd_duration = kwargs.get('rnd_duration')
+        min_duration = kwargs.get('min_duration', 0)
+
+        if isinstance(rnd_duration, int):
+            rnd_duration = [0, rnd_duration]
+
+        async with ctx.typing():
+            if rnd_duration:
+                time_to_wait = random.randint(rnd_duration[0], rnd_duration[1])
+                if time_to_wait < min_duration:
+                    time_to_wait = min_duration
+                await asyncio.sleep(time_to_wait)
+            else:
+                await asyncio.sleep(min_duration)
+
+            if embed is not None:
+                if content:
+                    await ctx.send(content, embed=embed)
+                else:
+                    await ctx.send(embed=embed)
+            else:
+                await ctx.send(content)
 
 
 def setup(bot: commands.Bot):

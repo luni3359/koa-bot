@@ -15,6 +15,34 @@ class Board(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    async def search_board(self, ctx, tags, board='danbooru'):
+        """Search on image boards!
+        Arguments:
+            ctx
+                The context to interact with the discord API
+            tags::*args (list)
+                List of the tags sent by the user
+            board::str
+                The board to manage. Default is 'danbooru'
+        """
+
+        search = ' '.join(tags)
+        print('User searching for: ' + search)
+
+        on_nsfw_channel = ctx.channel.is_nsfw()
+
+        async with ctx.typing():
+            posts = await self.search_query(board=board, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
+
+        if not posts:
+            await ctx.send('Sorry, nothing found!')
+            return
+
+        if 'posts' in posts:
+            posts = posts['posts']
+
+        await self.send_posts(ctx, posts, board=board)
+
     async def search_query(self, **kwargs):
         """Handle searching in boards
         Keywords:

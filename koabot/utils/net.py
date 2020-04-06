@@ -5,7 +5,7 @@ from datetime import datetime
 import aiohttp
 
 
-async def http_request(url, **kwargs):
+async def http_request(url: str, **kwargs):
     """Make an http request
     Arguments:
         url::str
@@ -42,7 +42,7 @@ async def http_request(url, **kwargs):
             return await response.read()
 
 
-async def fetch_image(url, **kwargs):
+async def fetch_image(url: str, **kwargs):
     """Download an image"""
 
     img_bytes = io.BytesIO(await http_request(url, **kwargs))

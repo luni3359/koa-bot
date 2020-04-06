@@ -2,6 +2,8 @@
 import re
 import typing
 
+import koabot.koakuma
+
 
 def get_post_id(url, words_to_match, trim_to, has_regex=False):
     """Get post id from url
@@ -46,3 +48,21 @@ def combine_tags(tags):
         return joint_tags.strip().replace('_', ' ')
 
     return ''.join(tag_list).strip().replace('_', ' ')
+
+
+def post_is_missing_preview(post, **kwargs):
+    """Determine whether or not a post misses its preview
+    Arguments:
+        post::json object
+
+    Keywords:
+        board::str
+            The board to check the rules with. Default is 'danbooru'
+    """
+
+    board = kwargs.get('board', 'danbooru')
+
+    if board == 'e621':
+        return koabot.koakuma.list_contains(post['tags']['general'], koabot.koakuma.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
+
+    return koabot.koakuma.list_contains(post['tag_string_general'].split(), koabot.koakuma.bot.rules['no_preview_tags'][board]) or post['is_banned']

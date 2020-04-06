@@ -1250,9 +1250,18 @@ def transition_old_config():
             print('Obsolete config folder deleted.')
         else:
             old_config_contents = glob.glob('{}/*'.format(old_config))
-            for path in old_config_contents:
-                print('Moving %s to %s...' % (os.path.basename(path), CONFIG_DIR))
-                shutil.move(path, CONFIG_DIR)
+            for file_path in old_config_contents:
+                file_name = os.path.basename(file_path)
+
+                if os.path.exists(os.path.join(CONFIG_DIR, file_name)):
+                    if os.path.samefile(file_path, os.path.join(CONFIG_DIR, file_name)):
+                        print('Files are the same!')
+                        continue
+
+                    os.remove(os.path.join(CONFIG_DIR, file_name))
+
+                print('Moving %s to %s...' % (file_name, CONFIG_DIR))
+                shutil.move(file_path, CONFIG_DIR)
 
             os.rmdir(old_config)
             print('The contents of config have been moved to %s.' % CONFIG_DIR)

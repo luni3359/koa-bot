@@ -1,3 +1,4 @@
+import re
 import subprocess
 from datetime import datetime
 
@@ -55,7 +56,7 @@ class BotStatus(commands.Cog):
             cpu_temp = float(cpu_temp)
 
             print('CPU Temp: %f °C' % cpu_temp)
-            await ctx.send('I\'m at %f °C.' % cpu_temp)
+            await ctx.send('I\'m at %0.1f °C.' % cpu_temp)
         except NameError:
             print('Unable to report temperature.')
             await ctx.send('I can\'t get the temperature...')
@@ -70,9 +71,9 @@ class BotStatus(commands.Cog):
         """Mention the current uptime"""
 
         delta_uptime = datetime.utcnow() - self.bot.launch_time
-        hours, remainder = divmod(int(delta_uptime.total_seconds()), 3600)
-        minutes, seconds = divmod(remainder, 60)
-        days, hours = divmod(hours, 24)
+        (hours, remainder) = divmod(int(delta_uptime.total_seconds()), 3600)
+        (minutes, seconds) = divmod(remainder, 60)
+        (days, hours) = divmod(hours, 24)
         await ctx.send('I\'ve been running for %i days, %i hours, %i minutes and %i seconds.' % (days, hours, minutes, seconds))
 
     @commands.command()
@@ -81,6 +82,7 @@ class BotStatus(commands.Cog):
 
         commit = subprocess.check_output(['git', 'describe', '--always']).strip()
         await ctx.send('On commit %s.' % commit.decode('utf-8'))
+
 
 def setup(bot: commands.Bot):
     """Initiate cog"""

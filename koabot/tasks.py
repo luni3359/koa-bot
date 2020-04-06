@@ -7,6 +7,7 @@ import discord
 
 import koabot.board
 import koabot.koakuma
+import koabot.utils.net
 
 
 async def check_live_streamers():
@@ -31,7 +32,7 @@ async def check_live_streamers():
             if streamer['platform'] == 'twitch':
                 twitch_search += 'user_id=%s&' % streamer['user_id']
 
-        twitch_query = await koabot.net.http_request(twitch_search, headers=koabot.koakuma.bot.assets['twitch']['headers'], json=True)
+        twitch_query = await koabot.utils.net.http_request(twitch_search, headers=koabot.koakuma.bot.assets['twitch']['headers'], json=True)
 
         for streamer in twitch_query['data']:
             already_online = False
@@ -70,11 +71,11 @@ async def check_live_streamers():
             thumbnail_url = streamer['streamer']['thumbnail_url']
             thumbnail_url = thumbnail_url.replace('{width}', '600')
             thumbnail_url = thumbnail_url.replace('{height}', '350')
-            thumbnail_file_name = koabot.koakuma.get_file_name(thumbnail_url)
-            image = await koabot.net.fetch_image(thumbnail_url)
-            embed.set_image(url='attachment://' + thumbnail_file_name)
+            thumbnail_filename = koabot.utils.net.get_url_filename(thumbnail_url)
+            image = await koabot.utils.net.fetch_image(thumbnail_url)
+            embed.set_image(url='attachment://' + thumbnail_filename)
 
-            stream_announcements.append({'message': '%s is now live!' % streamer['name'], 'embed': embed, 'image': image, 'filename': thumbnail_file_name})
+            stream_announcements.append({'message': '%s is now live!' % streamer['name'], 'embed': embed, 'image': image, 'filename': thumbnail_filename})
 
         for channel in koabot.koakuma.bot.tasks['streamer_activity']['channels_to_announce_on']:
             for batch in stream_announcements:

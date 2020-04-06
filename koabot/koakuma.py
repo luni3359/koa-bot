@@ -1272,7 +1272,7 @@ def transition_old_config():
 def start(testing=False):
     """Start bot"""
 
-    print('Starting Koakuma')
+    print('Initiating configuration...')
 
     # Temporarily move config automatically when
     transition_old_config()
@@ -1303,6 +1303,8 @@ def start(testing=False):
 
     try:
         bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
+    except mariadb.InterfaceError:
+        print('Could not connect to the database! Functionality will be limited.')
     except mariadb.DatabaseError:
         print('Could not connect to the database! Functionality will be limited.')
 

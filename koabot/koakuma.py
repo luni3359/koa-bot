@@ -1138,107 +1138,6 @@ async def koa_is_typing_a_message(ctx, **kwargs):
             await ctx.send(content)
 
 
-@bot.event
-async def on_message_edit(before, after):
-    """Make the embeds created by the bot unsuppressable"""
-    if not before.author.bot:
-        return
-
-    if before.author != before.guild.me:
-        return
-
-    if len(before.embeds) > 0 and len(after.embeds) == 0:
-        await after.edit(suppress=False)
-
-
-@bot.event
-async def on_message(msg):
-    """Searches messages for urls and certain keywords"""
-
-    # Prevent bot from spamming itself
-    if msg.author.bot:
-        return
-
-    beta_bot = msg.guild.get_member(bot.koa['discord_user']['beta_id'])
-    if beta_bot and beta_bot.status == discord.Status.online and msg.guild.me.id != bot.koa['discord_user']['beta_id']:
-        # Beta bot overrides me in the servers we share
-        return
-
-    channel = msg.channel
-
-    # Reference channels together
-    for mentioned_channel in msg.channel_mentions:
-        if mentioned_channel == channel:
-            continue
-
-        embed_template = discord.Embed()
-        embed_template.set_author(name=msg.author.display_name, icon_url=msg.author.avatar_url)
-        embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon_url)
-
-        target_embed = embed_template.copy()
-        target_embed.description = 'Mention by {} from {}\n\n[Click to go there]({})'.format(msg.author.mention, channel.mention, msg.jump_url)
-        target_channel_msg = await mentioned_channel.send(embed=target_embed)
-
-        origin_embed = embed_template.copy()
-        origin_embed.description = 'Mention by {} to {}\n\n[Click to go there]({})'.format(msg.author.mention, mentioned_channel.mention, target_channel_msg.jump_url)
-        await channel.send(embed=origin_embed)
-
-    url_matches = []
-    escaped_url = False
-    i = 0
-    while i < len(msg.content):
-        if msg.content[i] == '<':
-            escaped_url = True
-            i += 1
-            continue
-
-        url_match = URL_PATTERN.match(msg.content, i)
-        if url_match:
-            if not escaped_url or url_match.end() >= len(msg.content) or url_match.end() < len(msg.content) and msg.content[url_match.end()] != '>':
-                url_matches.append(url_match.group())
-
-            i = url_match.end()
-            continue
-
-        escaped_url = False
-        i += 1
-
-    for url in url_matches:
-        for domain_name, asset in bot.assets.items():
-            if 'domain' in bot.assets[domain_name] and asset['domain'] in url and 'type' in asset:
-                if asset['type'] == 'gallery':
-                    if domain_name == 'deviantart':
-                        await globals()['get_{}_post'.format(domain_name)](msg, url)
-                    else:
-                        await globals()['get_{}_gallery'.format(domain_name)](msg, url)
-                elif asset['type'] == 'stream' and domain_name == 'picarto':
-                    picarto_preview_shown = await get_picarto_stream_preview(msg, url)
-                    if picarto_preview_shown and msg.content[0] == '!':
-                        await msg.delete()
-
-    if bot.last_channel != channel.id or url_matches or msg.attachments:
-        bot.last_channel = channel.id
-        bot.last_channel_message_count = 0
-    else:
-        bot.last_channel_message_count += 1
-
-    if str(channel.id) in bot.rules['quiet_channels']:
-        if not bot.last_channel_warned and bot.last_channel_message_count >= bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
-            bot.last_channel_warned = True
-            await koa_is_typing_a_message(channel, content=random.choice(bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
-
-    await bot.process_commands(msg)
-
-
-@bot.event
-async def on_ready():
-    """On bot start"""
-
-    print('Ready!')
-    # Change play status to something fitting
-    await bot.change_presence(activity=discord.Game(name=random.choice(bot.quotes['playing_status'])))
-
-
 def transition_old_config():
     """Transition any existing config folders to $XDG_CONFIG_HOME/BOT_DIRNAME"""
 
@@ -1313,17 +1212,18 @@ def start(testing=False):
     except (mariadb.InterfaceError, mariadb.DatabaseError):
         print('Could not connect to the database! Functionality will be limited.')
 
-    bot.last_channel = 0
-    bot.last_channel_message_count = 0
-    bot.last_channel_warned = False
-
     bot.currency = currency.CurrencyRates()
 
     run_periodic_tasks()
 
-    extensions = ['boardcog', 'danbooru']
+    extensions = os.listdir(os.path.join(SOURCE_DIR, 'cogs'))
 
-    for ext in extensions:
-        bot.load_extension('koabot.boards.' + ext)
+    for file in extensions:
+        (file_name, file_ext) = os.path.splitext(file)
+
+        if file_ext != '.py':
+            continue
+
+        bot.load_extension('koabot.cogs.' + file_name)
 
     bot.run(bot.koa['token'])

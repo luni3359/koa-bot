@@ -1269,6 +1269,13 @@ def transition_old_config():
         print('No config files were moved.')
 
 
+def run_periodic_tasks():
+    """Bot routines"""
+
+    bot.loop.create_task(koabot.tasks.check_live_streamers())
+    bot.loop.create_task(koabot.tasks.change_presence_periodically())
+
+
 def start(testing=False):
     """Start bot"""
 
@@ -1312,8 +1319,7 @@ def start(testing=False):
 
     bot.currency = currency.CurrencyRates()
 
-    bot.loop.create_task(koabot.tasks.check_live_streamers())
-    bot.loop.create_task(koabot.tasks.change_presence_periodically())
+    run_periodic_tasks()
 
     extensions = ['boardcog', 'danbooru']
 

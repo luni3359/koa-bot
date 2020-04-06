@@ -47,3 +47,26 @@ async def fetch_image(url: str, **kwargs):
 
     img_bytes = io.BytesIO(await http_request(url, **kwargs))
     return img_bytes
+
+
+def get_url_filename(url: str):
+    """Get the file name from an url"""
+    return url.split('/')[-1]
+
+
+def get_domain(url: str):
+    """Get domain from an url"""
+    return url.split('//')[-1].split('/')[0].split('?')[0]
+
+
+def get_domains(lst: list):
+    """Get domains from a list of urls
+    https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868
+    """
+
+    domains = []
+
+    for url in lst:
+        domain = get_domain(url)
+        domains.append(domain)
+    return domains

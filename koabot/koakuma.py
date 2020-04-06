@@ -27,8 +27,8 @@ from num2words import num2words
 
 import koabot.board
 import koabot.converter
-import koabot.net
 import koabot.tasks
+import koabot.utils
 from koabot.patterns import *
 
 bot = commands.Bot(command_prefix='!', description='')
@@ -107,7 +107,7 @@ async def search_jisho(ctx, *word):
     word_encoded = urllib.parse.quote_plus(words)
     user_search = bot.assets['jisho']['search_url'] + word_encoded
 
-    js = await koabot.net.http_request(user_search, json=True)
+    js = await koabot.utils.net.http_request(user_search, json=True)
 
     if not js:
         await ctx.send('Error retrieving data from server.')
@@ -157,7 +157,7 @@ async def search_urbandictionary(ctx, *word):
     word_encoded = urllib.parse.quote_plus(words)
     user_search = bot.assets['urban_dictionary']['search_url'] + word_encoded
 
-    js = await koabot.net.http_request(user_search, json=True)
+    js = await koabot.utils.net.http_request(user_search, json=True)
 
     if not js:
         await ctx.send('Error retrieving data from server.')
@@ -219,7 +219,7 @@ async def search_english_word(ctx, *word):
     word_encoded = urllib.parse.quote(words)
     user_search = '%s/%s?key=%s' % (bot.assets['merriam-webster']['search_url'], word_encoded, bot.auth_keys['merriam-webster']['key'])
 
-    js = await koabot.net.http_request(user_search, json=True)
+    js = await koabot.utils.net.http_request(user_search, json=True)
 
     if not js:
         await ctx.send('Oops. What?')
@@ -669,13 +669,13 @@ async def search_twitch(ctx, *args):
                 # searching an username
                 search_type = 'user_login'
 
-            stream = await koabot.net.http_request('https://api.twitch.tv/helix/streams?%s=%s' % (search_type, item), headers=bot.assets['twitch']['headers'], json=True)
+            stream = await koabot.utils.net.http_request('https://api.twitch.tv/helix/streams?%s=%s' % (search_type, item), headers=bot.assets['twitch']['headers'], json=True)
 
             for strem in stream['data'][:3]:
                 await ctx.send('https://twitch.tv/%s' % strem['user_name'])
 
         else:
-            streams = await koabot.net.http_request('https://api.twitch.tv/helix/streams', headers=bot.assets['twitch']['headers'], json=True)
+            streams = await koabot.utils.net.http_request('https://api.twitch.tv/helix/streams', headers=bot.assets['twitch']['headers'], json=True)
 
             for stream in streams['data'][:5]:
                 embed.description += 'stream "%s"\nstreamer %s (%s)\n\n' % (stream['title'], stream['user_name'], stream['user_id'])
@@ -729,7 +729,7 @@ async def get_twitter_gallery(msg, url):
 
     channel = msg.channel
 
-    post_id = get_post_id(url, '/status/', '?')
+    post_id = koabot.utils.posts.get_post_id(url, '/status/', '?')
     if not post_id:
         return
 
@@ -772,12 +772,12 @@ async def get_imgur_gallery(msg, url):
 
     channel = msg.channel
 
-    album_id = get_post_id(url, ['/a/', '/gallery/'], '?')
+    album_id = koabot.utils.posts.get_post_id(url, ['/a/', '/gallery/'], '?')
     if not album_id:
         return
 
     search_url = bot.assets['imgur']['album_url'].format(album_id)
-    api_result = await koabot.net.http_request(search_url, headers=bot.assets['imgur']['headers'], json=True)
+    api_result = await koabot.utils.net.http_request(search_url, headers=bot.assets['imgur']['headers'], json=True)
 
     if not api_result or api_result['status'] != 200:
         return
@@ -820,7 +820,7 @@ async def generate_pixiv_embed(post, user):
 
     img_url = post.image_urls.medium
     image_filename = get_file_name(img_url)
-    image = await koabot.net.fetch_image(img_url, headers=bot.assets['pixiv']['headers'])
+    image = await koabot.utils.net.fetch_image(img_url, headers=bot.assets['pixiv']['headers'])
 
     embed = discord.Embed()
     embed.set_author(
@@ -835,7 +835,7 @@ async def get_pixiv_gallery(msg, url):
 
     channel = msg.channel
 
-    post_id = get_post_id(url, ['illust_id=', '/artworks/'], '&')
+    post_id = koabot.utils.posts.get_post_id(url, ['illust_id=', '/artworks/'], '&')
     if not post_id:
         return
 
@@ -933,12 +933,12 @@ async def get_sankaku_gallery(msg, url):
 
     channel = msg.channel
 
-    post_id = get_post_id(url, '/show/', '?')
+    post_id = koabot.utils.posts.get_post_id(url, '/show/', '?')
     if not post_id:
         return
 
     search_url = bot.assets['sankaku']['id_search_url'] + post_id
-    api_result = await koabot.net.http_request(search_url, json=True)
+    api_result = await koabot.utils.net.http_request(search_url, json=True)
 
     if not api_result or 'code' in api_result:
         print('Sankaku error\nCode #%s' % api_result['code'])
@@ -958,13 +958,13 @@ async def get_deviantart_post(msg, url):
 
     channel = msg.channel
 
-    post_id = get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
+    post_id = koabot.utils.posts.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
     if not post_id:
         return
 
     search_url = bot.assets['deviantart']['search_url_extended'].format(post_id)
 
-    api_result = await koabot.net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
+    api_result = await koabot.utils.net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
 
     if not api_result['deviation']['isMature']:
         return
@@ -1002,12 +1002,12 @@ async def get_picarto_stream_preview(msg, url):
     """Automatically fetch a preview of the running stream"""
 
     channel = msg.channel
-    post_id = get_post_id(url, '.tv/', '?')
+    post_id = koabot.utils.posts.get_post_id(url, '.tv/', '?')
 
     if not post_id:
         return
 
-    picarto_request = await koabot.net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
+    picarto_request = await koabot.utils.net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
 
     if not picarto_request:
         await channel.send(random.choice(bot.quotes['stream_preview_failed']))
@@ -1017,7 +1017,7 @@ async def get_picarto_stream_preview(msg, url):
         await channel.send(random.choice(bot.quotes['stream_preview_offline']))
         return
 
-    image = await koabot.net.fetch_image(picarto_request['thumbnails']['web'])
+    image = await koabot.utils.net.fetch_image(picarto_request['thumbnails']['web'])
     filename = get_file_name(picarto_request['thumbnails']['web'])
 
     embed = discord.Embed()
@@ -1032,51 +1032,6 @@ async def get_picarto_stream_preview(msg, url):
         icon_url=bot.assets['picarto']['favicon'])
     await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
     return True
-
-
-def get_post_id(url, words_to_match, trim_to, has_regex=False):
-    """Get post id from url
-    Arguments:
-        url::str
-        words_to_match::str or list
-        trim_to::str or regex
-        has_regex::bool
-    """
-
-    if not isinstance(words_to_match, typing.List):
-        words_to_match = [words_to_match]
-
-    matching_word = False
-    for v in words_to_match:
-        if v in url:
-            matching_word = v
-
-    if not matching_word:
-        return
-
-    if has_regex:
-        return re.findall(trim_to, url.split(matching_word)[1])[0]
-
-    return url.split(matching_word)[1].split(trim_to)[0]
-
-
-def combine_tags(tags):
-    """Combine tags and give them a readable format
-    Arguments:
-        tags::str or list
-    """
-
-    if isinstance(tags, typing.List):
-        tag_list = tags
-    else:
-        tag_list = tags.split()[:5]
-
-    if len(tag_list) > 1:
-        joint_tags = ', '.join(tag_list[:-1])
-        joint_tags += ' and ' + tag_list[-1]
-        return joint_tags.strip().replace('_', ' ')
-
-    return ''.join(tag_list).strip().replace('_', ' ')
 
 
 def get_domains(lst):

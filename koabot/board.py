@@ -7,7 +7,8 @@ import commentjson
 import discord
 
 import koabot.koakuma
-import koabot.net
+import koabot.utils.net
+import koabot.utils.posts
 
 
 async def get_board_gallery(channel, msg, url, **kwargs):
@@ -29,7 +30,7 @@ async def get_board_gallery(channel, msg, url, **kwargs):
     end_regex = kwargs.get('end_regex', False)
 
     on_nsfw_channel = channel.is_nsfw()
-    post_id = koabot.koakuma.get_post_id(url, id_start, id_end, has_regex=end_regex)
+    post_id = koabot.utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
     if not post_id:
         return
@@ -186,21 +187,21 @@ async def board_search(**kwargs):
     if board == 'danbooru':
         if post_id:
             url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
-            return await koabot.net.http_request(url, auth=koabot.koakuma.bot.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
+            return await koabot.utils.net.http_request(url, auth=koabot.koakuma.bot.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
         elif tags:
             if include_nsfw:
                 url = 'https://danbooru.donmai.us'
             else:
                 url = 'https://safebooru.donmai.us'
 
-            return await koabot.net.http_request(url + '/posts.json', auth=koabot.koakuma.bot.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
+            return await koabot.utils.net.http_request(url + '/posts.json', auth=koabot.koakuma.bot.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
     elif board == 'e621':
         # e621 requires to know the User-Agent
         headers = koabot.koakuma.bot.assets['e621']['headers']
 
         if post_id:
             url = 'https://e621.net/posts/%s.json' % post_id
-            return await koabot.net.http_request(url, auth=koabot.koakuma.bot.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
+            return await koabot.utils.net.http_request(url, auth=koabot.koakuma.bot.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
         elif tags:
             if include_nsfw:
                 url = 'https://e621.net'
@@ -208,7 +209,7 @@ async def board_search(**kwargs):
                 url = 'https://e926.net'
 
             headers['Content-Type'] = 'application/json'
-            return await koabot.net.http_request(url + '/posts.json', auth=koabot.koakuma.bot.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
+            return await koabot.utils.net.http_request(url + '/posts.json', auth=koabot.koakuma.bot.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
     else:
         raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 
@@ -310,9 +311,9 @@ def generate_board_embed(post, **kwargs):
     embed = discord.Embed()
 
     if board == 'danbooru':
-        post_char = re.sub(r' \(.*?\)', '', koabot.koakuma.combine_tags(post['tag_string_character']))
-        post_copy = koabot.koakuma.combine_tags(post['tag_string_copyright'])
-        post_artist = koabot.koakuma.combine_tags(post['tag_string_artist'])
+        post_char = re.sub(r' \(.*?\)', '', koabot.utils.posts.combine_tags(post['tag_string_character']))
+        post_copy = koabot.utils.posts.combine_tags(post['tag_string_copyright'])
+        post_artist = koabot.utils.posts.combine_tags(post['tag_string_artist'])
         embed_post_title = ''
 
         if post_char:
@@ -337,7 +338,7 @@ def generate_board_embed(post, **kwargs):
         embed.title = embed_post_title
         embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
     elif board == 'e621':
-        embed.title = '#%s: %s - e621' % (post['id'], koabot.koakuma.combine_tags(post['tags']['artist']))
+        embed.title = '#%s: %s - e621' % (post['id'], koabot.utils.posts.combine_tags(post['tags']['artist']))
         embed.url = 'https://e621.net/posts/%i' % post['id']
 
     if 'failed_post_preview' in koabot.koakuma.bot.assets[board]:

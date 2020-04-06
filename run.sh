@@ -50,9 +50,6 @@ function test_conectivity() {
         echo "The remote \$KOAKUMA_HOME env var is empty or set incorrectly."
         exit 1
     fi
-
-    # Appending home of the remote koakuma
-    TARGET="${KOAKUMA_CONNSTR}":"${REMOTE_HOME}"
 }
 
 function update_dependencies() {
@@ -74,15 +71,23 @@ function update() {
         test_conectivity
     fi
 
-    echo "Transferring from ${KOAKUMA_HOME} to ${TARGET}"
+    # Appending home of the remote koakuma
+    TARGET_KOAHOME="${KOAKUMA_CONNSTR}:${REMOTE_HOME}"
+    TARGET_KOACONFIG="${KOAKUMA_CONNSTR}:~/.config/koa-bot"
 
-    if ! path_is_valid ${TARGET}; then
+    echo "Transferring source from ${KOAKUMA_HOME} to ${TARGET_KOAHOME}"
+    echo "Transferring config files from ${XDG_CONFIG_HOME}/koa-bot/ to ${TARGET_KOACONFIG}"
+
+    if [[ ! $(path_is_valid ${TARGET_KOAHOME}) || ! $(path_is_valid ${TARGET_KOACONFIG}) ]]; then
         echo "Target is not defined."
         exit 1
     fi
 
-    echo "rsync -aXv --include=.python-version --exclude=.* --exclude=__pycache__ --exclude=venv --progress ${KOAKUMA_HOME}/ ${TARGET}"
-    rsync -aXv --include=.python-version --exclude=.* --exclude=__pycache__ --exclude=venv --progress "${KOAKUMA_HOME}"/ "${TARGET}"
+    echo "rsync -aAXv --include=.python-version --exclude=.* --exclude=__pycache__ --progress ${KOAKUMA_HOME}/ ${TARGET_KOAHOME}"
+    rsync -aAXv --include=.python-version --exclude=.* --exclude=__pycache__ --exclude=venv --progress "${KOAKUMA_HOME}/" "${TARGET_KOAHOME}"
+
+    echo "rsync -aAXv --progress ${XDG_CONFIG_HOME}/koa-bot/ ${TARGET_KOACONFIG}"
+    rsync -aAXv --progress "${XDG_CONFIG_HOME}/koa-bot/" "${TARGET_KOACONFIG}"
 }
 
 function run() {

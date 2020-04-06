@@ -5,7 +5,7 @@ import typing
 import koabot.koakuma
 
 
-def get_post_id(url, words_to_match, trim_to, has_regex=False):
+def get_post_id(url: str, words_to_match, trim_to, has_regex: bool = False):
     """Get post id from url
     Arguments:
         url::str

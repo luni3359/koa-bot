@@ -559,12 +559,51 @@ def list_contains(lst, items_to_be_matched):
 async def report_bot_temp(ctx):
     """Show the bot's current temperature"""
 
-    try:
-        current_temp = subprocess.run(['vcgencmd', 'measure_temp'], stdout=subprocess.PIPE, check=True, universal_newlines=True)
-    except FileNotFoundError:
-        current_temp = subprocess.run(['sensors'], stdout=subprocess.PIPE, check=True, universal_newlines=True)
+    temp_commands = ['vcgencmd measure_temp', 'sensors']
+    for cmd in temp_commands:
+        cmd_parts = cmd.split()
+        temp_command = cmd_parts[0]
 
-    await ctx.send(current_temp.stdout)
+        try:
+            current_temp = subprocess.run(cmd_parts, stdout=subprocess.PIPE, check=True, universal_newlines=True)
+            print('Using "%s".' % temp_command)
+            break
+        except FileNotFoundError:
+            print('"%s" is missing in system.' % temp_command)
+
+    try:
+        if temp_command == 'vcgencmd':
+            cpu_temp = re.findall(r'([0-9]+\.[0-9]?)\'C', current_temp.stdout)
+        elif temp_command == 'sensors':
+            cpu_found = False
+            adapter_found = False
+
+            for line in current_temp.stdout.splitlines():
+                if re.search(r'coretemp', line):
+                    cpu_found = True
+                    continue
+
+                if re.search(r'Adapter', line):
+                    if not cpu_found:
+                        continue
+
+                    adapter_found = True
+                    continue
+
+                if re.search(r'Package id|Core 0', line):
+                    if not cpu_found or not adapter_found:
+                        continue
+
+                    cpu_temp = re.findall(r'([0-9]+\.[0-9]?)°C', line)[0]
+                    break
+
+        cpu_temp = float(cpu_temp)
+
+        print('CPU Temp: %f °C' % cpu_temp)
+        await ctx.send('I\'m at %f °C.' % cpu_temp)
+    except NameError:
+        print('Unable to report temperature.')
+        await ctx.send('I can\'t get the temperature...')
 
 
 @bot.command(name='last')
@@ -677,7 +716,7 @@ async def version(ctx):
     """Show bot's version"""
 
     commit = subprocess.check_output(['git', 'describe', '--always']).strip()
-    await ctx.send('On commit %s.' % commit)
+    await ctx.send('On commit %s.' % commit.decode('utf-8'))
 
 
 async def get_danbooru_gallery(msg, url):

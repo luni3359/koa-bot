@@ -32,7 +32,7 @@ class BotStatus(commands.Cog):
 
         try:
             if temp_command == 'vcgencmd':
-                cpu_temp = re.findall(r'([0-9]+\.[0-9]?)\'C', current_temp.stdout)
+                cpu_temp = re.findall(r'([0-9]+\.[0-9]?)\'C', current_temp.stdout)[0]
             elif temp_command == 'sensors':
                 cpu_found = False
                 adapter_found = False
@@ -58,7 +58,7 @@ class BotStatus(commands.Cog):
 
             cpu_temp = float(cpu_temp)
 
-            print('CPU Temp: %f °C' % cpu_temp)
+            print('CPU Temp: %0.1f °C' % cpu_temp)
             await ctx.send('I\'m at %0.1f °C.' % cpu_temp)
         except NameError:
             print('Unable to report temperature.')

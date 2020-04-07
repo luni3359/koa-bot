@@ -632,13 +632,12 @@ def load_all_extensions(path: str):
     cog_prefix = 'koabot.cogs'
     cog_list = []
 
-    for path, _, files in os.walk(path):
-        for f in files:
-            if f.endswith('.py'):
-                container_dir = path.replace(path, '').replace('/', '.')
-                (filename, _) = os.path.splitext(f)
+    for p, _, f in os.walk(path):
+        for file in f:
+            if file.endswith('.py'):
+                container_dir = p.replace(path, '').replace('/', '.')
+                (filename, _) = os.path.splitext(file)
                 cog_path = cog_prefix + container_dir + '.' + filename
-
                 cog_list.append(cog_path)
 
     for ext in cog_list:

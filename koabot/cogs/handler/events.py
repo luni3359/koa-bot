@@ -89,7 +89,7 @@ class BotEvents(commands.Cog):
                         if imageboard_cog is None:
                             print('IMAGEBOARD COG WAS MISSING!')
 
-                        imageboard_cog.show_gallery(msg, url, board=domain_name)
+                        await imageboard_cog.show_gallery(msg, url, board=domain_name)
                     elif asset['type'] == 'stream' and domain_name == 'picarto':
                         streams_cog = self.bot.get_cog('StreamService')
 

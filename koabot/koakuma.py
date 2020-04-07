@@ -646,14 +646,15 @@ def load_all_extensions(path: str):
     print('Finished loading cogs.')
 
 
-def start(testing=False):
+def start(debugging=False):
     """Start bot"""
     print('Initiating configuration...')
 
     # Move old config automatically to ~/.config/koa-bot
     transition_old_config()
 
-    if testing:
+    if debugging:
+        print('In debug mode.')
         config_file = 'beta.jsonc'
     else:
         config_file = 'config.jsonc'

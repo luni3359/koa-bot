@@ -84,10 +84,12 @@ class BotEvents(commands.Cog):
             for domain_name, asset in self.bot.assets.items():
                 if 'domain' in self.bot.assets[domain_name] and asset['domain'] in url and 'type' in asset:
                     if asset['type'] == 'gallery':
-                        if domain_name == 'deviantart':
-                            await globals()['get_{}_post'.format(domain_name)](msg, url)
-                        else:
-                            await globals()['get_{}_gallery'.format(domain_name)](msg, url)
+                        imageboard_cog = self.bot.get_cog('ImageBoard')
+
+                        if imageboard_cog is None:
+                            print('IMAGEBOARD COG WAS MISSING!')
+
+                        imageboard_cog.show_gallery(msg, url, board=domain_name)
                     elif asset['type'] == 'stream' and domain_name == 'picarto':
                         streams_cog = self.bot.get_cog('StreamService')
 

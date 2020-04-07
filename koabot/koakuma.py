@@ -1,5 +1,4 @@
 """Koakuma bot"""
-import asyncio
 import glob
 import html
 import itertools
@@ -591,320 +590,6 @@ async def test(ctx):
     vc.play(source, after=lambda e: print('done', e))
 
 
-async def get_danbooru_gallery(msg, url):
-    """Automatically fetch and post any image galleries from danbooru"""
-    await koabot.board.get_board_gallery(msg.channel, msg, url, id_start='/posts/', id_end='?')
-
-
-async def get_twitter_gallery(msg, url):
-    """Automatically fetch and post any image galleries from twitter"""
-
-    channel = msg.channel
-
-    post_id = koabot.utils.posts.get_post_id(url, '/status/', '?')
-    if not post_id:
-        return
-
-    tweet = bot.twitter_api.get_status(post_id, tweet_mode='extended')
-
-    if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
-        print('Preview gallery not applicable.')
-        return
-
-    gallery_pics = []
-    for picture in tweet.extended_entities['media'][1:]:
-        if picture['type'] != 'photo':
-            return
-
-        # Appending :orig to get a better image quality
-        gallery_pics.append(picture['media_url_https'] + ':orig')
-
-    total_gallery_pics = len(gallery_pics)
-    for picture in gallery_pics:
-        total_gallery_pics -= 1
-
-        embed = discord.Embed()
-        embed.set_author(
-            name='%s (@%s)' % (tweet.author.name, tweet.author.screen_name),
-            url='https://twitter.com/' + tweet.author.screen_name,
-            icon_url=tweet.author.profile_image_url_https)
-        embed.set_image(url=picture)
-
-        # If it's the last picture to show, add a brand footer
-        if total_gallery_pics <= 0:
-            embed.set_footer(
-                text=bot.assets['twitter']['name'],
-                icon_url=bot.assets['twitter']['favicon'])
-
-        await channel.send(embed=embed)
-
-
-async def get_imgur_gallery(msg, url):
-    """Automatically fetch and post any image galleries from imgur"""
-
-    channel = msg.channel
-
-    album_id = koabot.utils.posts.get_post_id(url, ['/a/', '/gallery/'], '?')
-    if not album_id:
-        return
-
-    search_url = bot.assets['imgur']['album_url'].format(album_id)
-    api_result = await koabot.utils.net.http_request(search_url, headers=bot.assets['imgur']['headers'], json=True)
-
-    if not api_result or api_result['status'] != 200:
-        return
-
-    total_album_pictures = len(api_result['data']) - 1
-
-    if total_album_pictures < 1:
-        return
-
-    pictures_processed = 0
-    for image in api_result['data'][1:5]:
-        pictures_processed += 1
-
-        embed = discord.Embed()
-        embed.set_image(url=image['link'])
-
-        if pictures_processed >= min(4, total_album_pictures):
-            remaining_footer = ''
-
-            if total_album_pictures > 4:
-                remaining_footer = '%i+ remaining' % (total_album_pictures - 4)
-            else:
-                remaining_footer = bot.assets['imgur']['name']
-
-            embed.set_footer(
-                text=remaining_footer,
-                icon_url=bot.assets['imgur']['favicon']['size32'])
-
-        await channel.send(embed=embed)
-
-
-async def generate_pixiv_embed(post, user):
-    """Generate embeds for pixiv urls
-    Arguments:
-        post
-            The post object
-        user
-            The artist of the post
-    """
-
-    img_url = post.image_urls.medium
-    image_filename = koabot.utils.net.get_url_filename(img_url)
-    image = await koabot.utils.net.fetch_image(img_url, headers=bot.assets['pixiv']['headers'])
-
-    embed = discord.Embed()
-    embed.set_author(
-        name=user.name,
-        url='https://www.pixiv.net/member.php?id=%i' % user.id)
-    embed.set_image(url='attachment://' + image_filename)
-    return embed, image, image_filename
-
-
-async def get_pixiv_gallery(msg, url):
-    """Automatically fetch and post any image galleries from pixiv"""
-
-    channel = msg.channel
-
-    post_id = koabot.utils.posts.get_post_id(url, ['illust_id=', '/artworks/'], '&')
-    if not post_id:
-        return
-
-    print('Now starting to process pixiv link #' + post_id)
-
-    # Login
-    if bot.pixiv_api.access_token is None:
-        token_name = 'pixiv_refresh_token'
-        token_dir = os.path.join(appdirs.user_cache_dir('koa-bot'), token_name)
-
-        if hasattr(bot, token_name):
-            bot.pixiv_api.auth(refresh_token=bot.pixiv_refresh_token)
-        elif os.path.exists(token_dir):
-            with open(token_dir) as token_file:
-                token = token_file.readline()
-                bot.pixiv_refresh_token = token
-                bot.pixiv_api.auth(refresh_token=token)
-        else:
-            bot.pixiv_api.login(bot.auth_keys['pixiv']['username'], bot.auth_keys['pixiv']['password'])
-            bot.pixiv_refresh_token = bot.pixiv_api.refresh_token
-            with open(token_dir, 'w') as token_file:
-                token_file.write(bot.pixiv_api.refresh_token)
-    else:
-        bot.pixiv_api.auth(refresh_token=bot.pixiv_refresh_token)
-
-    try:
-        illust_json = bot.pixiv_api.illust_detail(post_id, req_auth=True)
-    except pixivpy3.PixivError as e:
-        await channel.send('Odd...')
-        print(e)
-        return
-
-    print(illust_json)
-    if 'illust' not in illust_json:
-        # too bad
-        print('Invalid Pixiv id #' + post_id)
-        return
-
-    print('Pixiv auth passed! (for #%s)' % post_id)
-
-    illust = illust_json.illust
-    if illust.x_restrict != 0 and not channel.is_nsfw():
-        embed = discord.Embed()
-
-        if 'nsfw_placeholder' in bot.assets['pixiv']:
-            embed.set_image(url=bot.assets['pixiv']['nsfw_placeholder'])
-        else:
-            embed.set_image(url=bot.assets['default']['nsfw_placeholder'])
-
-        content = '%s %s' % (msg.author.mention, random.choice(bot.quotes['improper_content_reminder']))
-        await koa_is_typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
-        return
-
-    temp_message = await channel.send('***%s***' % random.choice(bot.quotes['processing_long_task']))
-    async with channel.typing():
-        total_illust_pictures = illust.page_count
-
-        if total_illust_pictures > 1:
-            pictures = illust.meta_pages
-        else:
-            pictures = [illust]
-
-        pictures_processed = 0
-        for picture in pictures[:4]:
-            pictures_processed += 1
-            print('Retrieving picture from #%s...' % post_id)
-
-            (embed, image, filename) = await generate_pixiv_embed(picture, illust.user)
-            print('Retrieved more from #%s (maybe)' % post_id)
-
-            if pictures_processed >= min(4, total_illust_pictures):
-                remaining_footer = ''
-
-                if total_illust_pictures > 4:
-                    remaining_footer = '%i+ remaining' % (total_illust_pictures - 4)
-                else:
-                    remaining_footer = bot.assets['pixiv']['name']
-
-                embed.set_footer(
-                    text=remaining_footer,
-                    icon_url=bot.assets['pixiv']['favicon'])
-            await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
-
-    await temp_message.delete()
-    print('DONE PIXIV!')
-
-
-async def get_e621_gallery(msg, url):
-    """Automatically fetch a bigger preview and gallery from e621"""
-    await koabot.board.get_board_gallery(msg.channel, msg, url, board='e621', id_start=['/show/', '/posts/'], id_end=r'^[0-9]+', end_regex=True)
-
-
-async def get_sankaku_gallery(msg, url):
-    """Automatically fetch a bigger preview and gallery from Sankaku Complex"""
-
-    channel = msg.channel
-
-    post_id = koabot.utils.posts.get_post_id(url, '/show/', '?')
-    if not post_id:
-        return
-
-    search_url = bot.assets['sankaku']['id_search_url'] + post_id
-    api_result = await koabot.utils.net.http_request(search_url, json=True)
-
-    if not api_result or 'code' in api_result:
-        print('Sankaku error\nCode #%s' % api_result['code'])
-        return
-
-    embed = discord.Embed()
-    embed.set_image(url=api_result['preview_url'])
-    embed.set_footer(
-        text=bot.assets['sankaku']['name'],
-        icon_url=bot.assets['sankaku']['favicon'])
-
-    await channel.send(embed=embed)
-
-
-async def get_deviantart_post(msg, url):
-    """Automatically fetch post from deviantart"""
-
-    channel = msg.channel
-
-    post_id = koabot.utils.posts.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
-    if not post_id:
-        return
-
-    search_url = bot.assets['deviantart']['search_url_extended'].format(post_id)
-
-    api_result = await koabot.utils.net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
-
-    if not api_result['deviation']['isMature']:
-        return
-
-    if 'token' in api_result['deviation']['media']:
-        token = api_result['deviation']['media']['token'][0]
-    else:
-        print('No token!!!!')
-
-    baseUri = api_result['deviation']['media']['baseUri']
-    prettyName = api_result['deviation']['media']['prettyName']
-
-    for media_type in api_result['deviation']['media']['types']:
-        if media_type['t'] == 'preview':
-            preview_url = media_type['c'].replace('<prettyName>', prettyName)
-            break
-
-    image_url = '%s/%s?token=%s' % (baseUri, preview_url, token)
-    print(image_url)
-
-    embed = discord.Embed()
-    embed.set_author(
-        name=api_result['deviation']['author']['username'],
-        url='https://www.deviantart.com/' + api_result['deviation']['author']['username'],
-        icon_url=api_result['deviation']['author']['usericon'])
-    embed.set_image(url=image_url)
-    embed.set_footer(
-        text=bot.assets['deviantart']['name'],
-        icon_url=bot.assets['deviantart']['favicon'])
-
-    await channel.send(embed=embed)
-
-
-async def get_picarto_stream_preview(msg, url):
-    """Automatically fetch a preview of the running stream"""
-    channel = msg.channel
-    post_id = koabot.utils.posts.get_post_id(url, '.tv/', '?')
-
-    if not post_id:
-        return
-
-    picarto_request = await koabot.utils.net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
-
-    if not picarto_request:
-        await channel.send(random.choice(bot.quotes['stream_preview_failed']))
-        return
-
-    if not picarto_request['online']:
-        await channel.send(random.choice(bot.quotes['stream_preview_offline']))
-        return
-
-    image = await koabot.utils.net.fetch_image(picarto_request['thumbnails']['web'])
-    filename = koabot.utils.net.get_url_filename(picarto_request['thumbnails']['web'])
-
-    embed = discord.Embed()
-    embed.set_author(
-        name=post_id,
-        url='https://picarto.tv/' + post_id,
-        icon_url=picarto_request['avatar'])
-    embed.description = '**%s**' % picarto_request['title']
-    embed.set_image(url='attachment://' + filename)
-    embed.set_footer(
-        text=bot.assets['picarto']['name'],
-        icon_url=bot.assets['picarto']['favicon'])
-    await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
-    return True
-
-
 def transition_old_config():
     """Transition any existing config folders to $XDG_CONFIG_HOME/BOT_DIRNAME"""
     old_config = os.path.join(SOURCE_DIR, 'config')
@@ -942,14 +627,16 @@ def run_periodic_tasks():
 
 def load_all_extensions(path: str):
     """Recursively load all cogs in the project"""
+    print('Loading cogs in project...')
+
     cog_prefix = 'koabot.cogs'
     cog_list = []
 
-    for p, d, f in os.walk(path):
-        for file in f:
-            if file.endswith('.py'):
-                container_dir = p.replace(path, '').replace('/', '.')
-                (filename, file_ext) = os.path.splitext(file)
+    for path, _, files in os.walk(path):
+        for f in files:
+            if f.endswith('.py'):
+                container_dir = path.replace(path, '').replace('/', '.')
+                (filename, _) = os.path.splitext(f)
                 cog_path = cog_prefix + container_dir + '.' + filename
 
                 cog_list.append(cog_path)
@@ -958,12 +645,14 @@ def load_all_extensions(path: str):
         bot.load_extension(ext)
         print('Loaded "%s".' % ext)
 
+    print('Finished loading cogs.')
+
 
 def start(testing=False):
     """Start bot"""
     print('Initiating configuration...')
 
-    # Temporarily move config automatically in project to ~/.config
+    # Move old config automatically to ~/.config/koa-bot
     transition_old_config()
 
     if testing:

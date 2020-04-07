@@ -561,34 +561,6 @@ async def avatar(ctx):
         await ctx.send(embed=embed)
 
 
-@bot.command()
-async def test(ctx):
-    """Mic test"""
-
-    source = discord.FFmpegPCMAudio(os.path.join(SOURCE_DIR, 'assets', bot.testing['vc']['music-file']))
-
-    if not ctx.voice_client:
-        if ctx.guild.voice_channels:
-            for voice_channel in ctx.guild.voice_channels:
-                try:
-                    vc = await voice_channel.connect()
-                    break
-                except discord.ClientException:
-                    print('Already connected to a voice channel')
-                    continue
-
-    else:
-        vc = ctx.voice_client
-
-    if not vc:
-        return
-
-    if vc.is_playing():
-        vc.stop()
-
-    vc.play(source, after=lambda e: print('done', e))
-
-
 def transition_old_config():
     """Transition any existing config folders to $XDG_CONFIG_HOME/BOT_DIRNAME"""
     old_config = os.path.join(SOURCE_DIR, 'config')

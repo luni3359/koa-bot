@@ -5,7 +5,6 @@ from datetime import datetime
 
 import discord
 
-import koabot.board
 import koabot.koakuma
 import koabot.utils.net
 
@@ -113,6 +112,11 @@ async def lookup_pending_posts():
 
     await koabot.koakuma.bot.wait_until_ready()
 
+    board_cog = koabot.koakuma.bot.get_cog('Board')
+
+    if board_cog is None:
+        print('BOARD COG WAS MISSING!')
+
     pending_posts = []
     channel_categories = {}
 
@@ -122,7 +126,7 @@ async def lookup_pending_posts():
             channel_categories[channel_category].append(koabot.koakuma.bot.get_channel(int(channel)))
 
     while not koabot.koakuma.bot.is_closed():
-        posts = await koabot.board.board_search(tags=koabot.koakuma.bot.tasks['danbooru']['tag_list'], limit=5, random=True)
+        posts = await board_cog.search_query(tags=koabot.koakuma.bot.tasks['danbooru']['tag_list'], limit=5, random=True)
 
         safe_posts = []
         nsfw_posts = []

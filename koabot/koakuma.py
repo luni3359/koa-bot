@@ -23,7 +23,6 @@ import tweepy
 from discord.ext import commands
 from num2words import num2words
 
-import koabot.board
 import koabot.converter
 import koabot.tasks
 import koabot.utils

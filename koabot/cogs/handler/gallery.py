@@ -42,8 +42,11 @@ class Gallery(commands.Cog):
         if not post_id:
             return
 
+        bot_cog = self.bot.get_cog('BotStatus')
         board_cog = self.bot.get_cog('Board')
 
+        if bot_cog is None:
+            print('BOTSTATUS COG WAS MISSING!')
         if board_cog is None:
             print('BOARD COG WAS MISSING!')
 
@@ -63,11 +66,6 @@ class Gallery(commands.Cog):
                 embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
             content = '%s %s' % (msg.author.mention, random.choice(self.bot.quotes['improper_content_reminder']))
-
-            bot_cog = self.bot.get_cog('BotStatus')
-
-            if bot_cog is None:
-                print('BOTSTATUS COG WAS MISSING!')
 
             await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
@@ -93,17 +91,17 @@ class Gallery(commands.Cog):
         if single_post:
             if koabot.utils.posts.post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:
-                    await bot_cog.send_posts(channel, post, board=board)
+                    await board_cog.send_posts(channel, post, board=board)
             return
 
         # If there's multiple searches, put them all in the posts list
         if isinstance(search, typing.List):
             posts = []
             for query in search:
-                results = await bot_cog.search_query(board=board, tags=query, include_nsfw=on_nsfw_channel)
+                results = await board_cog.search_query(board=board, tags=query, include_nsfw=on_nsfw_channel)
                 posts.extend(results['posts'])
         else:
-            posts = await bot_cog.search_query(board=board, tags=search, include_nsfw=on_nsfw_channel)
+            posts = await board_cog.search_query(board=board, tags=search, include_nsfw=on_nsfw_channel)
 
         # e621 fix for broken API
         if 'posts' in posts:
@@ -125,19 +123,14 @@ class Gallery(commands.Cog):
 
         if posts:
             if post_included_in_results:
-                await bot_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
+                await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
             else:
-                await bot_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
+                await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
         else:
             if post['rating'] is 's':
                 content = random.choice(self.bot.quotes['cannot_show_nsfw_gallery'])
             else:
                 content = random.choice(self.bot.quotes['rude_cannot_show_nsfw_gallery'])
-
-            bot_cog = self.bot.get_cog('BotStatus')
-
-            if bot_cog is None:
-                print('BOTSTATUS COG WAS MISSING!')
 
             await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 

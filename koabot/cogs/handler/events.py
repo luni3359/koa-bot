@@ -12,9 +12,9 @@ class BotEvents(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.last_channel = 0
-        self.last_channel_message_count = 0
-        self.last_channel_warned = False
+        self.bot.last_channel = 0
+        self.bot.last_channel_message_count = 0
+        self.bot.last_channel_warned = False
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -101,15 +101,15 @@ class BotEvents(commands.Cog):
                         if picarto_preview_shown and msg.content[0] == '!':
                             await msg.delete()
 
-        if self.last_channel != channel.id or url_matches or msg.attachments:
-            self.last_channel = channel.id
-            self.last_channel_message_count = 0
+        if self.bot.last_channel != channel.id or url_matches or msg.attachments:
+            self.bot.last_channel = channel.id
+            self.bot.last_channel_message_count = 0
         else:
-            self.last_channel_message_count += 1
+            self.bot.last_channel_message_count += 1
 
         if str(channel.id) in self.bot.rules['quiet_channels']:
-            if not self.last_channel_warned and self.last_channel_message_count >= self.bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
-                self.last_channel_warned = True
+            if not self.bot.last_channel_warned and self.bot.last_channel_message_count >= self.bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
+                self.bot.last_channel_warned = True
 
                 bot_cog = self.bot.get_cog('BotStatus')
 

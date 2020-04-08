@@ -1,16 +1,11 @@
 """Koakuma bot"""
 import glob
-import html
-import itertools
 import os
-import random
-import re
 import shutil
 from datetime import datetime
 
 import aiohttp
 import appdirs
-import basc_py4chan
 import commentjson
 import discord
 import forex_python.converter as currency
@@ -35,115 +30,6 @@ CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 
-@bot.command(name='4chan', aliases=['4c', '4ch'])
-async def get_4chan_picture(ctx, user_board='u', thread_id=''):
-    """Get a random picture from a specific board"""
-
-    board = basc_py4chan.Board(user_board, https=True)
-    if thread_id and re.findall(r'([0-9]+)', thread_id):
-        thread = board.get_thread(int(thread_id))
-        max_posts = 5
-
-        if not thread:
-            await ctx.send(random.choice(bot.quotes['thread_missing']))
-            return
-
-        posts_ready = []
-        for post in thread.posts:
-            embed = discord.Embed()
-
-            if len(posts_ready) == 0:
-                if thread.topic.subject:
-                    embed.title = html.unescape(thread.topic.subject)
-                else:
-                    embed.title = '/%s/ thread' % user_board
-                embed.url = thread.topic.url
-
-            embed.set_author(
-                name='%s @ %s' % (post.name, post.datetime),
-                url=post.semantic_url)
-            embed.add_field(name='No.%s' % post.post_id, value='\u200b')
-            embed.description = post.text_comment
-
-            if post.has_file:
-                embed.set_image(url=post.file_url)
-
-            posts_ready.append(embed)
-
-            if len(posts_ready) >= max_posts:
-                break
-
-        if len(posts_ready) > 0:
-            posts_ready[len(posts_ready) - 1].set_footer(
-                text=bot.assets['4chan']['name'],
-                icon_url=bot.assets['4chan']['favicon'])
-
-        for post in posts_ready:
-            await ctx.send(embed=post)
-    else:
-        threads = board.get_threads()
-        max_threads = 2
-        max_posts_per_thread = 2
-
-        threads_ready = []
-        for thread in threads:
-            if thread.sticky:
-                continue
-
-            posts_ready = []
-            fallback_post = None
-            for post in thread.posts:
-                if post.has_file:
-                    embed = discord.Embed()
-
-                    if len(posts_ready) == 0:
-                        if thread.topic.subject:
-                            embed.title = html.unescape(thread.topic.subject)
-                        else:
-                            embed.title = '/%s/ thread' % user_board
-
-                        embed.url = thread.topic.url
-
-                    embed.set_author(
-                        name='%s @ %s' % (post.name, post.datetime),
-                        url=post.semantic_url)
-                    embed.add_field(name='No.%s' % post.post_id, value='\u200b')
-                    embed.description = post.text_comment
-                    embed.set_image(url=post.file_url)
-                    posts_ready.append(embed)
-
-                    if len(posts_ready) >= max_posts_per_thread:
-                        break
-                elif not fallback_post:
-                    fallback_post = post
-
-            if len(posts_ready) > 0:
-                if len(posts_ready) < max_posts_per_thread and fallback_post:
-                    embed = discord.Embed()
-                    embed.set_author(
-                        name='%s @ %s' % (fallback_post.name, fallback_post.datetime),
-                        url=fallback_post.semantic_url)
-                    embed.add_field(name='No.%s' % fallback_post.post_id, value='\u200b')
-                    embed.description = fallback_post.text_comment
-                    posts_ready.append(embed)
-
-                posts_ready[len(posts_ready) - 1].set_footer(
-                    text=bot.assets['4chan']['name'],
-                    icon_url=bot.assets['4chan']['favicon'])
-                threads_ready.append(posts_ready)
-
-            if len(threads_ready) >= max_threads:
-                break
-
-        for post in list(itertools.chain.from_iterable(threads_ready)):
-            if post.image.url:
-                print(post.author.url + '\n' + post.image.url + '\n\n')
-            else:
-                print(post.author.url + '\nNo image\n\n')
-
-            await ctx.send(embed=post)
-
-
 def list_contains(lst, items_to_be_matched):
     """Helper function for checking if a list contains any elements of another list"""
     for item in items_to_be_matched:
@@ -151,27 +37,6 @@ def list_contains(lst, items_to_be_matched):
             return True
 
     return False
-
-
-@bot.command(aliases=['ava'])
-async def avatar(ctx):
-    """Display the avatar of an user"""
-
-    if ctx.message.mentions:
-        for mention in ctx.message.mentions:
-            embed = discord.Embed()
-            embed.set_image(url=mention.avatar_url)
-            embed.set_author(
-                name='%s #%i' % (mention.name, int(mention.discriminator)),
-                icon_url=mention.avatar_url)
-            await ctx.send(embed=embed)
-    else:
-        embed = discord.Embed()
-        embed.set_image(url=ctx.message.author.avatar_url)
-        embed.set_author(
-            name='%s #%i' % (ctx.message.author.name, int(ctx.message.author.discriminator)),
-            icon_url=ctx.message.author.avatar_url)
-        await ctx.send(embed=embed)
 
 
 def transition_old_config():

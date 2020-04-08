@@ -15,7 +15,7 @@ class Board(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    async def search_board(self, ctx, tags, board='danbooru'):
+    async def search_board(self, ctx, tags: typing.List, board='danbooru'):
         """Search on image boards!
         Arguments:
             ctx
@@ -25,6 +25,10 @@ class Board(commands.Cog):
             board::str
                 The board to manage. Default is 'danbooru'
         """
+
+        if len(tags) == 0:
+            await ctx.send('Please make a search.')
+            return
 
         search = ' '.join(tags)
         print('User searching for: ' + search)

@@ -618,6 +618,17 @@ def load_all_extensions(path: str):
     print('Finished loading cogs.')
 
 
+@bot.check
+async def beta_check(ctx):
+    """Disable live instance if a beta instance is running"""
+    beta_bot_id = bot.koa['discord_user']['beta_id']
+    beta_bot = ctx.guild.get_member(beta_bot_id)
+
+    if beta_bot and beta_bot.status == discord.Status.online:
+        return ctx.guild.me.id == beta_bot_id
+    return True
+
+
 def start(debugging=False):
     """Start bot"""
     print('Initiating configuration...')

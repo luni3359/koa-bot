@@ -9,7 +9,9 @@ import pixivpy3
 import tweepy
 from discord.ext import commands
 
-import koabot.koakuma
+import koabot.koakuma as koakuma
+import koabot.utils as utils
+import koabot.utils.net
 import koabot.utils.posts
 
 
@@ -43,7 +45,7 @@ class Gallery(commands.Cog):
         end_regex = kwargs.get('end_regex', False)
 
         on_nsfw_channel = channel.is_nsfw()
-        post_id = koabot.utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
+        post_id = utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
         if not post_id:
             return
@@ -95,7 +97,7 @@ class Gallery(commands.Cog):
                 single_post = True
 
         if single_post:
-            if koabot.utils.posts.post_is_missing_preview(post, board=board):
+            if utils.posts.post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:
                     await board_cog.send_posts(channel, post, board=board)
             return
@@ -120,7 +122,7 @@ class Gallery(commands.Cog):
             posts = [post for post in posts if post['rating'] is 's']
 
         post_included_in_results = False
-        if koabot.utils.posts.post_is_missing_preview(post, board=board) and posts:
+        if utils.posts.post_is_missing_preview(post, board=board) and posts:
             if post['rating'] is 's' or on_nsfw_channel:
                 post_included_in_results = True
                 post = [post]
@@ -145,7 +147,7 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = koabot.utils.posts.get_post_id(url, '/status/', '?')
+        post_id = utils.posts.get_post_id(url, '/status/', '?')
         if not post_id:
             return
 
@@ -187,7 +189,7 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = koabot.utils.posts.get_post_id(url, ['illust_id=', '/artworks/'], '&')
+        post_id = utils.posts.get_post_id(url, ['illust_id=', '/artworks/'], '&')
         if not post_id:
             return
 
@@ -288,12 +290,12 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = koabot.utils.posts.get_post_id(url, '/show/', '?')
+        post_id = utils.posts.get_post_id(url, '/show/', '?')
         if not post_id:
             return
 
         search_url = self.bot.assets['sankaku']['id_search_url'] + post_id
-        api_result = await koabot.utils.net.http_request(search_url, json=True)
+        api_result = await utils.net.http_request(search_url, json=True)
 
         if not api_result or 'code' in api_result:
             print('Sankaku error\nCode #%s' % api_result['code'])
@@ -312,13 +314,13 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = koabot.utils.posts.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
+        post_id = utils.posts.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
         if not post_id:
             return
 
         search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
 
-        api_result = await koabot.utils.net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
+        api_result = await utils.net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
 
         if not api_result['deviation']['isMature']:
             return
@@ -356,12 +358,12 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        album_id = koabot.utils.posts.get_post_id(url, ['/a/', '/gallery/'], '?')
+        album_id = utils.posts.get_post_id(url, ['/a/', '/gallery/'], '?')
         if not album_id:
             return
 
         search_url = self.bot.assets['imgur']['album_url'].format(album_id)
-        api_result = await koabot.utils.net.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)
+        api_result = await utils.net.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)
 
         if not api_result or api_result['status'] != 200:
             return
@@ -403,8 +405,8 @@ async def generate_pixiv_embed(post, user):
     """
 
     img_url = post.image_urls.medium
-    image_filename = koabot.utils.net.get_url_filename(img_url)
-    image = await koabot.utils.net.fetch_image(img_url, headers=koabot.koakuma.bot.assets['pixiv']['headers'])
+    image_filename = utils.net.get_url_filename(img_url)
+    image = await utils.net.fetch_image(img_url, headers=koakuma.bot.assets['pixiv']['headers'])
 
     embed = discord.Embed()
     embed.set_author(

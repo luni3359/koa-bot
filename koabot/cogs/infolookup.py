@@ -8,8 +8,9 @@ import urllib
 import discord
 from discord.ext import commands
 
-import koabot.koakuma
-from koabot.utils import net
+import koabot.koakuma as koakuma
+import koabot.utils as utils
+import koabot.utils.posts
 
 
 class InfoLookup(commands.Cog):
@@ -26,7 +27,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote_plus(words)
         user_search = self.bot.assets['jisho']['search_url'] + word_encoded
 
-        js = await net.http_request(user_search, json=True)
+        js = await utils.net.http_request(user_search, json=True)
 
         if not js:
             await ctx.send('Error retrieving data from server.')
@@ -75,7 +76,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote_plus(words)
         user_search = self.bot.assets['urban_dictionary']['search_url'] + word_encoded
 
-        js = await net.http_request(user_search, json=True)
+        js = await utils.net.http_request(user_search, json=True)
 
         if not js:
             await ctx.send('Error retrieving data from server.')
@@ -136,7 +137,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote(words)
         user_search = '%s/%s?key=%s' % (self.bot.assets['merriam-webster']['search_url'], word_encoded, self.bot.auth_keys['merriam-webster']['key'])
 
-        js = await koabot.utils.net.http_request(user_search, json=True)
+        js = await utils.net.http_request(user_search, json=True)
 
         if not js:
             await ctx.send('Oops. What?')
@@ -295,7 +296,7 @@ def formatDictionaryOddities(txt: str, which: str):
 
         matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
         for match in matches:
-            txt = txt.replace(match[0], '[%s](%s%s)' % (match[1], koabot.koakuma.bot.assets['urban_dictionary']['dictionary_url'], urllib.parse.quote(match[1])))
+            txt = txt.replace(match[0], '[%s](%s%s)' % (match[1], koakuma.bot.assets['urban_dictionary']['dictionary_url'], urllib.parse.quote(match[1])))
 
         return txt
 

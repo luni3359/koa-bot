@@ -11,7 +11,6 @@ import mysql.connector as mariadb
 from discord.ext import commands
 
 import koabot.tasks
-import koabot.utils
 
 bot = commands.Bot(command_prefix='!', description='')
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))

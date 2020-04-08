@@ -11,8 +11,6 @@ from discord.ext import commands
 
 import koabot.koakuma as koakuma
 import koabot.utils as utils
-import koabot.utils.net
-import koabot.utils.posts
 
 
 class Gallery(commands.Cog):

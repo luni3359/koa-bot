@@ -5,7 +5,8 @@ from datetime import datetime
 
 import discord
 
-from koabot import koakuma, utils
+import koabot.utils as utils
+from koabot import koakuma
 
 
 async def check_live_streamers():

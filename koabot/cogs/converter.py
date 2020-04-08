@@ -2,6 +2,7 @@
 import itertools
 import random
 
+import forex_python.converter as currency
 from discord.ext import commands
 from pint import UnitRegistry
 
@@ -17,6 +18,7 @@ class Converter(commands.Cog):
         self.ureg = UnitRegistry()
         self.ureg.default_format = '~P.3f'
         self.Q_ = self.ureg.Quantity
+        self.currency = currency.CurrencyRates()
 
     @commands.command(name='convert', aliases=['conv', 'cv'])
     async def unit_convert(self, ctx, *, units):
@@ -54,7 +56,7 @@ class Converter(commands.Cog):
 
         currency_type1 = currency_type1.upper()
         currency_type2 = currency_type2.upper()
-        converted_amount = self.bot.currency.convert(currency_type1, currency_type2, amount)
+        converted_amount = self.currency.convert(currency_type1, currency_type2, amount)
 
         await ctx.send('```%s %s → %0.2f %s```' % (amount, currency_type1, converted_amount, currency_type2))
 

@@ -7,7 +7,6 @@ from datetime import datetime
 import appdirs
 import commentjson
 import discord
-import forex_python.converter as currency
 import mysql.connector as mariadb
 from discord.ext import commands
 
@@ -131,8 +130,6 @@ def start(debugging=False):
         bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
     except (mariadb.InterfaceError, mariadb.DatabaseError):
         print('Could not connect to the database! Functionality will be limited.')
-
-    bot.currency = currency.CurrencyRates()
 
     run_periodic_tasks()
     load_all_extensions(os.path.join(SOURCE_DIR, 'cogs'))

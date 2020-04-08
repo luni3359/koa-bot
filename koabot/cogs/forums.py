@@ -2,7 +2,6 @@
 import html
 import itertools
 import random
-import re
 
 import basc_py4chan
 import discord
@@ -16,12 +15,12 @@ class Forums(commands.Cog):
         self.bot = bot
 
     @commands.command(name='4chan', aliases=['4c', '4ch'])
-    async def get_4chan_posts(self, ctx, user_board='u', thread_id):
+    async def get_4chan_posts(self, ctx, user_board: str = 'u', thread_id: int = 0):
         """Get posts from a specific board, mostly those with pictures"""
 
         board = basc_py4chan.Board(user_board, https=True)
-        if thread_id and re.findall(r'([0-9]+)', thread_id):
-            thread = board.get_thread(int(thread_id))
+        if thread_id:
+            thread = board.get_thread(thread_id)
             max_posts = 5
 
             if not thread:

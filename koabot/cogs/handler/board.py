@@ -2,11 +2,14 @@
 import re
 import typing
 
+import aiohttp
 import commentjson
 import discord
 from discord.ext import commands
 
-import koabot.utils
+import koabot.utils as utils
+import koabot.utils.net
+import koabot.utils.posts
 
 
 class Board(commands.Cog):
@@ -14,8 +17,10 @@ class Board(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.danbooru_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['danbooru']['username'], password=self.bot.auth_keys['danbooru']['key'])
+        self.e621_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['e621']['username'], password=self.bot.auth_keys['e621']['key'])
 
-    async def search_board(self, ctx, tags, board='danbooru'):
+    async def search_board(self, ctx, tags: typing.List, board='danbooru'):
         """Search on image boards!
         Arguments:
             ctx
@@ -25,6 +30,10 @@ class Board(commands.Cog):
             board::str
                 The board to manage. Default is 'danbooru'
         """
+
+        if len(tags) == 0:
+            await ctx.send('Please make a search.')
+            return
 
         search = ' '.join(tags)
         print('User searching for: ' + search)
@@ -82,21 +91,21 @@ class Board(commands.Cog):
         if board == 'danbooru':
             if post_id:
                 url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
-                return await koabot.utils.net.http_request(url, auth=self.bot.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
+                return await utils.net.http_request(url, auth=self.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
             elif tags:
                 if include_nsfw:
                     url = 'https://danbooru.donmai.us'
                 else:
                     url = 'https://safebooru.donmai.us'
 
-                return await koabot.utils.net.http_request(url + '/posts.json', auth=self.bot.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
+                return await utils.net.http_request(url + '/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
         elif board == 'e621':
             # e621 requires to know the User-Agent
             headers = self.bot.assets['e621']['headers']
 
             if post_id:
                 url = 'https://e621.net/posts/%s.json' % post_id
-                return await koabot.utils.net.http_request(url, auth=self.bot.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
+                return await utils.net.http_request(url, auth=self.bot.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
             elif tags:
                 if include_nsfw:
                     url = 'https://e621.net'
@@ -104,7 +113,7 @@ class Board(commands.Cog):
                     url = 'https://e926.net'
 
                 headers['Content-Type'] = 'application/json'
-                return await koabot.utils.net.http_request(url + '/posts.json', auth=self.bot.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
+                return await utils.net.http_request(url + '/posts.json', auth=self.bot.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
         else:
             raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 
@@ -165,22 +174,22 @@ class Board(commands.Cog):
                     if total_posts > max_posts:
                         embed.set_footer(
                             text='%i+ remaining' % (total_posts - max_posts),
-                            icon_url=koabot.koakuma.bot.assets[board]['favicon']['size16'])
+                            icon_url=self.bot.assets[board]['favicon']['size16'])
                     else:
                         embed.set_footer(
-                            text=koabot.koakuma.bot.assets[board]['name'],
-                            icon_url=koabot.koakuma.bot.assets[board]['favicon']['size16'])
+                            text=self.bot.assets[board]['name'],
+                            icon_url=self.bot.assets[board]['favicon']['size16'])
 
             if not show_nsfw and post['rating'] is not 's':
-                if 'nsfw_placeholder' in koabot.koakuma.bot.assets[board]:
-                    embed.set_image(url=koabot.koakuma.bot.assets[board]['nsfw_placeholder'])
+                if 'nsfw_placeholder' in self.bot.assets[board]:
+                    embed.set_image(url=self.bot.assets[board]['nsfw_placeholder'])
                 else:
-                    embed.set_image(url=koabot.koakuma.bot.assets['default']['nsfw_placeholder'])
+                    embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
                 await ctx.send('<%s>' % embed.url, embed=embed)
             else:
                 if board == 'danbooru':
-                    if koabot.utils.posts.post_is_missing_preview(post, board=board) or last_post:
+                    if utils.posts.post_is_missing_preview(post, board=board) or last_post:
                         await ctx.send('<%s>' % embed.url, embed=embed)
                     else:
                         await ctx.send(embed.url)
@@ -204,9 +213,9 @@ class Board(commands.Cog):
         embed = discord.Embed()
 
         if board == 'danbooru':
-            post_char = re.sub(r' \(.*?\)', '', koabot.utils.posts.combine_tags(post['tag_string_character']))
-            post_copy = koabot.utils.posts.combine_tags(post['tag_string_copyright'])
-            post_artist = koabot.utils.posts.combine_tags(post['tag_string_artist'])
+            post_char = re.sub(r' \(.*?\)', '', utils.posts.combine_tags(post['tag_string_character']))
+            post_copy = utils.posts.combine_tags(post['tag_string_copyright'])
+            post_artist = utils.posts.combine_tags(post['tag_string_artist'])
             embed_post_title = ''
 
             if post_char:
@@ -225,19 +234,19 @@ class Board(commands.Cog):
                 embed_post_title += '#%i' % post['id']
 
             embed_post_title += ' | Danbooru'
-            if len(embed_post_title) >= koabot.koakuma.bot.assets['danbooru']['max_embed_title_length']:
-                embed_post_title = embed_post_title[:koabot.koakuma.bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
+            if len(embed_post_title) >= self.bot.assets['danbooru']['max_embed_title_length']:
+                embed_post_title = embed_post_title[:self.bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
             embed.title = embed_post_title
             embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
         elif board == 'e621':
-            embed.title = '#%s: %s - e621' % (post['id'], koabot.utils.posts.combine_tags(post['tags']['artist']))
+            embed.title = '#%s: %s - e621' % (post['id'], utils.posts.combine_tags(post['tags']['artist']))
             embed.url = 'https://e621.net/posts/%i' % post['id']
 
-        if 'failed_post_preview' in koabot.koakuma.bot.assets[board]:
-            fileurl = koabot.koakuma.bot.assets[board]['failed_post_preview']
+        if 'failed_post_preview' in self.bot.assets[board]:
+            fileurl = self.bot.assets[board]['failed_post_preview']
         else:
-            fileurl = koabot.koakuma.bot.assets['default']['failed_post_preview']
+            fileurl = self.bot.assets['default']['failed_post_preview']
 
         valid_urls_keys = ['large_file_url', 'file_url', 'preview_file_url', 'sample', 'file', 'preview']
         for key in valid_urls_keys:

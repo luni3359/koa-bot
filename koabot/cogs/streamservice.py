@@ -5,7 +5,9 @@ import re
 import discord
 from discord.ext import commands
 
-import koabot.utils
+import koabot.utils as utils
+import koabot.utils.net
+import koabot.utils.posts
 
 
 class StreamService(commands.Cog):
@@ -39,13 +41,13 @@ class StreamService(commands.Cog):
                     # searching an username
                     search_type = 'user_login'
 
-                stream = await koabot.utils.net.http_request('https://api.twitch.tv/helix/streams?%s=%s' % (search_type, item), headers=self.bot.assets['twitch']['headers'], json=True)
+                stream = await utils.net.http_request('https://api.twitch.tv/helix/streams?%s=%s' % (search_type, item), headers=self.bot.assets['twitch']['headers'], json=True)
 
                 for strem in stream['data'][:3]:
                     await ctx.send('https://twitch.tv/%s' % strem['user_name'])
 
             else:
-                streams = await koabot.utils.net.http_request('https://api.twitch.tv/helix/streams', headers=self.bot.assets['twitch']['headers'], json=True)
+                streams = await utils.net.http_request('https://api.twitch.tv/helix/streams', headers=self.bot.assets['twitch']['headers'], json=True)
 
                 for stream in streams['data'][:5]:
                     embed.description += 'stream "%s"\nstreamer %s (%s)\n\n' % (stream['title'], stream['user_name'], stream['user_id'])
@@ -56,12 +58,12 @@ class StreamService(commands.Cog):
         """Automatically fetch a preview of the running stream"""
 
         channel = msg.channel
-        post_id = koabot.utils.posts.get_post_id(url, '.tv/', '?')
+        post_id = utils.posts.get_post_id(url, '.tv/', '?')
 
         if not post_id:
             return
 
-        picarto_request = await koabot.utils.net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
+        picarto_request = await utils.net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
 
         if not picarto_request:
             await channel.send(random.choice(self.bot.quotes['stream_preview_failed']))
@@ -71,8 +73,8 @@ class StreamService(commands.Cog):
             await channel.send(random.choice(self.bot.quotes['stream_preview_offline']))
             return
 
-        image = await koabot.utils.net.fetch_image(picarto_request['thumbnails']['web'])
-        filename = koabot.utils.net.get_url_filename(picarto_request['thumbnails']['web'])
+        image = await utils.net.fetch_image(picarto_request['thumbnails']['web'])
+        filename = utils.net.get_url_filename(picarto_request['thumbnails']['web'])
 
         embed = discord.Embed()
         embed.set_author(

@@ -6,10 +6,11 @@ import typing
 import appdirs
 import discord
 import pixivpy3
+import tweepy
 from discord.ext import commands
 
-import koabot.koakuma
-import koabot.utils.posts
+import koabot.koakuma as koakuma
+import koabot.utils as utils
 
 
 class Gallery(commands.Cog):
@@ -17,6 +18,11 @@ class Gallery(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
+        twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
+        self.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
+        self.pixiv_api = pixivpy3.AppPixivAPI()
+        self.pixiv_refresh_token = None
 
     async def display_static(self, channel, msg, url, **kwargs):
         """Automatically automatic
@@ -37,7 +43,7 @@ class Gallery(commands.Cog):
         end_regex = kwargs.get('end_regex', False)
 
         on_nsfw_channel = channel.is_nsfw()
-        post_id = koabot.utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
+        post_id = utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
         if not post_id:
             return
@@ -89,7 +95,7 @@ class Gallery(commands.Cog):
                 single_post = True
 
         if single_post:
-            if koabot.utils.posts.post_is_missing_preview(post, board=board):
+            if utils.posts.post_is_missing_preview(post, board=board):
                 if post['rating'] is 's' or on_nsfw_channel:
                     await board_cog.send_posts(channel, post, board=board)
             return
@@ -114,7 +120,7 @@ class Gallery(commands.Cog):
             posts = [post for post in posts if post['rating'] is 's']
 
         post_included_in_results = False
-        if koabot.utils.posts.post_is_missing_preview(post, board=board) and posts:
+        if utils.posts.post_is_missing_preview(post, board=board) and posts:
             if post['rating'] is 's' or on_nsfw_channel:
                 post_included_in_results = True
                 post = [post]
@@ -139,11 +145,11 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = koabot.utils.posts.get_post_id(url, '/status/', '?')
+        post_id = utils.posts.get_post_id(url, '/status/', '?')
         if not post_id:
             return
 
-        tweet = self.bot.twitter_api.get_status(post_id, tweet_mode='extended')
+        tweet = self.twitter_api.get_status(post_id, tweet_mode='extended')
 
         if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
             print('Preview gallery not applicable.')
@@ -181,34 +187,20 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = koabot.utils.posts.get_post_id(url, ['illust_id=', '/artworks/'], '&')
+        post_id = utils.posts.get_post_id(url, ['illust_id=', '/artworks/'], '&')
         if not post_id:
             return
 
         print('Now starting to process pixiv link #' + post_id)
 
         # Login
-        if self.bot.pixiv_api.access_token is None:
-            token_name = 'pixiv_refresh_token'
-            token_dir = os.path.join(appdirs.user_cache_dir('koa-bot'), token_name)
-
-            if hasattr(self.bot, token_name):
-                self.bot.pixiv_api.auth(refresh_token=self.bot.pixiv_refresh_token)
-            elif os.path.exists(token_dir):
-                with open(token_dir) as token_file:
-                    token = token_file.readline()
-                    self.bot.pixiv_refresh_token = token
-                    self.bot.pixiv_api.auth(refresh_token=token)
-            else:
-                self.bot.pixiv_api.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
-                self.bot.pixiv_refresh_token = self.bot.pixiv_api.refresh_token
-                with open(token_dir, 'w') as token_file:
-                    token_file.write(self.bot.pixiv_api.refresh_token)
+        if self.pixiv_api.access_token is None:
+            self.reauthenticate_pixiv()
         else:
-            self.bot.pixiv_api.auth(refresh_token=self.bot.pixiv_refresh_token)
+            self.pixiv_api.auth(refresh_token=self.pixiv_refresh_token)
 
         try:
-            illust_json = self.bot.pixiv_api.illust_detail(post_id, req_auth=True)
+            illust_json = self.pixiv_api.illust_detail(post_id, req_auth=True)
         except pixivpy3.PixivError as e:
             await channel.send('Odd...')
             print(e)
@@ -274,17 +266,34 @@ class Gallery(commands.Cog):
         await temp_message.delete()
         print('DONE PIXIV!')
 
+    def reauthenticate_pixiv(self):
+        token_filename = 'pixiv_refresh_token'
+        token_path = os.path.join(appdirs.user_cache_dir('koa-bot'), token_filename)
+
+        if self.pixiv_refresh_token:
+            self.pixiv_api.auth(refresh_token=self.pixiv_refresh_token)
+        elif os.path.exists(token_path):
+            with open(token_path) as token_file:
+                token = token_file.readline()
+                self.pixiv_refresh_token = token
+                self.pixiv_api.auth(refresh_token=token)
+        else:
+            self.pixiv_api.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
+            self.pixiv_refresh_token = self.pixiv_api.refresh_token
+            with open(token_path, 'w') as token_file:
+                token_file.write(self.pixiv_api.refresh_token)
+
     async def get_sankaku_post(self, msg, url):
         """Automatically fetch a bigger preview from Sankaku Complex"""
 
         channel = msg.channel
 
-        post_id = koabot.utils.posts.get_post_id(url, '/show/', '?')
+        post_id = utils.posts.get_post_id(url, '/show/', '?')
         if not post_id:
             return
 
         search_url = self.bot.assets['sankaku']['id_search_url'] + post_id
-        api_result = await koabot.utils.net.http_request(search_url, json=True)
+        api_result = await utils.net.http_request(search_url, json=True)
 
         if not api_result or 'code' in api_result:
             print('Sankaku error\nCode #%s' % api_result['code'])
@@ -303,13 +312,13 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = koabot.utils.posts.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
+        post_id = utils.posts.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
         if not post_id:
             return
 
         search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
 
-        api_result = await koabot.utils.net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
+        api_result = await utils.net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
 
         if not api_result['deviation']['isMature']:
             return
@@ -347,12 +356,12 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        album_id = koabot.utils.posts.get_post_id(url, ['/a/', '/gallery/'], '?')
+        album_id = utils.posts.get_post_id(url, ['/a/', '/gallery/'], '?')
         if not album_id:
             return
 
         search_url = self.bot.assets['imgur']['album_url'].format(album_id)
-        api_result = await koabot.utils.net.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)
+        api_result = await utils.net.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)
 
         if not api_result or api_result['status'] != 200:
             return
@@ -394,8 +403,8 @@ async def generate_pixiv_embed(post, user):
     """
 
     img_url = post.image_urls.medium
-    image_filename = koabot.utils.net.get_url_filename(img_url)
-    image = await koabot.utils.net.fetch_image(img_url, headers=koabot.koakuma.bot.assets['pixiv']['headers'])
+    image_filename = utils.net.get_url_filename(img_url)
+    image = await utils.net.fetch_image(img_url, headers=koakuma.bot.assets['pixiv']['headers'])
 
     embed = discord.Embed()
     embed.set_author(

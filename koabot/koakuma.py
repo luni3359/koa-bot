@@ -4,14 +4,11 @@ import os
 import shutil
 from datetime import datetime
 
-import aiohttp
 import appdirs
 import commentjson
 import discord
 import forex_python.converter as currency
 import mysql.connector as mariadb
-import pixivpy3
-import tweepy
 from discord.ext import commands
 
 import koabot.tasks
@@ -129,15 +126,6 @@ def start(debugging=False):
 
     bot.launch_time = datetime.utcnow()
     bot.__dict__.update(bot_data)
-
-    twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
-    twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
-    bot.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
-
-    bot.pixiv_api = pixivpy3.AppPixivAPI()
-
-    bot.danbooru_auth = aiohttp.BasicAuth(login=bot.auth_keys['danbooru']['username'], password=bot.auth_keys['danbooru']['key'])
-    bot.e621_auth = aiohttp.BasicAuth(login=bot.auth_keys['e621']['username'], password=bot.auth_keys['e621']['key'])
 
     try:
         bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])

@@ -6,6 +6,7 @@ import typing
 import appdirs
 import discord
 import pixivpy3
+import tweepy
 from discord.ext import commands
 
 import koabot.koakuma
@@ -17,6 +18,11 @@ class Gallery(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
+        twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
+        self.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
+        self.pixiv_api = pixivpy3.AppPixivAPI()
+        self.pixiv_refresh_token = None
 
     async def display_static(self, channel, msg, url, **kwargs):
         """Automatically automatic
@@ -143,7 +149,7 @@ class Gallery(commands.Cog):
         if not post_id:
             return
 
-        tweet = self.bot.twitter_api.get_status(post_id, tweet_mode='extended')
+        tweet = self.twitter_api.get_status(post_id, tweet_mode='extended')
 
         if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
             print('Preview gallery not applicable.')
@@ -188,27 +194,13 @@ class Gallery(commands.Cog):
         print('Now starting to process pixiv link #' + post_id)
 
         # Login
-        if self.bot.pixiv_api.access_token is None:
-            token_name = 'pixiv_refresh_token'
-            token_dir = os.path.join(appdirs.user_cache_dir('koa-bot'), token_name)
-
-            if hasattr(self.bot, token_name):
-                self.bot.pixiv_api.auth(refresh_token=self.bot.pixiv_refresh_token)
-            elif os.path.exists(token_dir):
-                with open(token_dir) as token_file:
-                    token = token_file.readline()
-                    self.bot.pixiv_refresh_token = token
-                    self.bot.pixiv_api.auth(refresh_token=token)
-            else:
-                self.bot.pixiv_api.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
-                self.bot.pixiv_refresh_token = self.bot.pixiv_api.refresh_token
-                with open(token_dir, 'w') as token_file:
-                    token_file.write(self.bot.pixiv_api.refresh_token)
+        if self.pixiv_api.access_token is None:
+            self.reauthenticate_pixiv()
         else:
-            self.bot.pixiv_api.auth(refresh_token=self.bot.pixiv_refresh_token)
+            self.pixiv_api.auth(refresh_token=self.pixiv_refresh_token)
 
         try:
-            illust_json = self.bot.pixiv_api.illust_detail(post_id, req_auth=True)
+            illust_json = self.pixiv_api.illust_detail(post_id, req_auth=True)
         except pixivpy3.PixivError as e:
             await channel.send('Odd...')
             print(e)
@@ -273,6 +265,23 @@ class Gallery(commands.Cog):
 
         await temp_message.delete()
         print('DONE PIXIV!')
+
+    def reauthenticate_pixiv(self):
+        token_filename = 'pixiv_refresh_token'
+        token_path = os.path.join(appdirs.user_cache_dir('koa-bot'), token_filename)
+
+        if self.pixiv_refresh_token:
+            self.pixiv_api.auth(refresh_token=self.pixiv_refresh_token)
+        elif os.path.exists(token_path):
+            with open(token_path) as token_file:
+                token = token_file.readline()
+                self.pixiv_refresh_token = token
+                self.pixiv_api.auth(refresh_token=token)
+        else:
+            self.pixiv_api.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
+            self.pixiv_refresh_token = self.pixiv_api.refresh_token
+            with open(token_path, 'w') as token_file:
+                token_file.write(self.pixiv_api.refresh_token)
 
     async def get_sankaku_post(self, msg, url):
         """Automatically fetch a bigger preview from Sankaku Complex"""

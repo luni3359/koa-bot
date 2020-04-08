@@ -2,6 +2,7 @@
 import re
 import typing
 
+import aiohttp
 import commentjson
 import discord
 from discord.ext import commands
@@ -14,6 +15,8 @@ class Board(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.danbooru_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['danbooru']['username'], password=self.bot.auth_keys['danbooru']['key'])
+        self.e621_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['e621']['username'], password=self.bot.auth_keys['e621']['key'])
 
     async def search_board(self, ctx, tags: typing.List, board='danbooru'):
         """Search on image boards!
@@ -86,14 +89,14 @@ class Board(commands.Cog):
         if board == 'danbooru':
             if post_id:
                 url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
-                return await koabot.utils.net.http_request(url, auth=self.bot.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
+                return await koabot.utils.net.http_request(url, auth=self.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
             elif tags:
                 if include_nsfw:
                     url = 'https://danbooru.donmai.us'
                 else:
                     url = 'https://safebooru.donmai.us'
 
-                return await koabot.utils.net.http_request(url + '/posts.json', auth=self.bot.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
+                return await koabot.utils.net.http_request(url + '/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
         elif board == 'e621':
             # e621 requires to know the User-Agent
             headers = self.bot.assets['e621']['headers']

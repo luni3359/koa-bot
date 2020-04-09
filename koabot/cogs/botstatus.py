@@ -82,9 +82,8 @@ class BotStatus(commands.Cog):
     @commands.command()
     async def version(self, ctx):
         """Show bot's version"""
-
         commit = subprocess.check_output(['git', 'describe', '--always']).strip()
-        await ctx.send('On commit %s.' % commit.decode('utf-8'))
+        await ctx.send('On commit ``%s``.' % commit.decode('utf-8'))
 
     async def typing_a_message(self, ctx, **kwargs):
         """Make Koakuma seem alive with a 'is typing' delay

@@ -48,7 +48,7 @@ class Converter(commands.Cog):
             i += 1
 
         if unit_matches:
-            await self.bot.converter.convert_units(ctx, unit_matches)
+            await self.convert_units(ctx, unit_matches)
 
     @commands.command(name='exchange', aliases=['currency', 'xc', 'c'])
     async def convert_currency(self, ctx, amount: float, currency_type1: str, _, currency_type2: str):

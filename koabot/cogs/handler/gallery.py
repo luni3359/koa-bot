@@ -242,19 +242,18 @@ class Gallery(commands.Cog):
             else:
                 pictures = [illust]
 
-            pictures_processed = 0
-            for picture in pictures[:4]:
-                pictures_processed += 1
+            total_to_preview = 5
+            for i, picture in enumerate(pictures[:total_to_preview]):
                 print('Retrieving picture from #%s...' % post_id)
 
                 (embed, image, filename) = await generate_pixiv_embed(picture, illust.user)
                 print('Retrieved more from #%s (maybe)' % post_id)
 
-                if pictures_processed >= min(4, total_illust_pictures):
+                if i + 1 >= min(total_to_preview, total_illust_pictures):
                     remaining_footer = ''
 
-                    if total_illust_pictures > 4:
-                        remaining_footer = '%i+ remaining' % (total_illust_pictures - 4)
+                    if total_illust_pictures > total_to_preview:
+                        remaining_footer = '%i+ remaining' % (total_illust_pictures - total_to_preview)
                     else:
                         remaining_footer = self.bot.assets['pixiv']['name']
 

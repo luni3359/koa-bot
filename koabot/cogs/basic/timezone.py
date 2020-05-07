@@ -12,3 +12,8 @@ class TimeZone(commands.Cog):
     @commands.command(aliases=['t'])
     async def time(self, ctx, *region_or_country):
         """Provide time zones"""
+
+
+def setup(bot: commands.Bot):
+    """Initiate cog"""
+    bot.add_cog(TimeZone(bot))

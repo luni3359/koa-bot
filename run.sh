@@ -3,10 +3,7 @@
 # env var is defined at ~/.profile
 
 function var_is_defined() {
-    if [ -z ${1} ]; then
-        false
-    fi
-    true
+    [[ -v $1 ]]
 }
 
 function path_is_valid() {
@@ -17,7 +14,7 @@ function path_is_valid() {
 }
 
 function check_env_vars() {
-    if ! var_is_defined "${KOAKUMA_HOME}"; then
+    if ! var_is_defined KOAKUMA_HOME; then
         echo "\$KOAKUMA_HOME is not defined. It needs to point to the bot's directory."
         exit 1
     fi
@@ -27,7 +24,7 @@ function check_env_vars() {
         exit 1
     fi
 
-    if ! var_is_defined "${KOAKUMA_CONNSTR}"; then
+    if ! var_is_defined KOAKUMA_CONNSTR; then
         echo "\$KOAKUMA_CONNSTR is not defined. It needs to point to the bot's hosting machine."
         exit 1
     fi
@@ -46,7 +43,7 @@ function test_conectivity() {
         exit 1
     fi
 
-    if ! var_is_defined "${REMOTE_HOME}"; then
+    if ! var_is_defined REMOTE_HOME; then
         echo "The remote \$KOAKUMA_HOME env var is empty or set incorrectly."
         exit 1
     fi
@@ -127,6 +124,20 @@ function install() {
 
     pip install -r requirements.txt
 }
+
+# set XDG variables
+# https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
+if ! var_is_defined XDG_CONFIG_HOME; then
+    XDG_CONFIG_HOME=~/.config
+fi
+
+if ! var_is_defined XDG_CACHE_HOME; then
+    XDG_CACHE_HOME=~/.cache
+fi
+
+if ! var_is_defined XDG_DATA_HOME; then
+    XDG_DATA_HOME=~/.local/share
+fi
 
 # If there's options
 if [ -n "$1" ]; then

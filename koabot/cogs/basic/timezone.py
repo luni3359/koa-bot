@@ -1,4 +1,6 @@
-"""Provide users a way to view timezones"""
+"""Provide users a way to view timezones.
+The !time command allows typing a region or a country to further displays time zones there.
+"""
 from datetime import datetime
 
 import pytz

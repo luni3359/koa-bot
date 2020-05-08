@@ -3,7 +3,7 @@
 # env var is defined at ~/.profile
 
 function var_is_defined() {
-    [[ -v $1 ]]
+    [ -v $1 ]
 }
 
 function path_is_valid() {

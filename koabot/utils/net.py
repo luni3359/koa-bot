@@ -33,9 +33,10 @@ async def http_request(url: str, **kwargs):
     async with aiohttp.ClientSession(auth=auth) as session:
         async with session.get(url, data=data, headers=headers) as response:
             if response.status != 200:
+                # Timeout error
+                # if response.status == 524
                 print('> %s\nFailed connecting to %s\n[Network status %i]: %s "%s"' % (datetime.now(), url, response.status, response.reason, err_msg))
                 return False
-
             if json:
                 return await response.json(content_type=None)
 

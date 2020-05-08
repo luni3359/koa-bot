@@ -128,11 +128,11 @@ function install() {
 # set XDG variables
 # https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
 if ! var_is_defined "${XDG_CONFIG_HOME}"; then
-    XDG_CONFIG_HOME=~/.config/
+    XDG_CONFIG_HOME=~/.config
 fi
 
 if ! var_is_defined "${XDG_CACHE_HOME}"; then
-    XDG_CACHE_HOME=~/.cache/
+    XDG_CACHE_HOME=~/.cache
 fi
 
 if ! var_is_defined "${XDG_DATA_HOME}"; then

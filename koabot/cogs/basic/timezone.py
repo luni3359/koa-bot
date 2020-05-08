@@ -22,14 +22,14 @@ class TimeZone(commands.Cog):
                 ['Mexico', 'America/Mexico_City'],
             ]
 
-        tz_result = '>>> '
+        tz_result = '```\n'
         for label, timezone in tzs:
             tz = pytz.timezone(timezone)
             tz_time = datetime.now(tz)
             # https://strftime.org
-            tz_result += (label + ': ').ljust(10, ' ') + tz_time.strftime('%a, %b %d %H:%M:%S\n')
+            tz_result += (label + ': ').ljust(8) + tz_time.strftime('%a, %b %d %H:%M:%S\n')
 
-        await ctx.send(tz_result)
+        await ctx.send(tz_result + '```')
 
 
 def setup(bot: commands.Bot):

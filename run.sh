@@ -7,10 +7,7 @@ function var_is_defined() {
 }
 
 function path_is_valid() {
-    if [ ! -d ${1} ]; then
-        false
-    fi
-    true
+    [ -d "${1}" ]
 }
 
 function check_env_vars() {

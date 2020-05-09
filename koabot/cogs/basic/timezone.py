@@ -21,7 +21,8 @@ class TimeZone(commands.Cog):
             tzs = [
                 ['USA', 'America/Chicago'],
                 ['Canada', 'America/Toronto'],
-                ['Mexico', 'America/Mexico_City'],
+                ['Japan', 'Asia/Tokyo'],
+                ['Mexico', 'America/Mexico_City']
             ]
 
         tz_result = '```\n'

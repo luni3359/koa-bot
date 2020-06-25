@@ -105,7 +105,7 @@ class Board(commands.Cog):
 
             if post_id:
                 url = 'https://e621.net/posts/%s.json' % post_id
-                return await utils.net.http_request(url, auth=self.bot.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
+                return await utils.net.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
             elif tags:
                 if include_nsfw:
                     url = 'https://e621.net'
@@ -113,7 +113,7 @@ class Board(commands.Cog):
                     url = 'https://e926.net'
 
                 headers['Content-Type'] = 'application/json'
-                return await utils.net.http_request(url + '/posts.json', auth=self.bot.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
+                return await utils.net.http_request(url + '/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
         else:
             raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
 

@@ -85,10 +85,10 @@ def load_all_extensions(path: str):
                 cog_list.append(cog_path)
 
     for ext in cog_list:
+        print('Loading "%s"...'.ljust(40) % ext, end='\r')
         bot.load_extension(ext)
-        print('Loaded "%s".' % ext)
 
-    print('Finished loading cogs.')
+    print('Finished loading %i cogs.'.ljust(40) % len(ext))
 
 
 @bot.check

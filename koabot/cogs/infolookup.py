@@ -152,7 +152,7 @@ class InfoLookup(commands.Cog):
                     break
             await ctx.send(embed=embed)
 
-    @commands.command(name='word', aliases=['w', 'dictionary'])
+    @commands.command(name='word', aliases=['w', 'dictionary', 'd'])
     async def search_english_word(self, ctx, *word):
         """Search a term in merriam-webster's dictionary"""
 

@@ -93,14 +93,9 @@ function run() {
     python3 -m koabot
 }
 
-function install_package() {
-    echo "Installing $1..."
-    # sudo apt install $1
-    echo "$1 has been installed."
-}
-
 function install() {
     # System dependencies
+    # ffmpeg is necessary to play music
     package_deps=(ffmpeg)
 
     for pdep in ${package_deps[*]}; do
@@ -110,26 +105,21 @@ function install() {
     done
 
     if ! var_is_empty $pckgs; then
-        # dummy string
-        echo "sudo apt install ${pckgs} -y"
+        sudo apt install ${pckgs} -y
     else
         echo "Required dependencies met."
     fi
 
-    # ffmpeg is necessary to play music
-    if ! command_exists ffmpeg; then
-        install_package ffmpeg
-    fi
-
-    if ! command_exists python3; then
-        python3 -V
-    else
-        if ! command_exists python; then
-            python -V
-        fi
-    fi
-
     # Python dependencies
+    if command_exists python3; then
+        python3 -V
+    elif command_exists python; then
+        python -V
+    else
+        echo "Missing 'python' from system."
+        exit 1
+    fi
+
     pip install -r requirements.txt
 }
 

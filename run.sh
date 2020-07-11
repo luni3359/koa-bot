@@ -126,7 +126,7 @@ function install() {
     pip install -r requirements.txt
 }
 
-# Setting XDG variables
+# Checking XDG variables
 # https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
 if ! var_is_defined XDG_CONFIG_HOME; then
     XDG_CONFIG_HOME=~/.config

@@ -1,15 +1,15 @@
 -- Make users
-CREATE USER 'luni3359'
+CREATE USER 'admin'
     IDENTIFIED BY 'password';
 
 -- Grant permissions
 GRANT ALL
     ON *.*
-    TO 'luni3359'
+    TO 'admin'
     WITH GRANT OPTION;
 
 -- Example
--- CREATE USER 'luni3359'@'%.example.com'
+-- CREATE USER 'admin'@'%.example.com'
 --     IDENTIFIED BY 'password';
 -- GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP
 --     ON customer.addresses

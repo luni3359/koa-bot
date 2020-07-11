@@ -10,6 +10,10 @@ function path_is_valid() {
     [ -d "${1}" ]
 }
 
+function command_exists() {
+    command -v $1 1> /dev/null 2>&1;
+}
+
 function check_env_vars() {
     if ! var_is_defined KOAKUMA_HOME; then
         echo "\$KOAKUMA_HOME is not defined. It needs to point to the bot's directory."
@@ -79,10 +83,6 @@ function run() {
     echo "Starting bot..."
     cd "${KOAKUMA_HOME}"
     python3 -m koabot
-}
-
-function command_exists() {
-    command -v $1 1> /dev/null 2>&1;
 }
 
 function install_package() {

@@ -79,6 +79,10 @@ function update() {
     rsync -aAXv --progress "${XDG_CONFIG_HOME}/koa-bot/" "${TARGET_KOACONFIG}"
 }
 
+function restart() {
+    echo "Not yet implemented!"
+}
+
 function run() {
     echo "Starting bot..."
     cd "${KOAKUMA_HOME}"
@@ -148,7 +152,7 @@ if [ -n "$1" ]; then
             ;;
             -u|--update) update;;
             -U|--update-dependencies) update_dependencies;;
-            -r|--restart) ;;
+            -r|--restart) restart;;
         esac
 
         shift

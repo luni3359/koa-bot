@@ -6,6 +6,10 @@ function var_is_defined() {
     [ -v $1 ]
 }
 
+function var_is_empty() {
+    [ -z "${1}" ]
+}
+
 function path_is_valid() {
     [ -d "${1}" ]
 }
@@ -96,15 +100,21 @@ function install_package() {
 }
 
 function install() {
+    # System dependencies
     package_deps=(ffmpeg)
+
     for pdep in ${package_deps[*]}; do
         if ! command_exists $pdep; then
             pckgs="${pckgs}${pdep} "
         fi
     done
 
-    # dummy string
-    echo "apt install ${pckgs} -y"
+    if ! var_is_empty $pckgs; then
+        # dummy string
+        echo "sudo apt install ${pckgs} -y"
+    else
+        echo "Required dependencies met."
+    fi
 
     # ffmpeg is necessary to play music
     if ! command_exists ffmpeg; then
@@ -119,6 +129,7 @@ function install() {
         fi
     fi
 
+    # Python dependencies
     pip install -r requirements.txt
 }
 

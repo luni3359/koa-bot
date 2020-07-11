@@ -38,7 +38,7 @@ function check_env_vars() {
 function test_conectivity() {
     check_env_vars
 
-    # redirects STDERR to /dev/null to hide ssh error messages
+    # Redirects STDERR to /dev/null to hide ssh error messages
     REMOTE_HOME=$(ssh "${KOAKUMA_CONNSTR}" 'source ~/.profile; echo $KOAKUMA_HOME' 2> /dev/null)
     ssh_return_value=$?
 
@@ -90,12 +90,13 @@ function restart() {
 function run() {
     echo "Starting bot..."
     cd "${KOAKUMA_HOME}"
+    # TODO: make bot run in a venv if possible
     python3 -m koabot
 }
 
 function install() {
     # System dependencies
-    # ffmpeg is necessary to play music
+    # NOTE: ffmpeg is necessary to play music
     package_deps=(ffmpeg)
 
     for pdep in ${package_deps[*]}; do
@@ -105,12 +106,14 @@ function install() {
     done
 
     if ! var_is_empty $pckgs; then
+    # TODO: check if user cancels or apt errors out
         sudo apt install ${pckgs} -y
     else
         echo "Required dependencies met."
     fi
 
     # Python dependencies
+    # TODO: check if python meets the minimum version requirements
     if command_exists python3; then
         python3 -V
     elif command_exists python; then
@@ -123,7 +126,7 @@ function install() {
     pip install -r requirements.txt
 }
 
-# set XDG variables
+# Setting XDG variables
 # https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
 if ! var_is_defined XDG_CONFIG_HOME; then
     XDG_CONFIG_HOME=~/.config

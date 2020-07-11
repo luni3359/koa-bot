@@ -96,7 +96,7 @@ function install_package() {
 }
 
 function install() {
-    package_deps=(ffmpeg mariadb-server)
+    package_deps=(ffmpeg)
     for pdep in ${package_deps[*]}; do
         if ! command_exists $pdep; then
             pckgs="${pckgs}${pdep} "
@@ -109,10 +109,6 @@ function install() {
     # ffmpeg is necessary to play music
     if ! command_exists ffmpeg; then
         install_package ffmpeg
-    fi
-
-    if ! command_exists mariadb-server; then
-        install_package mariadb-server
     fi
 
     if ! command_exists python3; then

@@ -97,7 +97,7 @@ function run() {
 function install() {
     # System dependencies
     # NOTE: ffmpeg is necessary to play music
-    package_deps=(ffmpeg)
+    local package_deps=(ffmpeg)
 
     for pdep in ${package_deps[*]}; do
         if ! command_exists $pdep; then
@@ -109,20 +109,38 @@ function install() {
     # TODO: check if user cancels or apt errors out
         sudo apt install ${pckgs} -y
     else
-        echo "Required dependencies met."
+        echo "Required system dependencies met."
     fi
 
     # Python dependencies
-    # TODO: check if python meets the minimum version requirements
+    local MIN_PYTHON_VERSION="3.5"
+
+    MIN_PYTHON_VERSION=($(echo "$MIN_PYTHON_VERSION" | grep -o -E '[0-9]+'))
+
+    if [ ${#MIN_PYTHON_VERSION[@]} -gt 3 ]; then
+        echo "Invalid minimum python version requirement. Exiting."
+        exit 1
+    fi
+
     if command_exists python3; then
-        python3 -V
+        PYTHON_BIN=python3
     elif command_exists python; then
-        python -V
+        PYTHON_BIN=python
     else
         echo "Missing 'python' from system."
         exit 1
     fi
 
+    PYTHON_VERSION=($(echo $($PYTHON_BIN -c 'import platform; major, minor, patch = platform.python_version_tuple(); print(major); print(minor); print(patch);')))
+
+    for (( i=0; i<${#MIN_PYTHON_VERSION[@]}; i++ )); do
+        if [ ${PYTHON_VERSION[i]} -lt ${MIN_PYTHON_VERSION[i]} ]; then
+            echo "Minimum python version requirement not met. Exiting."
+            exit 1
+        fi
+    done
+
+    echo "Installing python dependencies..."
     pip install -r requirements.txt
 }
 
@@ -140,8 +158,8 @@ if ! var_is_defined XDG_DATA_HOME; then
     XDG_DATA_HOME=~/.local/share
 fi
 
-# If there's options
 if [ -n "$1" ]; then
+    # If there's options
     while [ -n "$1" ]; do
         case "$1" in
             -i|--install) install;;

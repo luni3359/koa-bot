@@ -122,12 +122,15 @@ function install() {
         exit 1
     fi
 
-    if command_exists python3; then
-        PYTHON_BIN=python3
-    elif command_exists python; then
-        PYTHON_BIN=python
-    else
-        echo "Missing 'python' from system."
+    for p in python3 python; do
+        if command_exists $p; then
+            PYTHON_BIN=$p
+            break
+        fi
+    done
+
+    if ! var_is_defined PYTHON_BIN; then
+        echo "Couldn't find 'python' in system."
         exit 1
     fi
 

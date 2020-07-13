@@ -5,16 +5,35 @@ c = conn.cursor()
 
 with open('db/database.sql') as f:
     sql_script = f.read()
-
 c.executescript(sql_script)
 
-c.execute("""CREATE TABLE discordUser (
-        userId INTEGER,
-        userName TEXT,
-        userBirthday TEXT
-    )""")
-
-conn.execute("INSERT INTO users VALUES (123, 123)")
-
+c.execute("INSERT INTO discordUser(userDId, userName, dateFirstSeen) VALUES (123123, 'rick', datetime('now'))")
 conn.commit()
-conn.close()
+
+# c.execute("SELECT last_insert_rowid()")
+# print(c.fetchone()) # returns an array...?
+
+userId = c.lastrowid
+
+c.execute("INSERT INTO discordServer(serverDId, serverName, dateFirstSeen) VALUES (43216, 'my server', datetime('now'))")
+# c.execute("INSERT INTO discordServer(serverId, serverName, dateFirstSeen) VALUES (43216, 'my server', strftime('%s', 'now'))") # unix version
+conn.commit()
+
+serverId = c.lastrowid
+
+c.execute("INSERT INTO discordServerUser(userId, serverId) VALUES (?, ?)", [userId, serverId])
+conn.commit()
+
+c.execute("SELECT * FROM discordUser")
+for row in c.fetchall():
+    print(row)
+
+c.execute("SELECT * FROM discordServer")
+for row in c.fetchall():
+    print(row)
+
+c.execute("SELECT d.userName, s.serverName FROM discordUser AS d, discordServer AS s, discordServerUser AS dsu WHERE dsu.userId=d.userId AND dsu.serverId=s.serverId")
+for row in c.fetchall():
+    print(row)
+
+c.close()

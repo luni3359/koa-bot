@@ -6,8 +6,16 @@ function var_is_defined() {
     [ -v $1 ]
 }
 
+function var_is_empty() {
+    [ -z "${1}" ]
+}
+
 function path_is_valid() {
     [ -d "${1}" ]
+}
+
+function command_exists() {
+    command -v $1 1> /dev/null 2>&1;
 }
 
 function check_env_vars() {
@@ -30,7 +38,7 @@ function check_env_vars() {
 function test_conectivity() {
     check_env_vars
 
-    # redirects STDERR to /dev/null to hide ssh error messages
+    # Redirects STDERR to /dev/null to hide ssh error messages
     REMOTE_HOME=$(ssh "${KOAKUMA_CONNSTR}" 'source ~/.profile; echo $KOAKUMA_HOME' 2> /dev/null)
     ssh_return_value=$?
 
@@ -75,54 +83,71 @@ function update() {
     rsync -aAXv --progress "${XDG_CONFIG_HOME}/koa-bot/" "${TARGET_KOACONFIG}"
 }
 
+function restart() {
+    echo "Not yet implemented!"
+}
+
 function run() {
     echo "Starting bot..."
     cd "${KOAKUMA_HOME}"
+    # TODO: make bot run in a venv if possible
     python3 -m koabot
 }
 
-function command_exists() {
-    command -v $1 1> /dev/null 2>&1;
-}
-
-function install_package() {
-    echo "Installing $1..."
-    # sudo apt install $1
-    echo "$1 has been installed."
-}
-
 function install() {
-    package_deps=(ffmpeg mariadb-server)
+    # System dependencies
+    # NOTE: ffmpeg is necessary to play music
+    local package_deps=(ffmpeg)
+
     for pdep in ${package_deps[*]}; do
         if ! command_exists $pdep; then
             pckgs="${pckgs}${pdep} "
         fi
     done
 
-    # dummy string
-    echo "apt install ${pckgs} -y"
-
-    # ffmpeg is necessary to play music
-    if ! command_exists ffmpeg; then
-        install_package ffmpeg
-    fi
-
-    if ! command_exists mariadb-server; then
-        install_package mariadb-server
-    fi
-
-    if ! command_exists python3; then
-        python3 -V
+    if ! var_is_empty $pckgs; then
+    # TODO: check if user cancels or apt errors out
+        sudo apt install ${pckgs} -y
     else
-        if ! command_exists python; then
-            python -V
-        fi
+        echo "Required system dependencies met."
     fi
 
-    pip install -r requirements.txt
+    # Python dependencies
+    local MIN_PYTHON_VERSION="3.5"
+
+    MIN_PYTHON_VERSION=($(echo "$MIN_PYTHON_VERSION" | grep -o -E '[0-9]+'))
+
+    if [ ${#MIN_PYTHON_VERSION[@]} -gt 3 ]; then
+        echo "Invalid minimum python version requirement. Exiting."
+        exit 1
+    fi
+
+    for p in python python3; do
+        if command_exists $p; then
+            PYTHON_BIN=$p
+            break
+        fi
+    done
+
+    if ! var_is_defined PYTHON_BIN; then
+        echo "Couldn't find 'python' in system."
+        exit 1
+    fi
+
+    PYTHON_VERSION=($(echo $($PYTHON_BIN -c 'import platform; major, minor, patch = platform.python_version_tuple(); print(major); print(minor); print(patch);')))
+
+    for (( i=0; i<${#MIN_PYTHON_VERSION[@]}; i++ )); do
+        if [ ${PYTHON_VERSION[i]} -lt ${MIN_PYTHON_VERSION[i]} ]; then
+            echo "Minimum python version requirement not met. Exiting."
+            exit 1
+        fi
+    done
+
+    echo "Installing python dependencies..."
+    $PYTHON_BIN -m pip install -r requirements.txt
 }
 
-# set XDG variables
+# Checking XDG variables
 # https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
 if ! var_is_defined XDG_CONFIG_HOME; then
     XDG_CONFIG_HOME=~/.config
@@ -136,8 +161,8 @@ if ! var_is_defined XDG_DATA_HOME; then
     XDG_DATA_HOME=~/.local/share
 fi
 
-# If there's options
 if [ -n "$1" ]; then
+    # If there's options
     while [ -n "$1" ]; do
         case "$1" in
             -i|--install) install;;
@@ -148,7 +173,7 @@ if [ -n "$1" ]; then
             ;;
             -u|--update) update;;
             -U|--update-dependencies) update_dependencies;;
-            -r|--restart) ;;
+            -r|--restart) restart;;
         esac
 
         shift

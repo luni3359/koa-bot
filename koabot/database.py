@@ -18,13 +18,9 @@ conn.commit()
 c.execute("INSERT INTO discordUser(userDId, userName) VALUES (123123, 'firstuser')")
 conn.commit()
 
-# c.execute("SELECT last_insert_rowid()")
-# print(c.fetchone()) # returns a tuple...?
-
 userId = c.lastrowid
 
 c.execute("INSERT INTO discordServer(serverDId, serverName) VALUES (43216, 'my server')")
-# c.execute("INSERT INTO discordServer(serverId, serverName) VALUES (43216, 'my server', strftime('%s', 'now'))") # unix version
 conn.commit()
 
 serverId = c.lastrowid

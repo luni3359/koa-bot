@@ -3,6 +3,7 @@ import glob
 import os
 import shutil
 import sqlite3
+import timeit
 from datetime import datetime
 
 import appdirs
@@ -73,6 +74,7 @@ def load_all_extensions(path: str):
     """Recursively load all cogs in the project"""
     print('Loading cogs in project...')
 
+    start_load_time = timeit.default_timer()
     cog_prefix = 'koabot.cogs'
     cog_list = []
 
@@ -88,7 +90,7 @@ def load_all_extensions(path: str):
         print('Loading "%s"...'.ljust(40) % ext, end='\r')
         bot.load_extension(ext)
 
-    print('Finished loading %i cogs.'.ljust(40) % len(ext))
+    print('Finished loading %i cogs in %0.2fs.'.ljust(40) % (len(ext), timeit.default_timer() - start_load_time))
 
 
 @bot.check
@@ -125,6 +127,8 @@ def start(debugging=False):
     bot.launch_time = datetime.utcnow()
     bot.__dict__.update(bot_data)
 
+    print('Connecting to database...')
+    start_load_time = timeit.default_timer()
     try:
         bot.sqlite_conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbBeta.sqlite3'))
 
@@ -139,6 +143,7 @@ def start(debugging=False):
     except sqlite3.Error as e:
         print(e)
         print('Could not connect to the database! Functionality will be limited.')
+    print('To database in %0.3fs' % (timeit.default_timer() - start_load_time))
 
     run_periodic_tasks()
     load_all_extensions(os.path.join(SOURCE_DIR, 'cogs'))

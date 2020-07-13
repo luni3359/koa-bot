@@ -1,6 +1,13 @@
+import os
 import sqlite3
 
-conn = sqlite3.connect(':memory:')
+import appdirs
+
+BOT_DIRNAME = 'koa-bot'
+CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
+
+
+conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbTest.sqlite3'))
 c = conn.cursor()
 
 with open('db/database.sql') as f:
@@ -11,7 +18,7 @@ c.execute("INSERT INTO discordUser(userDId, userName) VALUES (123123, 'firstuser
 conn.commit()
 
 # c.execute("SELECT last_insert_rowid()")
-# print(c.fetchone()) # returns an array...?
+# print(c.fetchone()) # returns a tuple...?
 
 userId = c.lastrowid
 

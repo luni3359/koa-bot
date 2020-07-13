@@ -1,5 +1,6 @@
 """Bot events"""
 import random
+from datetime import datetime
 
 import discord
 from discord.ext import commands
@@ -12,6 +13,8 @@ class BotEvents(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.bot.connect_time = None
+        self.bot.isconnected = False
         self.bot.last_channel = 0
         self.bot.last_channel_message_count = 0
         self.bot.last_channel_warned = False
@@ -123,9 +126,32 @@ class BotEvents(commands.Cog):
     async def on_ready(self):
         """On bot start"""
 
-        print('Ready!')
+        print('Logged in to Discord  [%s (UTC+0)]' % (datetime.utcnow().replace(microsecond=0)))
+
         # Change play status to something fitting
         await self.bot.change_presence(activity=discord.Game(name=random.choice(self.bot.quotes['playing_status'])))
+
+    @commands.Cog.listener()
+    async def on_connect(self):
+        """On connect"""
+        print('Connected to server [%s (UTC+0)]' % (datetime.utcnow().replace(microsecond=0)))
+
+        if self.bot.connect_time:
+            delta_time = datetime.utcnow() - self.bot.connect_time
+            (hours, remainder) = divmod(int(delta_time.total_seconds()), 3600)
+            (minutes, seconds) = divmod(remainder, 60)
+            (days, hours) = divmod(hours, 24)
+            print('Downtime for %i days, %02d:%02d:%02d' % (days, hours, minutes, seconds))
+
+        self.bot.isconnected = True
+        self.bot.connect_time = datetime.utcnow()
+
+    @commands.Cog.listener()
+    async def on_disconnect(self):
+        """On disconnect"""
+        if self.bot.isconnected:
+            print('Disconnected from server [%s (UTC+0)]' % (datetime.utcnow().replace(microsecond=0)))
+            self.bot.isconnected = False
 
 
 def setup(bot: commands.Bot):

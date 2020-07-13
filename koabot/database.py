@@ -7,7 +7,7 @@ with open('db/database.sql') as f:
     sql_script = f.read()
 c.executescript(sql_script)
 
-c.execute("INSERT INTO discordUser(userDId, userName, dateFirstSeen) VALUES (123123, 'rick', datetime('now'))")
+c.execute("INSERT INTO discordUser(userDId, userName) VALUES (123123, 'firstuser')")
 conn.commit()
 
 # c.execute("SELECT last_insert_rowid()")
@@ -15,8 +15,8 @@ conn.commit()
 
 userId = c.lastrowid
 
-c.execute("INSERT INTO discordServer(serverDId, serverName, dateFirstSeen) VALUES (43216, 'my server', datetime('now'))")
-# c.execute("INSERT INTO discordServer(serverId, serverName, dateFirstSeen) VALUES (43216, 'my server', strftime('%s', 'now'))") # unix version
+c.execute("INSERT INTO discordServer(serverDId, serverName) VALUES (43216, 'my server')")
+# c.execute("INSERT INTO discordServer(serverId, serverName) VALUES (43216, 'my server', strftime('%s', 'now'))") # unix version
 conn.commit()
 
 serverId = c.lastrowid

@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS discordUser (
     userId INTEGER NOT NULL,
     userDId INTEGER NOT NULL UNIQUE,
     userName TEXT NOT NULL,
-    dateFirstSeen TEXT NOT NULL,
+    dateFirstSeen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dateFirstUsed TEXT,
     userBirthday TEXT,
     -- https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS discordServer (
     serverId INTEGER NOT NULL,
     serverDId INTEGER NOT NULL UNIQUE,
     serverName TEXT,
-    dateFirstSeen TEXT NOT NULL,
+    dateFirstSeen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_discServer PRIMARY KEY (serverId)
 );
 

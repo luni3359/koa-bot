@@ -13,6 +13,7 @@ c = conn.cursor()
 with open('db/database.sql') as f:
     sql_script = f.read()
 c.executescript(sql_script)
+conn.commit()
 
 c.execute("INSERT INTO discordUser(userDId, userName) VALUES (123123, 'firstuser')")
 conn.commit()

@@ -2,6 +2,7 @@
 import glob
 import os
 import shutil
+import sqlite3
 from datetime import datetime
 
 import appdirs
@@ -123,6 +124,21 @@ def start(debugging=False):
 
     bot.launch_time = datetime.utcnow()
     bot.__dict__.update(bot_data)
+
+    try:
+        bot.sqlite_conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbBeta.sqlite3'))
+
+        # Generate tables in database
+        with open('db/database.sql') as f:
+            sql_script = f.read()
+
+        c = bot.sqlite_conn.cursor()
+        c.executescript(sql_script)
+        bot.sqlite_conn.commit()
+        c.close()
+    except sqlite3.Error as e:
+        print(e)
+        print('Could not connect to the database! Functionality will be limited.')
 
     run_periodic_tasks()
     load_all_extensions(os.path.join(SOURCE_DIR, 'cogs'))

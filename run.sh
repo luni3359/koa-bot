@@ -122,7 +122,7 @@ function install() {
         exit 1
     fi
 
-    for p in python3 python; do
+    for p in python python3; do
         if command_exists $p; then
             PYTHON_BIN=$p
             break
@@ -144,7 +144,7 @@ function install() {
     done
 
     echo "Installing python dependencies..."
-    pip install -r requirements.txt
+    $PYTHON_BIN -m pip install -r requirements.txt
 }
 
 # Checking XDG variables

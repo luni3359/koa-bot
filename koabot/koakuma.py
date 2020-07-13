@@ -2,12 +2,12 @@
 import glob
 import os
 import shutil
+import sqlite3
 from datetime import datetime
 
 import appdirs
 import commentjson
 import discord
-import mysql.connector as mariadb
 from discord.ext import commands
 
 import koabot.tasks
@@ -126,8 +126,18 @@ def start(debugging=False):
     bot.__dict__.update(bot_data)
 
     try:
-        bot.mariadb_connection = mariadb.connect(host=bot.database['host'], user=bot.database['username'], password=bot.database['password'])
-    except (mariadb.InterfaceError, mariadb.DatabaseError):
+        bot.sqlite_conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbBeta.sqlite3'))
+
+        # Generate tables in database
+        with open('db/database.sql') as f:
+            sql_script = f.read()
+
+        c = bot.sqlite_conn.cursor()
+        c.executescript(sql_script)
+        bot.sqlite_conn.commit()
+        c.close()
+    except sqlite3.Error as e:
+        print(e)
         print('Could not connect to the database! Functionality will be limited.')
 
     run_periodic_tasks()

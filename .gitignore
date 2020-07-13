@@ -1,7 +1,6 @@
 __pycache__
 .vscode
 .python-version
-db
 config*
 *.webm
 favicons

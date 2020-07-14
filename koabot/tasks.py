@@ -11,16 +11,14 @@ import koabot.utils as utils
 import koabot.utils.net
 from koabot import koakuma
 
-token_filename = 'twitch_access_token'
-twitch_access_token = None
-twitch_headers = {}
-
 
 async def check_live_streamers():
     """Checks every so often for streamers that have gone online"""
 
     await koakuma.bot.wait_until_ready()
 
+    twitch_access_token = None
+    token_filename = 'twitch_access_token'
     token_path = os.path.join(appdirs.user_cache_dir('koa-bot'), token_filename)
     if os.path.exists(token_path):
         with open(token_path) as token_file:

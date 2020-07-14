@@ -113,7 +113,7 @@ function install() {
     fi
 
     # Python dependencies
-    local MIN_PYTHON_VERSION="3.5"
+    local MIN_PYTHON_VERSION="3.7.3"
 
     MIN_PYTHON_VERSION=($(echo "$MIN_PYTHON_VERSION" | grep -o -E '[0-9]+'))
 

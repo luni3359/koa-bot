@@ -58,7 +58,7 @@ class Converter(commands.Cog):
         currency_type2 = currency_type2.upper()
         converted_amount = self.currency.convert(currency_type1, currency_type2, amount)
 
-        await ctx.send('```%s %s → %0.2f %s```' % (amount, currency_type1, converted_amount, currency_type2))
+        await ctx.send(f'```{amount} {currency_type1} → {converted_amount:0.2f} {currency_type2}```')
 
     async def convert_units(self, ctx, units):
         """Convert units found to their opposite (SI <-> imp)"""
@@ -87,8 +87,9 @@ class Converter(commands.Cog):
                 value2 = quantity[2]
 
                 converted_value = (value * self.ureg.foot + value2 * self.ureg.inch).to_base_units()
-                print('%s %s → %s' % (value * self.ureg.foot, value2 * self.ureg.inch, converted_value))
-                conversion_str += '\n%s %s → %s' % (value * self.ureg.foot, value2 * self.ureg.inch, converted_value)
+                calculation_str = f'{value * self.ureg.foot} {value2 * self.ureg.inch} → {converted_value}'
+                print(calculation_str)
+                conversion_str += f'\n{calculation_str}'
                 continue
 
             (unit, value) = quantity
@@ -107,8 +108,9 @@ class Converter(commands.Cog):
                 else:
                     converted_value = value.to(self.ureg.feet)
 
-            print('%s → %s' % (value, converted_value))
-            conversion_str += '\n%s → %s' % (value, converted_value)
+            calculation_str = f'{value} → {converted_value}'
+            print(calculation_str)
+            conversion_str += f'\n{calculation_str}'
 
         conversion_str += '```'
         await ctx.send(conversion_str)

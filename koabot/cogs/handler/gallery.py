@@ -71,26 +71,26 @@ class Gallery(commands.Cog):
             else:
                 embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-            content = '%s %s' % (msg.author.mention, random.choice(self.bot.quotes['improper_content_reminder']))
+            content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
 
             await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
         single_post = False
         if board == 'e621':
             if post['relationships']['has_active_children']:
-                search = 'parent:%s order:id' % post['id']
+                search = f"parent:{post['id']} order:id"
             elif post['relationships']['parent_id']:
                 search = [
-                    'id:%s' % post['relationships']['parent_id'],
-                    'parent:%s order:id -id:%s' % (post['relationships']['parent_id'], post['id'])
+                    f"id:{post['relationships']['parent_id']}",
+                    f"parent:{post['relationships']['parent_id']} order:id -id:{post['id']}"
                 ]
             else:
                 single_post = True
         else:
             if post['has_children']:
-                search = 'parent:%s order:id -id:%s' % (post['id'], post['id'])
+                search = f"parent:{post['id']} order:id -id:{post['id']}"
             elif post['parent_id']:
-                search = 'parent:%s order:id -id:%s' % (post['parent_id'], post['id'])
+                search = f"parent:{post['parent_id']} order:id -id:{post['id']}"
             else:
                 single_post = True
 
@@ -161,7 +161,7 @@ class Gallery(commands.Cog):
                 return
 
             # Appending :orig to get a better image quality
-            gallery_pics.append(picture['media_url_https'] + ':orig')
+            gallery_pics.append(f"{picture['media_url_https']}:orig")
 
         total_gallery_pics = len(gallery_pics)
         for picture in gallery_pics:
@@ -169,8 +169,8 @@ class Gallery(commands.Cog):
 
             embed = discord.Embed()
             embed.set_author(
-                name='%s (@%s)' % (tweet.author.name, tweet.author.screen_name),
-                url='https://twitter.com/' + tweet.author.screen_name,
+                name=f'{tweet.author.name} (@{tweet.author.screen_name})',
+                url=f'https://twitter.com/{tweet.author.screen_name}',
                 icon_url=tweet.author.profile_image_url_https)
             embed.set_image(url=picture)
 
@@ -191,7 +191,7 @@ class Gallery(commands.Cog):
         if not post_id:
             return
 
-        print('Now starting to process pixiv link #' + post_id)
+        print(f'Now starting to process pixiv link #{post_id}')
 
         # Login
         if self.pixiv_api.access_token is None:
@@ -209,10 +209,10 @@ class Gallery(commands.Cog):
         print(illust_json)
         if 'illust' not in illust_json:
             # too bad
-            print('Invalid Pixiv id #' + post_id)
+            print(f'Invalid Pixiv id #{post_id}')
             return
 
-        print('Pixiv auth passed! (for #%s)' % post_id)
+        print(f'Pixiv auth passed! (for #{post_id})')
 
         illust = illust_json.illust
         if illust.x_restrict != 0 and not channel.is_nsfw():
@@ -223,7 +223,7 @@ class Gallery(commands.Cog):
             else:
                 embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-            content = '%s %s' % (msg.author.mention, random.choice(self.bot.quotes['improper_content_reminder']))
+            content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
 
             bot_cog = self.bot.get_cog('BotStatus')
 
@@ -233,7 +233,7 @@ class Gallery(commands.Cog):
             await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
             return
 
-        temp_message = await channel.send('***%s***' % random.choice(self.bot.quotes['processing_long_task']))
+        temp_message = await channel.send(f"***{random.choice(self.bot.quotes['processing_long_task'])}***")
         async with channel.typing():
             total_illust_pictures = illust.page_count
 
@@ -244,16 +244,16 @@ class Gallery(commands.Cog):
 
             total_to_preview = 5
             for i, picture in enumerate(pictures[:total_to_preview]):
-                print('Retrieving picture from #%s...' % post_id)
+                print(f'Retrieving picture from #{post_id}...')
 
                 (embed, image, filename) = await generate_pixiv_embed(picture, illust.user)
-                print('Retrieved more from #%s (maybe)' % post_id)
+                print(f'Retrieved more from #{post_id} (maybe)')
 
                 if i + 1 >= min(total_to_preview, total_illust_pictures):
                     remaining_footer = ''
 
                     if total_illust_pictures > total_to_preview:
-                        remaining_footer = '%i+ remaining' % (total_illust_pictures - total_to_preview)
+                        remaining_footer = f'{total_illust_pictures - total_to_preview}+ remaining'
                     else:
                         remaining_footer = self.bot.assets['pixiv']['name']
 
@@ -291,11 +291,11 @@ class Gallery(commands.Cog):
         if not post_id:
             return
 
-        search_url = self.bot.assets['sankaku']['id_search_url'] + post_id
+        search_url = f"{self.bot.assets['sankaku']['id_search_url']}{post_id}"
         api_result = await utils.net.http_request(search_url, json=True)
 
         if not api_result or 'code' in api_result:
-            print('Sankaku error\nCode #%s' % api_result['code'])
+            print(f"Sankaku error\nCode #{api_result['code']}")
             return
 
         embed = discord.Embed()
@@ -317,7 +317,7 @@ class Gallery(commands.Cog):
 
         search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
 
-        api_result = await utils.net.http_request(search_url, json=True, err_msg='error fetching post #' + post_id)
+        api_result = await utils.net.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')
 
         if not api_result['deviation']['isMature']:
             return
@@ -335,13 +335,13 @@ class Gallery(commands.Cog):
                 preview_url = media_type['c'].replace('<prettyName>', prettyName)
                 break
 
-        image_url = '%s/%s?token=%s' % (baseUri, preview_url, token)
+        image_url = f'{baseUri}/{preview_url}?token={token}'
         print(image_url)
 
         embed = discord.Embed()
         embed.set_author(
             name=api_result['deviation']['author']['username'],
-            url='https://www.deviantart.com/' + api_result['deviation']['author']['username'],
+            url=f"https://www.deviantart.com/{api_result['deviation']['author']['username']}",
             icon_url=api_result['deviation']['author']['usericon'])
         embed.set_image(url=image_url)
         embed.set_footer(
@@ -381,7 +381,7 @@ class Gallery(commands.Cog):
                 remaining_footer = ''
 
                 if total_album_pictures > 4:
-                    remaining_footer = '%i+ remaining' % (total_album_pictures - 4)
+                    remaining_footer = f'{total_album_pictures - 4}+ remaining'
                 else:
                     remaining_footer = self.bot.assets['imgur']['name']
 
@@ -408,8 +408,8 @@ async def generate_pixiv_embed(post, user):
     embed = discord.Embed()
     embed.set_author(
         name=user.name,
-        url='https://www.pixiv.net/member.php?id=%i' % user.id)
-    embed.set_image(url='attachment://' + image_filename)
+        url=f'https://www.pixiv.net/member.php?id={user.id}')
+    embed.set_image(url=f'attachment://{image_filename}')
     return embed, image, image_filename
 
 

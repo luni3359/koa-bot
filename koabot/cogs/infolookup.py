@@ -30,7 +30,7 @@ class InfoLookup(commands.Cog):
             bot_msg = 'There are many definitions for that... do you see anything that matches?\n'
 
             for suggestion in e.options[0:3]:
-                bot_msg += '* %s\n' % suggestion
+                bot_msg += f'* {suggestion}\n'
 
             await ctx.send(bot_msg)
         except wikipedia.exceptions.PageError:
@@ -38,7 +38,7 @@ class InfoLookup(commands.Cog):
             suggestions = wikipedia.search(search_term, results=3)
 
             for suggestion in suggestions:
-                bot_msg += '* %s\n' % suggestion
+                bot_msg += f'* {suggestion}\n'
 
             await ctx.send(bot_msg)
 
@@ -75,12 +75,12 @@ class InfoLookup(commands.Cog):
             tags = '; '.join(entry['senses'][0]['tags'])
 
             if tags:
-                tags = '\n*%s*' % tags
+                tags = f'\n*{tags}*'
 
             if primary_reading:
-                embed.description += '►{kanji}【{reading}】\n{wis}: {}{} {}\n\n'.format(jlpt_level, definitions, tags, wis=what_it_is, reading=primary_reading, kanji=kanji)
+                embed.description += f'►{kanji}【{primary_reading}】\n{what_it_is}: {jlpt_level}{definitions} {tags}\n\n'
             else:
-                embed.description += '►{kanji}\n{wis}: {}{} {}\n\n'.format(jlpt_level, definitions, tags, wis=what_it_is, kanji=kanji)
+                embed.description += f'►{kanji}\n{what_it_is}: {jlpt_level}{definitions} {tags}\n\n'
 
         if len(embed.description) > 2048:
             embed.description = embed.description[:2048]
@@ -122,7 +122,7 @@ class InfoLookup(commands.Cog):
             definition = entry['definition']
             example = entry['example']
 
-            string_to_add = '**%s. %s**\n\n' % (index_placeholder, formatDictionaryOddities(definition, 'urban'))
+            string_to_add = f"**{index_placeholder}. {formatDictionaryOddities(definition, 'urban')}**\n\n"
             string_to_add += formatDictionaryOddities(example, 'urban') + '\n\n'
 
             if len(string_to_add) - len(index_placeholder) + 1 > 2048:
@@ -158,7 +158,7 @@ class InfoLookup(commands.Cog):
 
         words = ' '.join(word).lower()
         word_encoded = urllib.parse.quote(words)
-        user_search = '%s/%s?key=%s' % (self.bot.assets['merriam-webster']['search_url'], word_encoded, self.bot.auth_keys['merriam-webster']['key'])
+        user_search = f"{self.bot.assets['merriam-webster']['search_url']}/{word_encoded}?key={self.bot.auth_keys['merriam-webster']['key']}"
 
         js = await utils.net.http_request(user_search, json=True)
 
@@ -178,10 +178,11 @@ class InfoLookup(commands.Cog):
                 suggestions = js[:5]
 
                 for i, suggestion in enumerate(suggestions):
-                    suggestions[i] = '• ' + suggestion
+                    suggestions[i] = f'• {suggestion}'
 
                 embed = discord.Embed()
-                embed.description = '*%s*' % '\n\n'.join(suggestions)
+                suggestion_list = '\n\n'.join(suggestions)
+                embed.description = f"*{suggestion_list}*"
                 embed.set_footer(
                     text=self.bot.assets['merriam-webster']['name'],
                     icon_url=self.bot.assets['merriam-webster']['favicon'])
@@ -197,7 +198,7 @@ class InfoLookup(commands.Cog):
 
         embed = discord.Embed()
         embed.title = words
-        embed.url = '%s/%s' % (self.bot.assets['merriam-webster']['dictionary_url'], word_encoded)
+        embed.url = f"{self.bot.assets['merriam-webster']['dictionary_url']}/{word_encoded}"
         embed.description = ''
 
         for category in js[:2]:
@@ -207,10 +208,10 @@ class InfoLookup(commands.Cog):
             pronunciation = category['hwi']['hw']
             definitions = category['def']
 
-            embed.description = '%s►  *%s*' % (embed.description, pronunciation.replace('*', '・'))
+            embed.description = f"{embed.description}►  *{pronunciation.replace('*', '・')}*"
 
             if 'fl' in category:
-                embed.description = '%s\n\n__**%s**__' % (embed.description, category['fl'].upper())
+                embed.description = f"{embed.description}\n\n__**{category['fl'].upper()}**__"
 
             for subcategory in definitions:
                 similar_meaning_string = ''
@@ -253,7 +254,7 @@ class InfoLookup(commands.Cog):
                             definition = definition[0][0][1]
 
                         # Format bullet point
-                        similar_meaning_string += '%s: %s\n' % (meaning_position, definition)
+                        similar_meaning_string += f'{meaning_position}: {definition}\n'
 
                 embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd']
                                                         or 'definition', formatDictionaryOddities(similar_meaning_string, 'merriam'))
@@ -263,7 +264,7 @@ class InfoLookup(commands.Cog):
                 etymology = category['et']
                 embed.description = '%s\n**%s**\n%s\n\n' % (embed.description, 'etymology', formatDictionaryOddities(etymology[0][1], 'merriam'))
             else:
-                embed.description = '%s\n\n' % embed.description
+                embed.description = f'{embed.description}\n\n'
 
         # Embed descriptions longer than 2048 characters error out.
         if len(embed.description) > 2048:
@@ -319,7 +320,7 @@ def formatDictionaryOddities(txt: str, which: str):
 
         matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
         for match in matches:
-            txt = txt.replace(match[0], '[%s](%s%s)' % (match[1], koakuma.bot.assets['urban_dictionary']['dictionary_url'], urllib.parse.quote(match[1])))
+            txt = txt.replace(match[0], f"[{match[1]}]({koakuma.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
 
         return txt
 

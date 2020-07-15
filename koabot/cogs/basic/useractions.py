@@ -18,14 +18,14 @@ class UserActions(commands.Cog):
                 embed = discord.Embed()
                 embed.set_image(url=mention.avatar_url)
                 embed.set_author(
-                    name='%s #%i' % (mention.name, int(mention.discriminator)),
+                    name=f'{mention.name} #{mention.discriminator}',
                     icon_url=mention.avatar_url)
                 await ctx.send(embed=embed)
         else:
             embed = discord.Embed()
             embed.set_image(url=ctx.message.author.avatar_url)
             embed.set_author(
-                name='%s #%i' % (ctx.message.author.name, int(ctx.message.author.discriminator)),
+                name=f'{ctx.message.author.name} #{ctx.message.author.discriminator}',
                 icon_url=ctx.message.author.avatar_url)
             await ctx.send(embed=embed)
 

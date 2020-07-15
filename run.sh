@@ -90,7 +90,13 @@ function restart() {
 function run() {
     echo "Starting bot..."
     cd "${KOAKUMA_HOME}"
-    # TODO: make bot run in a venv if possible
+
+    # pyenv specific
+    export PYENV_VIRTUALENV_DISABLE_PROMPT=1
+    eval "$(pyenv init -)"
+    eval "$(pyenv virtualenv-init -)"
+    pyenv activate koa-bot
+
     python3 -m koabot
 }
 

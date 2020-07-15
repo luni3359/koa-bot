@@ -56,11 +56,11 @@ class BotEvents(commands.Cog):
             embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon_url)
 
             target_embed = embed_template.copy()
-            target_embed.description = 'Mention by {} from {}\n\n[Click to go there]({})'.format(msg.author.mention, channel.mention, msg.jump_url)
+            target_embed.description = f'Mention by {msg.author.mention} from {channel.mention}\n\n[Click to go there]({msg.jump_url})'
             target_channel_msg = await mentioned_channel.send(embed=target_embed)
 
             origin_embed = embed_template.copy()
-            origin_embed.description = 'Mention by {} to {}\n\n[Click to go there]({})'.format(msg.author.mention, mentioned_channel.mention, target_channel_msg.jump_url)
+            origin_embed.description = f'Mention by {msg.author.mention} to {mentioned_channel.mention}\n\n[Click to go there]({target_channel_msg.jump_url})'
             await channel.send(embed=origin_embed)
 
         url_matches = []
@@ -126,7 +126,7 @@ class BotEvents(commands.Cog):
     async def on_ready(self):
         """On bot start"""
 
-        print('Logged in to Discord  [%s (UTC+0)]' % (datetime.utcnow().replace(microsecond=0)))
+        print(f'Logged in to Discord  [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
 
         # Change play status to something fitting
         await self.bot.change_presence(activity=discord.Game(name=random.choice(self.bot.quotes['playing_status'])))
@@ -134,14 +134,14 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_connect(self):
         """On connect"""
-        print('Connected to server [%s (UTC+0)]' % (datetime.utcnow().replace(microsecond=0)))
+        print(f'Connected to server [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
 
         if self.bot.connect_time:
             delta_time = datetime.utcnow() - self.bot.connect_time
             (hours, remainder) = divmod(int(delta_time.total_seconds()), 3600)
             (minutes, seconds) = divmod(remainder, 60)
             (days, hours) = divmod(hours, 24)
-            print('Downtime for %i days, %02d:%02d:%02d' % (days, hours, minutes, seconds))
+            print(f'Downtime for {days} days, {hours:02d}:{minutes:02d}:{seconds:02d}')
 
         self.bot.isconnected = True
         self.bot.connect_time = datetime.utcnow()
@@ -150,7 +150,7 @@ class BotEvents(commands.Cog):
     async def on_disconnect(self):
         """On disconnect"""
         if self.bot.isconnected:
-            print('Disconnected from server [%s (UTC+0)]' % (datetime.utcnow().replace(microsecond=0)))
+            print(f'Disconnected from server [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
             self.bot.isconnected = False
 
 

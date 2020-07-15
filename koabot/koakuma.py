@@ -55,11 +55,11 @@ def transition_old_config():
 
                     os.remove(os.path.join(CONFIG_DIR, filename))
 
-                print('Moving %s to %s...' % (filename, CONFIG_DIR))
+                print(f'Moving {filename} to {CONFIG_DIR}...')
                 shutil.move(file_path, CONFIG_DIR)
 
             os.rmdir(old_config)
-            print('The contents of config have been moved to %s.' % CONFIG_DIR)
+            print(f'The contents of config have been moved to {CONFIG_DIR}.')
     else:
         print('No config files were moved.')
 
@@ -87,10 +87,10 @@ def load_all_extensions(path: str):
                 cog_list.append(cog_path)
 
     for ext in cog_list:
-        print('Loading "%s"...'.ljust(40) % ext, end='\r')
+        print(f'Loading "{ext}"...'.ljust(40), end='\r')
         bot.load_extension(ext)
 
-    print('Finished loading %i cogs in %0.2fs.'.ljust(40) % (len(ext), timeit.default_timer() - start_load_time))
+    print(f'Finished loading {len(ext)} cogs in {timeit.default_timer() - start_load_time:0.2f}s.'.ljust(40))
 
 
 @bot.check
@@ -143,7 +143,7 @@ def start(debugging=False):
     except sqlite3.Error as e:
         print(e)
         print('Could not connect to the database! Functionality will be limited.')
-    print('To database in %0.3fs' % (timeit.default_timer() - start_load_time))
+    print(f'To database in {timeit.default_timer() - start_load_time:0.3f}s')
 
     run_periodic_tasks()
     load_all_extensions(os.path.join(SOURCE_DIR, 'cogs'))

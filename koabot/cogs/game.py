@@ -26,7 +26,7 @@ class Game(commands.Cog):
             return
 
         dice_single_or_many = len(dice_matches) > 1 or (dice_matches[0][0] and int(dice_matches[0][0]) > 1)
-        message = '>>> {} rolled the {}.\n'.format(ctx.author.mention, dice_single_or_many and 'dice' or 'die')
+        message = f">>> {ctx.author.mention} rolled the {dice_single_or_many and 'dice' or 'die'}.\n"
         pip_sum = 0
 
         for match in dice_matches:
@@ -34,34 +34,34 @@ class Game(commands.Cog):
             pips = match[1] and int(match[1]) or 1
             bonus_points = match[2] and int(match[2]) or 0
 
-            message += '{} {}-sided {} for a '.format(num2words(quantity).capitalize(), pips, quantity > 1 and 'dice' or 'die')
+            message += f"{num2words(quantity).capitalize()} {pips}-sided {quantity > 1 and 'dice' or 'die'} for a "
 
             for i in range(0, quantity):
                 die_roll = random.randint(1, pips)
 
                 if i == quantity - 1:
                     if quantity == 1:
-                        message += '{}.'.format(die_roll)
+                        message += f'{die_roll}.'
                     else:
-                        message += 'and a {}.'.format(die_roll)
+                        message += f'and a {die_roll}.'
 
                     if bonus_points:
                         pip_sum += bonus_points
 
                         if bonus_points > 0:
-                            message += ' +{}'.format(bonus_points)
+                            message += f' +{bonus_points}'
                         else:
-                            message += ' {}'.format(bonus_points)
+                            message += f' {bonus_points}'
 
                     message += '\n'
                 elif i == quantity - 2:
-                    message += '{} '.format(die_roll)
+                    message += f'{die_roll} '
                 else:
-                    message += '{}, '.format(die_roll)
+                    message += f'{die_roll}, '
 
                 pip_sum += die_roll
 
-        message += 'For a total of **{}.**'.format(pip_sum)
+        message += f'For a total of **{pip_sum}.**'
 
         await ctx.send(message)
 

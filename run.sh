@@ -188,3 +188,6 @@ else
     # No options: run the bot
     run
 fi
+
+# Prevent terminal from closing
+read -p "Bot terminated."

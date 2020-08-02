@@ -187,7 +187,7 @@ if [ -n "$1" ]; then
 else
     # No options: run the bot
     run
-fi
 
-# Prevent terminal from closing
-read -p "Bot terminated."
+    # Prevent terminal from closing
+    read -p "Bot terminated."
+fi

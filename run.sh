@@ -2,6 +2,14 @@
 # This script is run automatically when the pi runs, directly from /etc/xdg/autostart/koa-bot.desktop
 # env var is defined at ~/.profile
 
+MIN_PYTHON_VERSION="3.7.3"
+
+# Checking XDG variables
+# https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
+XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
+XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
+
 function var_is_defined() {
     [ -v $1 ]
 }
@@ -112,15 +120,13 @@ function install() {
     done
 
     if ! var_is_empty $pckgs; then
-    # TODO: check if user cancels or apt errors out
+        # TODO: check if user cancels or apt errors out
         sudo apt install ${pckgs} -y
     else
         echo "Required system dependencies met."
     fi
 
     # Python dependencies
-    local MIN_PYTHON_VERSION="3.7.3"
-
     MIN_PYTHON_VERSION=($(echo "$MIN_PYTHON_VERSION" | grep -o -E '[0-9]+'))
 
     if [ ${#MIN_PYTHON_VERSION[@]} -gt 3 ]; then
@@ -152,12 +158,6 @@ function install() {
     echo "Installing python dependencies..."
     $PYTHON_BIN -m pip install -r requirements.txt
 }
-
-# Checking XDG variables
-# https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
-XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
-XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
-XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
 
 if [ -n "$1" ]; then
     # If there's options

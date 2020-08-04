@@ -10,6 +10,17 @@ XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
 XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
 XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
 
+function show_help() {
+    cat << EOF
+Usage: ${0##*/} [OPTION...]
+  -h, --help
+  -i, --install
+  -u, --update
+  -U, --update-dependencies
+  -r, --restart
+EOF
+}
+
 function var_is_defined() {
     [ -v $1 ]
 }
@@ -163,6 +174,7 @@ if [ -n "$1" ]; then
     # If there's options
     while [ -n "$1" ]; do
         case "$1" in
+            -h|--help) show_help;;
             -i|--install) install;;
             -uU|-Uu)
                 test_conectivity

@@ -155,17 +155,9 @@ function install() {
 
 # Checking XDG variables
 # https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
-if ! var_is_defined XDG_CONFIG_HOME; then
-    XDG_CONFIG_HOME=~/.config
-fi
-
-if ! var_is_defined XDG_CACHE_HOME; then
-    XDG_CACHE_HOME=~/.cache
-fi
-
-if ! var_is_defined XDG_DATA_HOME; then
-    XDG_DATA_HOME=~/.local/share
-fi
+XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
+XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
 
 if [ -n "$1" ]; then
     # If there's options

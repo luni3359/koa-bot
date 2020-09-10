@@ -12,7 +12,7 @@ XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
 
 # Loading .env file
 if [ -f .env ]; then
-  export $(echo $(cat .env | sed 's/#.*//g'| xargs) | envsubst)
+    export $(echo $(cat .env | sed 's/#.*//g'| xargs) | envsubst)
 fi
 
 function show_help() {
@@ -116,6 +116,11 @@ function run() {
     cd "${KOAKUMA_HOME}"
 
     # pyenv specific
+    if ! command_exists pyenv; then
+        export PYENV_ROOT=$HOME/.pyenv
+        export PATH="$PYENV_ROOT/bin:$PATH"
+    fi
+
     if command_exists pyenv; then
         export PYENV_VIRTUALENV_DISABLE_PROMPT=1
         eval "$(pyenv init -)"

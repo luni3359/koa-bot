@@ -1,6 +1,30 @@
 #!/bin/bash
 # This script is run automatically when the pi runs, directly from /etc/xdg/autostart/koa-bot.desktop
-# env var is defined at ~/.profile
+# You can define the environmental variables either in ./.env or at ~/.profile
+
+MIN_PYTHON_VERSION="3.7.3"
+
+# Checking XDG variables
+# https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
+XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
+XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
+
+# Loading .env file
+if [ -f .env ]; then
+    export $(echo $(cat .env | sed 's/#.*//g'| xargs) | envsubst)
+fi
+
+function show_help() {
+    cat << EOF
+Usage: ${0##*/} [OPTION...]
+  -h, --help
+  -i, --install
+  -u, --update
+  -U, --update-dependencies
+  -r, --restart
+EOF
+}
 
 function var_is_defined() {
     [ -v $1 ]
@@ -92,10 +116,17 @@ function run() {
     cd "${KOAKUMA_HOME}"
 
     # pyenv specific
-    export PYENV_VIRTUALENV_DISABLE_PROMPT=1
-    eval "$(pyenv init -)"
-    eval "$(pyenv virtualenv-init -)"
-    pyenv activate koa-bot
+    if ! command_exists pyenv; then
+        export PYENV_ROOT=$HOME/.pyenv
+        export PATH="$PYENV_ROOT/bin:$PATH"
+    fi
+
+    if command_exists pyenv; then
+        export PYENV_VIRTUALENV_DISABLE_PROMPT=1
+        eval "$(pyenv init -)"
+        eval "$(pyenv virtualenv-init -)"
+        pyenv activate koa-bot
+    fi
 
     python3 -m koabot
 }
@@ -112,15 +143,13 @@ function install() {
     done
 
     if ! var_is_empty $pckgs; then
-    # TODO: check if user cancels or apt errors out
+        # TODO: check if user cancels or apt errors out
         sudo apt install ${pckgs} -y
     else
         echo "Required system dependencies met."
     fi
 
     # Python dependencies
-    local MIN_PYTHON_VERSION="3.7.3"
-
     MIN_PYTHON_VERSION=($(echo "$MIN_PYTHON_VERSION" | grep -o -E '[0-9]+'))
 
     if [ ${#MIN_PYTHON_VERSION[@]} -gt 3 ]; then
@@ -153,24 +182,11 @@ function install() {
     $PYTHON_BIN -m pip install -r requirements.txt
 }
 
-# Checking XDG variables
-# https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
-if ! var_is_defined XDG_CONFIG_HOME; then
-    XDG_CONFIG_HOME=~/.config
-fi
-
-if ! var_is_defined XDG_CACHE_HOME; then
-    XDG_CACHE_HOME=~/.cache
-fi
-
-if ! var_is_defined XDG_DATA_HOME; then
-    XDG_DATA_HOME=~/.local/share
-fi
-
 if [ -n "$1" ]; then
     # If there's options
     while [ -n "$1" ]; do
         case "$1" in
+            -h|--help) show_help;;
             -i|--install) install;;
             -uU|-Uu)
                 test_conectivity
@@ -187,4 +203,7 @@ if [ -n "$1" ]; then
 else
     # No options: run the bot
     run
+
+    # Prevent terminal from closing
+    read -p "Bot terminated."
 fi

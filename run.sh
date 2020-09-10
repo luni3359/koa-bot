@@ -1,6 +1,6 @@
 #!/bin/bash
 # This script is run automatically when the pi runs, directly from /etc/xdg/autostart/koa-bot.desktop
-# env var is defined at ~/.profile
+# You can define the environmental variables either in ./.env or at ~/.profile
 
 MIN_PYTHON_VERSION="3.7.3"
 
@@ -11,7 +11,9 @@ XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
 XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
 
 # Loading .env file
-export $(grep -v '^#' .env | xargs)
+if [ -f .env ]; then
+  export $(echo $(cat .env | sed 's/#.*//g'| xargs) | envsubst)
+fi
 
 function show_help() {
     cat << EOF

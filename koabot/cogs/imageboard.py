@@ -14,10 +14,6 @@ class ImageBoard(commands.Cog):
         """Search on danbooru!"""
         board_cog = self.bot.get_cog('Board')
 
-        if board_cog is None:
-            print('BOARD COG WAS MISSING!')
-            return
-
         await board_cog.search_board(ctx, tags)
 
     @commands.command(name='e621', aliases=['e6'])
@@ -25,18 +21,11 @@ class ImageBoard(commands.Cog):
         """Search on e621!"""
         board_cog = self.bot.get_cog('Board')
 
-        if board_cog is None:
-            print('BOARD COG WAS MISSING!')
-            return
-
         await board_cog.search_board(ctx, tags, board='e621')
 
     async def show_gallery(self, msg: discord.Message, url: str, board: str):
         """Show a gallery"""
         gallery_cog = self.bot.get_cog('Gallery')
-
-        if gallery_cog is None:
-            print('GALLERY COG WAS MISSING!')
 
         if board == 'danbooru':
             await gallery_cog.display_static(msg.channel, msg, url, id_start='/posts/', id_end='?')

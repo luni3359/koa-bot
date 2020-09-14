@@ -35,7 +35,8 @@ async def check_live_streamers():
             if streamer['platform'] == 'twitch':
                 twitch_search += 'user_id=%s&' % streamer['user_id']
 
-        twitch_query = await utils.net.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
+        twitch_headers = await streamservice_cog.twitch_headers
+        twitch_query = await utils.net.http_request(twitch_search, headers=twitch_headers, json=True)
 
         for streamer in twitch_query['data']:
             already_online = False
@@ -117,10 +118,6 @@ async def lookup_pending_posts():
     await koakuma.bot.wait_until_ready()
 
     board_cog = koakuma.bot.get_cog('Board')
-
-    if board_cog is None:
-        print('BOARD COG WAS MISSING!')
-
     pending_posts = []
     channel_categories = {}
 

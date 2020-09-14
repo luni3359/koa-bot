@@ -105,12 +105,13 @@ class StreamService(commands.Cog):
 
         return await self.fetch_twitch_access_token()
 
-    async def fetch_twitch_access_token(self):
+    async def fetch_twitch_access_token(self, force=False):
+        """Get access token saved locally or from Twitch"""
         token_filename = 'twitch_access_token'
         token_path = os.path.join(appdirs.user_cache_dir('koa-bot'), token_filename)
 
         # if the file exists
-        if os.path.exists(token_path):
+        if os.path.exists(token_path) and not force:
             with open(token_path) as token_file:
                 self._twitch_access_token = token_file.readline()
 
@@ -125,6 +126,8 @@ class StreamService(commands.Cog):
             with open(token_path, 'w') as token_file:
                 self._twitch_access_token = response['access_token']
                 token_file.write(self._twitch_access_token)
+
+        return self._twitch_access_token
 
 
 def setup(bot: commands.Bot):

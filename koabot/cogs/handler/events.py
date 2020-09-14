@@ -89,16 +89,9 @@ class BotEvents(commands.Cog):
                     if asset['type'] == 'gallery':
                         imageboard_cog = self.bot.get_cog('ImageBoard')
 
-                        if imageboard_cog is None:
-                            print('IMAGEBOARD COG WAS MISSING!')
-
                         await imageboard_cog.show_gallery(msg, url, board=domain_name)
                     elif asset['type'] == 'stream' and domain_name == 'picarto':
                         streams_cog = self.bot.get_cog('StreamService')
-
-                        if streams_cog is None:
-                            print('STREAMSERVICE COG WAS MISSING!')
-                            continue
 
                         picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, url)
                         if picarto_preview_shown and msg.content[0] == '!':
@@ -113,12 +106,7 @@ class BotEvents(commands.Cog):
         if str(channel.id) in self.bot.rules['quiet_channels']:
             if not self.bot.last_channel_warned and self.bot.last_channel_message_count >= self.bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
                 self.bot.last_channel_warned = True
-
                 bot_cog = self.bot.get_cog('BotStatus')
-
-                if bot_cog is None:
-                    print('BOTSTATUS COG WAS MISSING!')
-                    return
 
                 await bot_cog.typing_a_message(channel, content=random.choice(self.bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
 

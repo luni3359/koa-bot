@@ -48,13 +48,13 @@ class StreamService(commands.Cog):
                 stream = await utils.net.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
 
                 for strem in stream['data'][:3]:
-                    await ctx.send('https://twitch.tv/%s' % strem['user_name'])
+                    await ctx.send(f"https://twitch.tv/{strem['user_name']}")
 
             else:
                 streams = await utils.net.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
 
                 for stream in streams['data'][:5]:
-                    embed.description += 'stream "%s"\nstreamer %s (%s)\n\n' % (stream['title'], stream['user_name'], stream['user_id'])
+                    embed.description += f"stream \"{stream['title']}\"\nstreamer {stream['user_name']} ({stream['user_id']})\n\n"
 
                 await ctx.send(embed=embed)
 
@@ -67,7 +67,7 @@ class StreamService(commands.Cog):
         if not post_id:
             return
 
-        picarto_request = await utils.net.http_request('https://api.picarto.tv/v1/channel/name/' + post_id, json=True)
+        picarto_request = await utils.net.http_request(f'https://api.picarto.tv/v1/channel/name/{post_id}', json=True)
 
         if not picarto_request:
             await channel.send(random.choice(self.bot.quotes['stream_preview_failed']))
@@ -83,10 +83,10 @@ class StreamService(commands.Cog):
         embed = discord.Embed()
         embed.set_author(
             name=post_id,
-            url='https://picarto.tv/' + post_id,
+            url=f'https://picarto.tv/{post_id}',
             icon_url=picarto_request['avatar'])
-        embed.description = '**%s**' % picarto_request['title']
-        embed.set_image(url='attachment://' + filename)
+        embed.description = f"**{picarto_request['title']}**"
+        embed.set_image(url=f'attachment://{filename}')
         embed.set_footer(
             text=self.bot.assets['picarto']['name'],
             icon_url=self.bot.assets['picarto']['favicon'])

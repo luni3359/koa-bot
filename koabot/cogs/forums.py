@@ -35,13 +35,13 @@ class Forums(commands.Cog):
                     if thread.topic.subject:
                         embed.title = html.unescape(thread.topic.subject)
                     else:
-                        embed.title = '/%s/ thread' % user_board
+                        embed.title = f'/{user_board}/ thread'
                     embed.url = thread.topic.url
 
                 embed.set_author(
-                    name='%s @ %s' % (post.name, post.datetime),
+                    name=f'{post.name} @ {post.datetime}',
                     url=post.semantic_url)
-                embed.add_field(name='No.%s' % post.post_id, value='\u200b')
+                embed.add_field(name=f'No.{post.post_id}', value='\u200b')
                 embed.description = post.text_comment
 
                 if post.has_file:
@@ -79,14 +79,14 @@ class Forums(commands.Cog):
                             if thread.topic.subject:
                                 embed.title = html.unescape(thread.topic.subject)
                             else:
-                                embed.title = '/%s/ thread' % user_board
+                                embed.title = f'/{user_board}/ thread'
 
                             embed.url = thread.topic.url
 
                         embed.set_author(
-                            name='%s @ %s' % (post.name, post.datetime),
+                            name=f'{post.name} @ {post.datetime}',
                             url=post.semantic_url)
-                        embed.add_field(name='No.%s' % post.post_id, value='\u200b')
+                        embed.add_field(name=f'No.{post.post_id}', value='\u200b')
                         embed.description = post.text_comment
                         embed.set_image(url=post.file_url)
                         posts_ready.append(embed)
@@ -100,9 +100,9 @@ class Forums(commands.Cog):
                     if len(posts_ready) < max_posts_per_thread and fallback_post:
                         embed = discord.Embed()
                         embed.set_author(
-                            name='%s @ %s' % (fallback_post.name, fallback_post.datetime),
+                            name=f'{fallback_post.name} @ {fallback_post.datetime}',
                             url=fallback_post.semantic_url)
-                        embed.add_field(name='No.%s' % fallback_post.post_id, value='\u200b')
+                        embed.add_field(name=f'No.{fallback_post.post_id}', value='\u200b')
                         embed.description = fallback_post.text_comment
                         posts_ready.append(embed)
 

@@ -48,7 +48,7 @@ async def http_request(url: str, **kwargs):
             if response.status != 200:
                 # Timeout error
                 # if response.status == 524
-                print('> %s\nFailed connecting to %s\n[Network status %i]: %s "%s"' % (datetime.now(), url, response.status, response.reason, err_msg))
+                print(f'> {datetime.now()}\nFailed connecting to {url}\n[Network status {response.status}]: {response.reason} "{err_msg}"')
                 return False
             if json:
                 return await response.json(content_type=None)

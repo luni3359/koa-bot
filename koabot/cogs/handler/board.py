@@ -36,7 +36,7 @@ class Board(commands.Cog):
             return
 
         search = ' '.join(tags)
-        print('User searching for: ' + search)
+        print(f'User searching for: {search}')
 
         on_nsfw_channel = ctx.channel.is_nsfw()
 
@@ -90,22 +90,22 @@ class Board(commands.Cog):
 
         if board == 'danbooru':
             if post_id:
-                url = 'https://danbooru.donmai.us/posts/%s.json' % post_id
-                return await utils.net.http_request(url, auth=self.danbooru_auth, json=True, err_msg='error fetching post #' + post_id)
+                url = f'https://danbooru.donmai.us/posts/{post_id}.json'
+                return await utils.net.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
             elif tags:
                 if include_nsfw:
                     url = 'https://danbooru.donmai.us'
                 else:
                     url = 'https://safebooru.donmai.us'
 
-                return await utils.net.http_request(url + '/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg='error fetching search: ' + tags)
+                return await utils.net.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
         elif board == 'e621':
             # e621 requires to know the User-Agent
             headers = self.bot.assets['e621']['headers']
 
             if post_id:
-                url = 'https://e621.net/posts/%s.json' % post_id
-                return await utils.net.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg='error fetching post #' + post_id)
+                url = f'https://e621.net/posts/{post_id}.json'
+                return await utils.net.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
             elif tags:
                 if include_nsfw:
                     url = 'https://e621.net'
@@ -113,9 +113,9 @@ class Board(commands.Cog):
                     url = 'https://e926.net'
 
                 headers['Content-Type'] = 'application/json'
-                return await utils.net.http_request(url + '/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg='error fetching search: ' + tags)
+                return await utils.net.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
         else:
-            raise ValueError('Board "%s" can\'t be handled by the post searcher.' % board)
+            raise ValueError(f'Board "{board}" can\'t be handled by the post searcher.')
 
     async def send_posts(self, ctx, posts, **kwargs):
         """Handle sending posts retrieved from image boards
@@ -149,18 +149,18 @@ class Board(commands.Cog):
         if max_posts != 0:
             posts = posts[:max_posts]
 
-        print('Sending %s posts' % board)
+        print(f'Sending {board} posts')
 
         for post in posts:
             posts_processed += 1
-            print('Parsing post #%i (%i/%i)...' % (post['id'], posts_processed, min(total_posts, max_posts)))
+            print(f"Parsing post #{post['id']} ({posts_processed}/{min(total_posts, max_posts)})...")
 
             denied_ext = ['webm']
             if 'file_ext' in post and post['file_ext'] in denied_ext:
                 if board == 'danbooru':
-                    url = 'https://danbooru.donmai.us/posts/%i' % post['id']
+                    url = f"https://danbooru.donmai.us/posts/{post['id']}"
                 elif board == 'e621':
-                    url = 'https://e621.net/posts/%i' % post['id']
+                    url = f"https://e621.net/posts/{post['id']}"
 
                 await ctx.send(url)
                 continue
@@ -173,7 +173,7 @@ class Board(commands.Cog):
 
                     if total_posts > max_posts:
                         embed.set_footer(
-                            text='%i+ remaining' % (total_posts - max_posts),
+                            text=f'{total_posts - max_posts}+ remaining',
                             icon_url=self.bot.assets[board]['favicon']['size16'])
                     else:
                         embed.set_footer(
@@ -186,17 +186,17 @@ class Board(commands.Cog):
                 else:
                     embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-                await ctx.send('<%s>' % embed.url, embed=embed)
+                await ctx.send(f'<{embed.url}>', embed=embed)
             else:
                 if board == 'danbooru':
                     if utils.posts.post_is_missing_preview(post, board=board) or last_post:
-                        await ctx.send('<%s>' % embed.url, embed=embed)
+                        await ctx.send(f'<{embed.url}>', embed=embed)
                     else:
                         await ctx.send(embed.url)
                 elif board == 'e621':
-                    await ctx.send('<%s>' % embed.url, embed=embed)
+                    await ctx.send(f'<{embed.url}>', embed=embed)
 
-            print('Post #%i complete' % post['id'])
+            print(f"Post #{post['id']} complete")
 
     def generate_embed(self, post, **kwargs):
         """Generate embeds for image board post urls
@@ -225,23 +225,23 @@ class Board(commands.Cog):
                 if not post_char:
                     embed_post_title += post_copy
                 else:
-                    embed_post_title += ' (%s)' % post_copy
+                    embed_post_title += f' ({post_copy})'
 
             if post_artist:
-                embed_post_title += ' drawn by ' + post_artist
+                embed_post_title += f' drawn by {post_artist}'
 
             if not post_char and not post_copy and not post_artist:
-                embed_post_title += '#%i' % post['id']
+                embed_post_title += f"#{post['id']}"
 
             embed_post_title += ' | Danbooru'
             if len(embed_post_title) >= self.bot.assets['danbooru']['max_embed_title_length']:
                 embed_post_title = embed_post_title[:self.bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
             embed.title = embed_post_title
-            embed.url = 'https://danbooru.donmai.us/posts/%i' % post['id']
+            embed.url = f"https://danbooru.donmai.us/posts/{post['id']}"
         elif board == 'e621':
-            embed.title = '#%s: %s - e621' % (post['id'], utils.posts.combine_tags(post['tags']['artist']))
-            embed.url = 'https://e621.net/posts/%i' % post['id']
+            embed.title = f"#{post['id']}: {utils.posts.combine_tags(post['tags']['artist'])} - e621"
+            embed.url = f"https://e621.net/posts/{post['id']}"
 
         if 'failed_post_preview' in self.bot.assets[board]:
             fileurl = self.bot.assets[board]['failed_post_preview']

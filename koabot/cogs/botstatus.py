@@ -25,10 +25,10 @@ class BotStatus(commands.Cog):
 
             try:
                 current_temp = subprocess.run(cmd_parts, stdout=subprocess.PIPE, check=True, universal_newlines=True)
-                print('Using "%s".' % temp_command)
+                print(f'Using "{temp_command}".')
                 break
             except FileNotFoundError:
-                print('"%s" is missing in system.' % temp_command)
+                print(f'"{temp_command}" is missing in system.')
 
         try:
             if temp_command == 'vcgencmd':
@@ -58,8 +58,8 @@ class BotStatus(commands.Cog):
 
             cpu_temp = float(cpu_temp)
 
-            print('CPU Temp: %0.1f °C' % cpu_temp)
-            await ctx.send('I\'m at %0.1f °C.' % cpu_temp)
+            print(f'CPU Temp: {cpu_temp:0.1f} °C')
+            await ctx.send(f'I\'m at {cpu_temp:0.1f} °C.')
         except NameError:
             print('Unable to report temperature.')
             await ctx.send('I can\'t get the temperature...')
@@ -67,7 +67,7 @@ class BotStatus(commands.Cog):
     @commands.command(name='last')
     async def talk_status(self, ctx):
         """Mention a brief summary of the last used channel"""
-        await ctx.send('Last channel: %s\nCurrent count there: %s' % (self.bot.last_channel, self.bot.last_channel_message_count))
+        await ctx.send(f'Last channel: {self.bot.last_channel}\nCurrent count there: {self.bot.last_channel_message_count}')
 
     @commands.command()
     async def uptime(self, ctx):
@@ -77,13 +77,13 @@ class BotStatus(commands.Cog):
         (hours, remainder) = divmod(int(delta_uptime.total_seconds()), 3600)
         (minutes, seconds) = divmod(remainder, 60)
         (days, hours) = divmod(hours, 24)
-        await ctx.send('I\'ve been running for %i days, %i hours, %i minutes and %i seconds.' % (days, hours, minutes, seconds))
+        await ctx.send(f'I\'ve been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.')
 
     @commands.command()
     async def version(self, ctx):
         """Show bot's version"""
         commit = subprocess.check_output(['git', 'describe', '--always']).strip()
-        await ctx.send('On commit ``%s``.' % commit.decode('utf-8'))
+        await ctx.send(f"On commit ``{commit.decode('utf-8')}``.")
 
     async def typing_a_message(self, ctx, **kwargs):
         """Make Koakuma seem alive with a 'is typing' delay

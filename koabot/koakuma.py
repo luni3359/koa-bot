@@ -145,7 +145,7 @@ def start(debugging=False):
         print('Could not connect to the database! Functionality will be limited.')
     print('To database in %0.3fs' % (timeit.default_timer() - start_load_time))
 
-    run_periodic_tasks()
     load_all_extensions(os.path.join(SOURCE_DIR, 'cogs'))
+    run_periodic_tasks()
 
     bot.run(bot.koa['token'])

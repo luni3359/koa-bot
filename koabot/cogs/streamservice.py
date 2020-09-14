@@ -1,7 +1,9 @@
 """Commands for streaming services like Twitch and Picarto"""
+import os
 import random
 import re
 
+import appdirs
 import discord
 from discord.ext import commands
 
@@ -15,6 +17,8 @@ class StreamService(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self._twitch_access_token = None
+        self._twitch_headers = None
 
     @commands.command(name='twitch')
     async def search_twitch(self, ctx, *args):
@@ -41,13 +45,13 @@ class StreamService(commands.Cog):
                     # searching an username
                     search_type = 'user_login'
 
-                stream = await utils.net.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=self.bot.assets['twitch']['headers'], json=True)
+                stream = await utils.net.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
 
                 for strem in stream['data'][:3]:
                     await ctx.send(f"https://twitch.tv/{strem['user_name']}")
 
             else:
-                streams = await utils.net.http_request('https://api.twitch.tv/helix/streams', headers=self.bot.assets['twitch']['headers'], json=True)
+                streams = await utils.net.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
 
                 for stream in streams['data'][:5]:
                     embed.description += f"stream \"{stream['title']}\"\nstreamer {stream['user_name']} ({stream['user_id']})\n\n"
@@ -88,6 +92,42 @@ class StreamService(commands.Cog):
             icon_url=self.bot.assets['picarto']['favicon'])
         await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
         return True
+
+    @property
+    async def twitch_headers(self):
+        self._twitch_headers = {'Client-ID': self.bot.auth_keys['twitch']['client_id'], 'Authorization': f'Bearer {await self.twitch_access_token}'}
+        return self._twitch_headers
+
+    @property
+    async def twitch_access_token(self):
+        if self._twitch_access_token:
+            return self._twitch_access_token
+
+        return await self.fetch_twitch_access_token()
+
+    async def fetch_twitch_access_token(self, force=False):
+        """Get access token saved locally or from Twitch"""
+        token_filename = 'twitch_access_token'
+        token_path = os.path.join(appdirs.user_cache_dir('koa-bot'), token_filename)
+
+        # if the file exists
+        if os.path.exists(token_path) and not force:
+            with open(token_path) as token_file:
+                self._twitch_access_token = token_file.readline()
+
+        if not self._twitch_access_token:
+            url = 'https://id.twitch.tv/oauth2/token'
+            data = {
+                'client_id': self.bot.auth_keys['twitch']['client_id'],
+                'client_secret':  self.bot.auth_keys['twitch']['client_secret'],
+                'grant_type': 'client_credentials'}
+            response = await utils.net.http_request(url, post=True, data=data, json=True)
+            print('Twitch response:\n', response)
+            with open(token_path, 'w') as token_file:
+                self._twitch_access_token = response['access_token']
+                token_file.write(self._twitch_access_token)
+
+        return self._twitch_access_token
 
 
 def setup(bot: commands.Bot):

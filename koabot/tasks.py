@@ -11,32 +11,13 @@ import koabot.utils as utils
 import koabot.utils.net
 from koabot import koakuma
 
-token_filename = 'twitch_access_token'
-twitch_access_token = None
-twitch_headers = {}
-
 
 async def check_live_streamers():
     """Checks every so often for streamers that have gone online"""
 
     await koakuma.bot.wait_until_ready()
 
-    token_path = os.path.join(appdirs.user_cache_dir('koa-bot'), token_filename)
-    if os.path.exists(token_path):
-        with open(token_path) as token_file:
-            twitch_access_token = token_file.readline()
-    else:
-        url = 'https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials' % (
-            koakuma.bot.auth_keys['twitch']['client_id'], koakuma.bot.auth_keys['twitch']['client_secret'])
-
-        response = await utils.net.http_request(url, json=True)
-        with open(token_path, 'w') as token_file:
-            twitch_access_token = response['access_token']
-            token_file.write(twitch_access_token)
-
-    twitch_headers = {'Client-ID': koakuma.bot.auth_keys['twitch']['client_id'],
-                      'Authorization': 'Bearer %s' % twitch_access_token}
-
+    streamservice_cog = koakuma.bot.get_cog('StreamService')
     online_streamers = []
 
     while not koakuma.bot.is_closed():
@@ -54,6 +35,7 @@ async def check_live_streamers():
             if streamer['platform'] == 'twitch':
                 twitch_search += 'user_id=%s&' % streamer['user_id']
 
+        twitch_headers = await streamservice_cog.twitch_headers
         twitch_query = await utils.net.http_request(twitch_search, headers=twitch_headers, json=True)
 
         for streamer in twitch_query['data']:
@@ -136,10 +118,6 @@ async def lookup_pending_posts():
     await koakuma.bot.wait_until_ready()
 
     board_cog = koakuma.bot.get_cog('Board')
-
-    if board_cog is None:
-        print('BOARD COG WAS MISSING!')
-
     pending_posts = []
     channel_categories = {}
 

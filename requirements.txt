@@ -12,5 +12,6 @@ PixivPy==3.5.9
 pylint==2.6.0
 pytz==2020.1
 rope==0.17.0
+tldextract>=2.2.3
 tweepy==3.9.0
 wikipedia==1.4.0

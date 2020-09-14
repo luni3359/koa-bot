@@ -3,6 +3,7 @@ import random
 from datetime import datetime
 
 import discord
+import tldextract
 from discord.ext import commands
 
 from koabot.patterns import URL_PATTERN
@@ -85,7 +86,8 @@ class BotEvents(commands.Cog):
 
         for url in url_matches:
             for domain_name, asset in self.bot.assets.items():
-                if 'domain' in self.bot.assets[domain_name] and asset['domain'] in url and 'type' in asset:
+                url_domain_name = tldextract.extract(url).fqdn
+                if 'domain' in self.bot.assets[domain_name] and asset['domain'] == url_domain_name and 'type' in asset:
                     if asset['type'] == 'gallery':
                         imageboard_cog = self.bot.get_cog('ImageBoard')
 

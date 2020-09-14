@@ -97,6 +97,9 @@ class BotEvents(commands.Cog):
                         if picarto_preview_shown and msg.content[0] == '!':
                             await msg.delete()
 
+                    # found a match, no need to keep testing
+                    break
+
         if self.bot.last_channel != channel.id or url_matches or msg.attachments:
             self.bot.last_channel = channel.id
             self.bot.last_channel_message_count = 0

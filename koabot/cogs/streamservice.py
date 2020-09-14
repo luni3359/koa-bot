@@ -45,7 +45,7 @@ class StreamService(commands.Cog):
                     # searching an username
                     search_type = 'user_login'
 
-                stream = await utils.net.http_request('https://api.twitch.tv/helix/streams?%s=%s' % (search_type, item), headers=await self.twitch_headers, json=True)
+                stream = await utils.net.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
 
                 for strem in stream['data'][:3]:
                     await ctx.send('https://twitch.tv/%s' % strem['user_name'])

@@ -18,48 +18,71 @@ async def http_request(url: str, **kwargs):
             Stringified json object
         headers::json object
             object containing headers
-        json::bool
-            true = must return json. false/unset = returns plain text
-        err_msg::str
-            message to display on failure
         post::bool
             whether or not the request is a POST request
     """
-
     auth = kwargs.get('auth')
-    data = kwargs.get('data')
     headers = kwargs.get('headers')
-    json = kwargs.get('json')
-    err_msg = kwargs.get('err_msg')
+    data = kwargs.get('data')
     post = kwargs.get('post')
 
     async with aiohttp.ClientSession(auth=auth) as session:
         if post:
             async with session.post(url, data=data, headers=headers) as response:
-                if response.status != 200:
-                    print('> %s\nFailed connecting to %s\n[Network status %i]: %s "%s"' % (datetime.now(), url, response.status, response.reason, err_msg))
-                    return False
-                if json:
-                    return await response.json(content_type=None)
+                return await handle_request(response, **kwargs)
+        else:
+            async with session.get(url, data=data, headers=headers) as response:
+                return await handle_request(response, **kwargs)
 
-                return await response.read()
 
-        async with session.get(url, data=data, headers=headers) as response:
-            if response.status != 200:
-                # Timeout error
-                # if response.status == 524
-                print(f'> {datetime.now()}\nFailed connecting to {url}\n[Network status {response.status}]: {response.reason} "{err_msg}"')
-                return False
-            if json:
-                return await response.json(content_type=None)
+async def handle_request(response: aiohttp.ClientResponse, **kwargs):
+    """Handle the response made by either POST or GET requests
+    Arguments:
+        response::ClientResponse
 
-            return await response.read()
+    Keywords:
+        json::bool
+            true = must return json. false/unset = returns plain text
+        err_msg::str
+            message to display on failure
+    """
+    json = kwargs.get('json')
+    err_msg = kwargs.get('err_msg')
+
+    if response.status != 200:
+        # Timeout error
+        # if response.status == 524
+        print(f'> {datetime.now()}\nFailed connecting to {response.real_url}\n[Network status {response.status}]: {response.reason} "{err_msg}"')
+        return NetResponse(response)
+
+    if json:
+        response_body = await response.json(content_type=None)
+    else:
+        response_body = await response.read()
+
+    return NetResponse(response, response_body=response_body, **kwargs)
+
+
+class NetResponse():
+    """Custom network response class"""
+
+    def __init__(self, response: aiohttp.ClientResponse, **kwargs):
+        self.client_response = response
+        self.status = self.client_response.status
+        self.response_body = kwargs.get('response_body', None)
+
+        if kwargs.get('json'):
+            self.json = self.response_body
+        elif kwargs.get('image'):
+            self.image = self.response_body
+        else:
+            self.plain_text = self.response_body
 
 
 async def fetch_image(url: str, **kwargs):
     """Download an image"""
 
-    img_bytes = io.BytesIO(await http_request(url, **kwargs))
+    img_bytes = io.BytesIO((await http_request(url, image=True, **kwargs)).image)
     return img_bytes
 
 

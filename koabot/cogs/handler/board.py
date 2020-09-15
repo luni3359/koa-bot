@@ -41,7 +41,7 @@ class Board(commands.Cog):
         on_nsfw_channel = ctx.channel.is_nsfw()
 
         async with ctx.typing():
-            posts = await self.search_query(board=board, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)
+            posts = (await self.search_query(board=board, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)).json
 
         if not posts:
             await ctx.send('Sorry, nothing found!')

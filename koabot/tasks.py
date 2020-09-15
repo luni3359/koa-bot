@@ -35,10 +35,15 @@ async def check_live_streamers():
             if streamer['platform'] == 'twitch':
                 twitch_search += 'user_id=%s&' % streamer['user_id']
 
-        twitch_headers = await streamservice_cog.twitch_headers
-        twitch_query = await utils.net.http_request(twitch_search, headers=twitch_headers, json=True)
+        twitch_query = await utils.net.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
-        for streamer in twitch_query['data']:
+        # Token is invalid/expired, acquire a new token
+        if twitch_query.status == 401:
+            await streamservice_cog.fetch_twitch_access_token(force=True)
+
+            twitch_query = await utils.net.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
+
+        for streamer in twitch_query.json['data']:
             already_online = False
 
             for on_streamer in online_streamers:
@@ -127,7 +132,7 @@ async def lookup_pending_posts():
             channel_categories[channel_category].append(koakuma.bot.get_channel(int(channel)))
 
     while not koakuma.bot.is_closed():
-        posts = await board_cog.search_query(tags=koakuma.bot.tasks['danbooru']['tag_list'], limit=5, random=True)
+        posts = (await board_cog.search_query(tags=koakuma.bot.tasks['danbooru']['tag_list'], limit=5, random=True)).json
 
         safe_posts = []
         nsfw_posts = []

@@ -45,13 +45,15 @@ class StreamService(commands.Cog):
                     # searching an username
                     search_type = 'user_login'
 
-                stream = await utils.net.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
+                response = await utils.net.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
+                streams = response.json
 
-                for strem in stream['data'][:3]:
-                    await ctx.send(f"https://twitch.tv/{strem['user_name']}")
+                for stream in streams['data'][:3]:
+                    await ctx.send(f"https://twitch.tv/{stream['user_name']}")
 
             else:
-                streams = await utils.net.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
+                response = await utils.net.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
+                streams = response.json
 
                 for stream in streams['data'][:5]:
                     embed.description += f"stream \"{stream['title']}\"\nstreamer {stream['user_name']} ({stream['user_id']})\n\n"
@@ -67,7 +69,7 @@ class StreamService(commands.Cog):
         if not post_id:
             return
 
-        picarto_request = await utils.net.http_request(f'https://api.picarto.tv/v1/channel/name/{post_id}', json=True)
+        picarto_request = (await utils.net.http_request(f'https://api.picarto.tv/v1/channel/name/{post_id}', json=True)).json
 
         if not picarto_request:
             await channel.send(random.choice(self.bot.quotes['stream_preview_failed']))
@@ -106,7 +108,11 @@ class StreamService(commands.Cog):
         return await self.fetch_twitch_access_token()
 
     async def fetch_twitch_access_token(self, force=False):
-        """Get access token saved locally or from Twitch"""
+        """Get access token saved locally or from Twitch
+        Arguments:
+            force::bool
+                Ignore the cached key and fetch a new one from Twitch
+        """
         token_filename = 'twitch_access_token'
         token_path = os.path.join(appdirs.user_cache_dir('koa-bot'), token_filename)
 
@@ -115,14 +121,14 @@ class StreamService(commands.Cog):
             with open(token_path) as token_file:
                 self._twitch_access_token = token_file.readline()
 
-        if not self._twitch_access_token:
+        if not self._twitch_access_token or force:
             url = 'https://id.twitch.tv/oauth2/token'
             data = {
                 'client_id': self.bot.auth_keys['twitch']['client_id'],
                 'client_secret':  self.bot.auth_keys['twitch']['client_secret'],
                 'grant_type': 'client_credentials'}
-            response = await utils.net.http_request(url, post=True, data=data, json=True)
-            print('Twitch response:\n', response)
+            response = (await utils.net.http_request(url, post=True, data=data, json=True)).json
+
             with open(token_path, 'w') as token_file:
                 self._twitch_access_token = response['access_token']
                 token_file.write(self._twitch_access_token)

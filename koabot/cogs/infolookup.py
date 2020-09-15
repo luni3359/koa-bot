@@ -50,7 +50,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote_plus(words)
         user_search = self.bot.assets['jisho']['search_url'] + word_encoded
 
-        js = await utils.net.http_request(user_search, json=True)
+        js = (await utils.net.http_request(user_search, json=True)).json
 
         if not js:
             await ctx.send('Error retrieving data from server.')
@@ -99,7 +99,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote_plus(words)
         user_search = self.bot.assets['urban_dictionary']['search_url'] + word_encoded
 
-        js = await utils.net.http_request(user_search, json=True)
+        js = (await utils.net.http_request(user_search, json=True)).json
 
         if not js:
             await ctx.send('Error retrieving data from server.')
@@ -160,7 +160,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote(words)
         user_search = f"{self.bot.assets['merriam-webster']['search_url']}/{word_encoded}?key={self.bot.auth_keys['merriam-webster']['key']}"
 
-        js = await utils.net.http_request(user_search, json=True)
+        js = (await utils.net.http_request(user_search, json=True)).json
 
         if not js:
             await ctx.send('Oops. What?')

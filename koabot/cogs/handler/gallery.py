@@ -56,7 +56,7 @@ class Gallery(commands.Cog):
         if board_cog is None:
             print('BOARD COG WAS MISSING!')
 
-        post = await board_cog.search_query(board=board, post_id=post_id)
+        post = (await board_cog.search_query(board=board, post_id=post_id)).json
 
         if not post:
             return
@@ -104,10 +104,10 @@ class Gallery(commands.Cog):
         if isinstance(search, typing.List):
             posts = []
             for query in search:
-                results = await board_cog.search_query(board=board, tags=query, include_nsfw=on_nsfw_channel)
+                results = (await board_cog.search_query(board=board, tags=query, include_nsfw=on_nsfw_channel)).json
                 posts.extend(results['posts'])
         else:
-            posts = await board_cog.search_query(board=board, tags=search, include_nsfw=on_nsfw_channel)
+            posts = (await board_cog.search_query(board=board, tags=search, include_nsfw=on_nsfw_channel)).json
 
         # e621 fix for broken API
         if 'posts' in posts:
@@ -292,7 +292,7 @@ class Gallery(commands.Cog):
             return
 
         search_url = f"{self.bot.assets['sankaku']['id_search_url']}{post_id}"
-        api_result = await utils.net.http_request(search_url, json=True)
+        api_result = (await utils.net.http_request(search_url, json=True)).json
 
         if not api_result or 'code' in api_result:
             print(f"Sankaku error\nCode #{api_result['code']}")
@@ -317,7 +317,7 @@ class Gallery(commands.Cog):
 
         search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
 
-        api_result = await utils.net.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')
+        api_result = (await utils.net.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
 
         if not api_result['deviation']['isMature']:
             return
@@ -360,7 +360,7 @@ class Gallery(commands.Cog):
             return
 
         search_url = self.bot.assets['imgur']['album_url'].format(album_id)
-        api_result = await utils.net.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)
+        api_result = (await utils.net.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)).json
 
         if not api_result or api_result['status'] != 200:
             return

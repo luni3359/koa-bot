@@ -51,11 +51,6 @@ class Gallery(commands.Cog):
         bot_cog = self.bot.get_cog('BotStatus')
         board_cog = self.bot.get_cog('Board')
 
-        if bot_cog is None:
-            print('BOTSTATUS COG WAS MISSING!')
-        if board_cog is None:
-            print('BOARD COG WAS MISSING!')
-
         post = (await board_cog.search_query(board=board, post_id=post_id)).json
 
         if not post:

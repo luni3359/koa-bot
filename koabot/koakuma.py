@@ -97,10 +97,11 @@ def load_all_extensions(path: str):
 async def debug_check(ctx):
     """Disable live instance for specific users if a beta instance is running"""
 
-    if ctx.author.id not in bot.testing['debug_users']:
-        return True
-
     beta_bot_id = bot.koa['discord_user']['beta_id']
+
+    if ctx.author.id not in bot.testing['debug_users']:
+        return ctx.guild.me.id != beta_bot_id
+
     beta_bot = ctx.guild.get_member(beta_bot_id)
 
     if beta_bot and beta_bot.status == discord.Status.online:

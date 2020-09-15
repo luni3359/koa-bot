@@ -1,10 +1,8 @@
 """Routine tasks"""
 import asyncio
-import os
 import random
 from datetime import datetime
 
-import appdirs
 import discord
 
 import koabot.utils as utils

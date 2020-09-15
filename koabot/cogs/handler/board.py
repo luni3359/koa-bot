@@ -155,8 +155,8 @@ class Board(commands.Cog):
             posts_processed += 1
             print(f"Parsing post #{post['id']} ({posts_processed}/{min(total_posts, max_posts)})...")
 
-            denied_ext = ['webm']
-            if 'file_ext' in post and post['file_ext'] in denied_ext:
+            approved_ext = ['png', 'jpg', 'webp']
+            if 'file_ext' in post and post['file_ext'] not in approved_ext:
                 if board == 'danbooru':
                     url = f"https://danbooru.donmai.us/posts/{post['id']}"
                 elif board == 'e621':
@@ -248,9 +248,19 @@ class Board(commands.Cog):
         else:
             fileurl = self.bot.assets['default']['failed_post_preview']
 
-        valid_urls_keys = ['large_file_url', 'file_url', 'preview_file_url', 'sample', 'file', 'preview']
+        valid_urls_keys = [
+            'large_file_url',   # medium quality / large sample
+            'file_url',         # highest quality / file (png, zip, webm)
+            'preview_file_url',  # lowest quality / thumbnail
+            'sample', 'file', 'preview'
+        ]
+        approved_ext = ['png', 'jpg', 'webp']
+
         for key in valid_urls_keys:
             if key in post:
+                if utils.net.get_url_fileext(post[key]) not in approved_ext:
+                    continue
+
                 if board == 'e621':
                     fileurl = post[key]['url']
                 else:

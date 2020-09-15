@@ -106,7 +106,11 @@ class Converter(commands.Cog):
                 elif value.magnitude >= 300:
                     converted_value = value.to(self.ureg.yards)
                 else:
-                    converted_value = value.to(self.ureg.feet)
+                    raw_feet = value.to(self.ureg.feet)
+                    inches = value.to(self.ureg.inch)
+                    feet = int(inches.magnitude / 12)
+                    remainder_inches = round(inches.magnitude % 12)
+                    converted_value = f'{feet} ft {remainder_inches} in ({raw_feet})'
 
             calculation_str = f'{value} → {converted_value}'
             print(calculation_str)

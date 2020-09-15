@@ -90,6 +90,10 @@ def get_url_filename(url: str):
     """Get the file name from an url"""
     return url.split('/')[-1]
 
+def get_url_fileext(url: str):
+    """Get the file extension from an url"""
+    return get_url_filename(url).split('.')[-1]
+
 
 def get_domain(url: str):
     """Get domain from an url"""

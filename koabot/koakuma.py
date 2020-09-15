@@ -90,7 +90,7 @@ def load_all_extensions(path: str):
         print(f'Loading "{ext}"...'.ljust(40), end='\r')
         bot.load_extension(ext)
 
-    print(f'Finished loading {len(ext)} cogs in {timeit.default_timer() - start_load_time:0.2f}s.'.ljust(40))
+    print(f'Finished loading {len(cog_list)} cogs in {timeit.default_timer() - start_load_time:0.2f}s.'.ljust(40))
 
 
 @bot.check

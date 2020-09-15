@@ -111,20 +111,25 @@ def start(debugging=False):
     # Move old config automatically to ~/.config/koa-bot
     transition_old_config()
 
+    bot.launch_time = datetime.utcnow()
+    bot_data = {}
+
     if debugging:
         print('In debug mode.')
         config_file = 'beta.jsonc'
     else:
         config_file = 'config.jsonc'
 
-    config_paths = [os.path.join(CONFIG_DIR, config_file), os.path.join(CONFIG_DIR, 'auth.jsonc')]
+    data_filenames = [
+        config_file,
+        'auth.jsonc',
+        'quotes.jsonc'
+    ]
 
-    bot_data = {}
-    for config_path in config_paths:
-        with open(config_path) as json_file:
+    for filename in data_filenames:
+        with open(os.path.join(CONFIG_DIR, filename)) as json_file:
             bot_data.update(commentjson.load(json_file))
 
-    bot.launch_time = datetime.utcnow()
     bot.__dict__.update(bot_data)
 
     print('Connecting to database...')

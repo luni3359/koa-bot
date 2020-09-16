@@ -171,25 +171,12 @@ class Board(commands.Cog):
             posts_processed += 1
             print(f"Parsing post #{post['id']} ({posts_processed}/{min(total_posts, max_posts)})...")
 
-            approved_ext = ['png', 'jpg', 'webp', 'gif', 'image/jpeg', 'image/png']
-            for ext_key in ['file_ext', 'file_type']:
-                if ext_key in post:
-                    break
-
-            if ext_key and post[ext_key] not in approved_ext:
-                if board == 'danbooru':
-                    url = f"https://danbooru.donmai.us/posts/{post['id']}"
-                elif board == 'e621':
-                    url = f"https://e621.net/posts/{post['id']}"
-                elif board == 'sankaku':
-                    url = f"https://chan.sankakucomplex.com/post/show/{post['id']}"
-                else:
-                    raise ValueError('Cannot create url.')
-
-                await ctx.send(url)
-                continue
-
             embed = self.generate_embed(post, board=board)
+
+            # if there's no image file or image url, send a link
+            if not embed.image.url:
+                await ctx.send(embed.url)
+                continue
 
             if max_posts != 0:
                 if posts_processed >= min(max_posts, total_posts):
@@ -264,43 +251,30 @@ class Board(commands.Cog):
                 embed_post_title = embed_post_title[:self.bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
 
             embed.title = embed_post_title
-            embed.url = f"https://danbooru.donmai.us/posts/{post['id']}"
         elif board == 'e621':
             embed.title = f"#{post['id']}: {utils.posts.combine_tags(post['tags']['artist'])} - e621"
-            embed.url = f"https://e621.net/posts/{post['id']}"
         elif board == 'sankaku':
             embed.title = f"Post {post['id']}"
-            embed.url = f"https://chan.sankakucomplex.com/post/show/{post['id']}"
         else:
-            raise ValueError('Board embed not configured.')
+            raise ValueError('Board embed title not configured.')
+
+        embed.url = self.bot.assets[board]['post_url'].format(post['id'])
 
         if 'failed_post_preview' in self.bot.assets[board]:
             fileurl = self.bot.assets[board]['failed_post_preview']
         else:
             fileurl = self.bot.assets['default']['failed_post_preview']
 
-        valid_urls_keys = [
-            'large_file_url',   # medium quality / large sample
-            'file_url',         # highest quality / file (png, zip, webm)
-            'preview_file_url',  # lowest quality / thumbnail
-            'sample_url',       # medium quality / large sample
-            'file_url',         # highest quality / file (png, zip, webm)
-            'preview_url',      # lowest quality / thumbnail
-            'sample',           # medium quality / large sample
-            'file',             # highest quality / file (png, zip, webm)
-            'preview'           # lowest quality / thumbnail
-        ]
-        approved_ext = ['png', 'jpg', 'webp', 'gif', 'image/jpeg', 'image/png']
-
-        for key in valid_urls_keys:
-            if key in post:
+        approved_ext = ['png', 'jpg', 'webp', 'gif']
+        for res_key in self.bot.assets[board]['post_quality']:
+            if res_key in post:
                 if board == 'e621':
-                    if utils.net.get_url_fileext(post[key]['url']) in approved_ext:
-                        fileurl = post[key]['url']
+                    if utils.net.get_url_fileext(post[res_key]['url']) in approved_ext:
+                        fileurl = post[res_key]['url']
                         break
                 else:
-                    if utils.net.get_url_fileext(post[key]) in approved_ext:
-                        fileurl = post[key]
+                    if utils.net.get_url_fileext(post[res_key]) in approved_ext:
+                        fileurl = post[res_key]
                         break
 
         embed.set_image(url=fileurl)

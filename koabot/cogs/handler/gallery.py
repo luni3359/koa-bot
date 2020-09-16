@@ -25,7 +25,7 @@ class Gallery(commands.Cog):
         self.pixiv_refresh_token = None
 
     async def display_static(self, channel, msg, url, **kwargs):
-        """Automatically automatic
+        """Display posts from a gallery in separate unmodifiable embeds
         Keywords:
             board::str
                 The board to handle. Default is 'danbooru'

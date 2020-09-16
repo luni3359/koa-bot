@@ -114,6 +114,14 @@ class Board(commands.Cog):
 
                 headers['Content-Type'] = 'application/json'
                 return await utils.net.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
+        elif board == 'sankaku':
+            if post_id:
+                url = f"{self.bot.assets['sankaku']['id_search_url']}{post_id}"
+                return await utils.net.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
+            elif tags:
+                search_query = '+'.join(tags.split(' '))
+                url = f"{self.bot.assets['sankaku']['search_url']}{search_query}"
+                return await utils.net.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
         else:
             raise ValueError(f'Board "{board}" can\'t be handled by the post searcher.')
 
@@ -155,12 +163,20 @@ class Board(commands.Cog):
             posts_processed += 1
             print(f"Parsing post #{post['id']} ({posts_processed}/{min(total_posts, max_posts)})...")
 
-            approved_ext = ['png', 'jpg', 'webp']
-            if 'file_ext' in post and post['file_ext'] not in approved_ext:
+            approved_ext = ['png', 'jpg', 'webp', 'gif', 'image/jpeg', 'image/png']
+            for ext_key in ['file_ext', 'file_type']:
+                if ext_key in post:
+                    break
+
+            if ext_key and post[ext_key] not in approved_ext:
                 if board == 'danbooru':
                     url = f"https://danbooru.donmai.us/posts/{post['id']}"
                 elif board == 'e621':
                     url = f"https://e621.net/posts/{post['id']}"
+                elif board == 'sankaku':
+                    url = f"https://chan.sankakucomplex.com/post/show/{post['id']}"
+                else:
+                    raise ValueError('Cannot create url.')
 
                 await ctx.send(url)
                 continue
@@ -193,8 +209,10 @@ class Board(commands.Cog):
                         await ctx.send(f'<{embed.url}>', embed=embed)
                     else:
                         await ctx.send(embed.url)
-                elif board == 'e621':
+                elif board == 'e621' or board == 'sankaku':
                     await ctx.send(f'<{embed.url}>', embed=embed)
+                else:
+                    raise ValueError('Board embed send not configured.')
 
             print(f"Post #{post['id']} complete")
 
@@ -242,6 +260,11 @@ class Board(commands.Cog):
         elif board == 'e621':
             embed.title = f"#{post['id']}: {utils.posts.combine_tags(post['tags']['artist'])} - e621"
             embed.url = f"https://e621.net/posts/{post['id']}"
+        elif board == 'sankaku':
+            embed.title = f"Post {post['id']}"
+            embed.url = f"https://chan.sankakucomplex.com/post/show/{post['id']}"
+        else:
+            raise ValueError('Board embed not configured.')
 
         if 'failed_post_preview' in self.bot.assets[board]:
             fileurl = self.bot.assets[board]['failed_post_preview']
@@ -252,20 +275,25 @@ class Board(commands.Cog):
             'large_file_url',   # medium quality / large sample
             'file_url',         # highest quality / file (png, zip, webm)
             'preview_file_url',  # lowest quality / thumbnail
-            'sample', 'file', 'preview'
+            'sample_url',       # medium quality / large sample
+            'file_url',         # highest quality / file (png, zip, webm)
+            'preview_url',      # lowest quality / thumbnail
+            'sample',           # medium quality / large sample
+            'file',             # highest quality / file (png, zip, webm)
+            'preview'           # lowest quality / thumbnail
         ]
-        approved_ext = ['png', 'jpg', 'webp']
+        approved_ext = ['png', 'jpg', 'webp', 'gif', 'image/jpeg', 'image/png']
 
         for key in valid_urls_keys:
             if key in post:
-                if utils.net.get_url_fileext(post[key]) not in approved_ext:
-                    continue
-
                 if board == 'e621':
-                    fileurl = post[key]['url']
+                    if utils.net.get_url_fileext(post[key]['url']) in approved_ext:
+                        fileurl = post[key]['url']
+                        break
                 else:
-                    fileurl = post[key]
-                break
+                    if utils.net.get_url_fileext(post[key]) in approved_ext:
+                        fileurl = post[key]
+                        break
 
         embed.set_image(url=fileurl)
         return embed

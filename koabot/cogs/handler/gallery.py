@@ -293,13 +293,24 @@ class Gallery(commands.Cog):
             print(f"Sankaku error\nCode #{api_result['code']}")
             return
 
+        valid_urls_keys = [
+            'sample_url',   # medium quality / large sample
+            'file_url',     # highest quality / file (png, zip, webm)
+            'preview_url'   # lowest quality / thumbnail
+        ]
+        approved_ext = ['png', 'jpg', 'webp', 'gif']
+
+        img_url = api_result['preview_url']
+        img_filename = utils.net.get_url_filename(img_url)
+        img = await utils.net.fetch_image(img_url)
+
         embed = discord.Embed()
-        embed.set_image(url=api_result['preview_url'])
+        embed.set_image(url='attachment://' + img_filename)
         embed.set_footer(
             text=self.bot.assets['sankaku']['name'],
             icon_url=self.bot.assets['sankaku']['favicon'])
 
-        await channel.send(embed=embed)
+        await channel.send(file=discord.File(fp=img, filename=img_filename), embed=embed)
 
     async def get_deviantart_post(self, msg, url):
         """Automatically fetch post from deviantart"""

@@ -20,7 +20,7 @@ class Board(commands.Cog):
         self.danbooru_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['danbooru']['username'], password=self.bot.auth_keys['danbooru']['key'])
         self.e621_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['e621']['username'], password=self.bot.auth_keys['e621']['key'])
 
-    async def search_board(self, ctx, tags: typing.List, board='danbooru'):
+    async def search_board(self, ctx, tags: typing.List, board='danbooru', **kwargs):
         """Search on image boards!
         Arguments:
             ctx
@@ -29,7 +29,12 @@ class Board(commands.Cog):
                 List of the tags sent by the user
             board::str
                 The board to manage. Default is 'danbooru'
+        Keywords:
+            hide_posts_remaining::bool
+                Omit the final remaining count on the final post. False by default.
         """
+
+        hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
 
         if len(tags) == 0:
             await ctx.send('Please make a search.')
@@ -50,7 +55,7 @@ class Board(commands.Cog):
         if 'posts' in posts:
             posts = posts['posts']
 
-        await self.send_posts(ctx, posts, board=board)
+        await self.send_posts(ctx, posts[:3], board=board, hide_posts_remaining=hide_posts_remaining)
 
     async def search_query(self, **kwargs):
         """Handle searching in boards
@@ -137,15 +142,18 @@ class Board(commands.Cog):
             board::str
                 The board to manage. Default is 'danbooru'
             show_nsfw::bool
-                Whether or not nsfw posts should have their previews shown. Default is True
+                Whether or not nsfw posts should have their previews shown. True by default.
             max_posts::int
                 How many posts should be shown before showing how many of them were cut-off.
                 If max_posts is set to 0 then no footer will be shown and no posts will be omitted.
+            hide_posts_remaining::bool
+                Omit the final remaining count on the final post. False by default.
         """
 
         board = kwargs.get('board', 'danbooru')
         show_nsfw = kwargs.get('show_nsfw', True)
         max_posts = kwargs.get('max_posts', 4)
+        hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
 
         if not isinstance(posts, typing.List):
             posts = [posts]
@@ -187,7 +195,7 @@ class Board(commands.Cog):
                 if posts_processed >= min(max_posts, total_posts):
                     last_post = True
 
-                    if total_posts > max_posts:
+                    if total_posts > max_posts and not hide_posts_remaining:
                         embed.set_footer(
                             text=f'{total_posts - max_posts}+ remaining',
                             icon_url=self.bot.assets[board]['favicon']['size16'])

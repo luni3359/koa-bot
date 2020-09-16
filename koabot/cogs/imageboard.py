@@ -25,7 +25,7 @@ class ImageBoard(commands.Cog):
     async def search_sankaku(self, ctx, *tags):
         """Search on sankaku!"""
         board_cog = self.bot.get_cog('Board')
-        await board_cog.search_board(ctx, tags, board='sankaku')
+        await board_cog.search_board(ctx, tags, board='sankaku', hide_posts_remaining=True)
 
     async def show_gallery(self, msg: discord.Message, url: str, board: str):
         """Show a gallery"""

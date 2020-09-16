@@ -20,7 +20,7 @@ class Board(commands.Cog):
         self.danbooru_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['danbooru']['username'], password=self.bot.auth_keys['danbooru']['key'])
         self.e621_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['e621']['username'], password=self.bot.auth_keys['e621']['key'])
 
-    async def search_board(self, ctx, tags: typing.List, board='danbooru'):
+    async def search_board(self, ctx, tags: typing.List, board='danbooru', **kwargs):
         """Search on image boards!
         Arguments:
             ctx
@@ -29,7 +29,12 @@ class Board(commands.Cog):
                 List of the tags sent by the user
             board::str
                 The board to manage. Default is 'danbooru'
+        Keywords:
+            hide_posts_remaining::bool
+                Omit the final remaining count on the final post. False by default.
         """
+
+        hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
 
         if len(tags) == 0:
             await ctx.send('Please make a search.')
@@ -50,7 +55,7 @@ class Board(commands.Cog):
         if 'posts' in posts:
             posts = posts['posts']
 
-        await self.send_posts(ctx, posts, board=board)
+        await self.send_posts(ctx, posts[:3], board=board, hide_posts_remaining=hide_posts_remaining)
 
     async def search_query(self, **kwargs):
         """Handle searching in boards
@@ -114,6 +119,14 @@ class Board(commands.Cog):
 
                 headers['Content-Type'] = 'application/json'
                 return await utils.net.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
+        elif board == 'sankaku':
+            if post_id:
+                url = f"{self.bot.assets['sankaku']['id_search_url']}{post_id}"
+                return await utils.net.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
+            elif tags:
+                search_query = '+'.join(tags.split(' '))
+                url = f"{self.bot.assets['sankaku']['search_url']}{search_query}"
+                return await utils.net.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
         else:
             raise ValueError(f'Board "{board}" can\'t be handled by the post searcher.')
 
@@ -129,15 +142,18 @@ class Board(commands.Cog):
             board::str
                 The board to manage. Default is 'danbooru'
             show_nsfw::bool
-                Whether or not nsfw posts should have their previews shown. Default is True
+                Whether or not nsfw posts should have their previews shown. True by default.
             max_posts::int
                 How many posts should be shown before showing how many of them were cut-off.
                 If max_posts is set to 0 then no footer will be shown and no posts will be omitted.
+            hide_posts_remaining::bool
+                Omit the final remaining count on the final post. False by default.
         """
 
         board = kwargs.get('board', 'danbooru')
         show_nsfw = kwargs.get('show_nsfw', True)
         max_posts = kwargs.get('max_posts', 4)
+        hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
 
         if not isinstance(posts, typing.List):
             posts = [posts]
@@ -155,12 +171,20 @@ class Board(commands.Cog):
             posts_processed += 1
             print(f"Parsing post #{post['id']} ({posts_processed}/{min(total_posts, max_posts)})...")
 
-            denied_ext = ['webm']
-            if 'file_ext' in post and post['file_ext'] in denied_ext:
+            approved_ext = ['png', 'jpg', 'webp', 'gif', 'image/jpeg', 'image/png']
+            for ext_key in ['file_ext', 'file_type']:
+                if ext_key in post:
+                    break
+
+            if ext_key and post[ext_key] not in approved_ext:
                 if board == 'danbooru':
                     url = f"https://danbooru.donmai.us/posts/{post['id']}"
                 elif board == 'e621':
                     url = f"https://e621.net/posts/{post['id']}"
+                elif board == 'sankaku':
+                    url = f"https://chan.sankakucomplex.com/post/show/{post['id']}"
+                else:
+                    raise ValueError('Cannot create url.')
 
                 await ctx.send(url)
                 continue
@@ -171,7 +195,7 @@ class Board(commands.Cog):
                 if posts_processed >= min(max_posts, total_posts):
                     last_post = True
 
-                    if total_posts > max_posts:
+                    if total_posts > max_posts and not hide_posts_remaining:
                         embed.set_footer(
                             text=f'{total_posts - max_posts}+ remaining',
                             icon_url=self.bot.assets[board]['favicon']['size16'])
@@ -193,8 +217,10 @@ class Board(commands.Cog):
                         await ctx.send(f'<{embed.url}>', embed=embed)
                     else:
                         await ctx.send(embed.url)
-                elif board == 'e621':
+                elif board == 'e621' or board == 'sankaku':
                     await ctx.send(f'<{embed.url}>', embed=embed)
+                else:
+                    raise ValueError('Board embed send not configured.')
 
             print(f"Post #{post['id']} complete")
 
@@ -242,20 +268,40 @@ class Board(commands.Cog):
         elif board == 'e621':
             embed.title = f"#{post['id']}: {utils.posts.combine_tags(post['tags']['artist'])} - e621"
             embed.url = f"https://e621.net/posts/{post['id']}"
+        elif board == 'sankaku':
+            embed.title = f"Post {post['id']}"
+            embed.url = f"https://chan.sankakucomplex.com/post/show/{post['id']}"
+        else:
+            raise ValueError('Board embed not configured.')
 
         if 'failed_post_preview' in self.bot.assets[board]:
             fileurl = self.bot.assets[board]['failed_post_preview']
         else:
             fileurl = self.bot.assets['default']['failed_post_preview']
 
-        valid_urls_keys = ['large_file_url', 'file_url', 'preview_file_url', 'sample', 'file', 'preview']
+        valid_urls_keys = [
+            'large_file_url',   # medium quality / large sample
+            'file_url',         # highest quality / file (png, zip, webm)
+            'preview_file_url',  # lowest quality / thumbnail
+            'sample_url',       # medium quality / large sample
+            'file_url',         # highest quality / file (png, zip, webm)
+            'preview_url',      # lowest quality / thumbnail
+            'sample',           # medium quality / large sample
+            'file',             # highest quality / file (png, zip, webm)
+            'preview'           # lowest quality / thumbnail
+        ]
+        approved_ext = ['png', 'jpg', 'webp', 'gif', 'image/jpeg', 'image/png']
+
         for key in valid_urls_keys:
             if key in post:
                 if board == 'e621':
-                    fileurl = post[key]['url']
+                    if utils.net.get_url_fileext(post[key]['url']) in approved_ext:
+                        fileurl = post[key]['url']
+                        break
                 else:
-                    fileurl = post[key]
-                break
+                    if utils.net.get_url_fileext(post[key]) in approved_ext:
+                        fileurl = post[key]
+                        break
 
         embed.set_image(url=fileurl)
         return embed

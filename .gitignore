@@ -4,8 +4,6 @@ __pycache__
 .python-version
 
 # Legacy files
-config*
 *.webm
 favicons
-*example.json
-*.example
+examples

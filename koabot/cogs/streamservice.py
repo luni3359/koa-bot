@@ -11,6 +11,9 @@ import koabot.utils as utils
 import koabot.utils.net
 import koabot.utils.posts
 
+BOT_DIRNAME = 'koa-bot'
+CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
+
 
 class StreamService(commands.Cog):
     """Streaming websites definitions"""
@@ -113,13 +116,14 @@ class StreamService(commands.Cog):
             force::bool
                 Ignore the cached key and fetch a new one from Twitch
         """
-        token_filename = 'twitch_access_token'
-        token_path = os.path.join(appdirs.user_cache_dir('koa-bot'), token_filename)
+        token_filename = 'access_token'
+        twitch_cache_dir = os.path.join(CACHE_DIR, 'twitch')
+        token_path = os.path.join(twitch_cache_dir, token_filename)
 
         # if the file exists
         if os.path.exists(token_path) and not force:
             with open(token_path) as token_file:
-                self._twitch_access_token = token_file.readline()
+                self._twitch_acceqss_token = token_file.readline()
 
         if not self._twitch_access_token or force:
             url = 'https://id.twitch.tv/oauth2/token'
@@ -128,6 +132,8 @@ class StreamService(commands.Cog):
                 'client_secret':  self.bot.auth_keys['twitch']['client_secret'],
                 'grant_type': 'client_credentials'}
             response = (await utils.net.http_request(url, post=True, data=data, json=True)).json
+
+            os.makedirs(twitch_cache_dir)
 
             with open(token_path, 'w') as token_file:
                 self._twitch_access_token = response['access_token']

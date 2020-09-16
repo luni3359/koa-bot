@@ -1,6 +1,7 @@
 """Handles the use of imageboard galleries"""
 import os
 import random
+import shutil
 import typing
 
 import appdirs
@@ -11,6 +12,9 @@ from discord.ext import commands
 
 import koabot.koakuma as koakuma
 import koabot.utils as utils
+
+BOT_DIRNAME = 'koa-bot'
+CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
 
 
 class Gallery(commands.Cog):
@@ -222,9 +226,6 @@ class Gallery(commands.Cog):
 
             bot_cog = self.bot.get_cog('BotStatus')
 
-            if bot_cog is None:
-                print('BOTSTATUS COG WAS MISSING!')
-
             await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
             return
 
@@ -241,8 +242,23 @@ class Gallery(commands.Cog):
             for i, picture in enumerate(pictures[:total_to_preview]):
                 print(f'Retrieving picture from #{post_id}...')
 
-                (embed, image, filename) = await generate_pixiv_embed(picture, illust.user)
+                (embed, url, filename) = await generate_pixiv_embed(picture, illust.user)
                 print(f'Retrieved more from #{post_id} (maybe)')
+
+                # create if pixiv cache directory if it doesn't exist
+                file_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'files')
+                os.makedirs(file_cache_dir, exist_ok=True)
+                image_path = os.path.join(file_cache_dir, filename)
+
+                # cache file if it doesn't exist
+                image_bytes = None
+                if not os.path.exists(image_path):
+                    print('Saving to cache...')
+                    image_bytes = await utils.net.fetch_image(url, headers=koakuma.bot.assets['pixiv']['headers'])
+
+                    with open(os.path.join(file_cache_dir, filename), 'wb') as image_file:
+                        shutil.copyfileobj(image_bytes, image_file)
+                    image_bytes.seek(0)
 
                 if i + 1 >= min(total_to_preview, total_illust_pictures):
                     remaining_footer = ''
@@ -255,14 +271,20 @@ class Gallery(commands.Cog):
                     embed.set_footer(
                         text=remaining_footer,
                         icon_url=self.bot.assets['pixiv']['favicon'])
-                await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
+                if image_bytes:
+                    await channel.send(file=discord.File(fp=image_bytes, filename=filename), embed=embed)
+                    image_bytes.close()
+                else:
+                    print('Uploading from cache...')
+                    await channel.send(file=discord.File(fp=image_path, filename=filename), embed=embed)
 
         await temp_message.delete()
         print('DONE PIXIV!')
 
     def reauthenticate_pixiv(self):
-        token_filename = 'pixiv_refresh_token'
-        token_path = os.path.join(appdirs.user_cache_dir('koa-bot'), token_filename)
+        pixiv_cache_dir = os.path.join(CACHE_DIR, 'pixiv')
+        token_filename = 'refresh_token'
+        token_path = os.path.join(pixiv_cache_dir, token_filename)
 
         if self.pixiv_refresh_token:
             self.pixiv_api.auth(refresh_token=self.pixiv_refresh_token)
@@ -274,6 +296,7 @@ class Gallery(commands.Cog):
         else:
             self.pixiv_api.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
             self.pixiv_refresh_token = self.pixiv_api.refresh_token
+            os.makedirs(pixiv_cache_dir)
             with open(token_path, 'w') as token_file:
                 token_file.write(self.pixiv_api.refresh_token)
 
@@ -301,16 +324,16 @@ class Gallery(commands.Cog):
         approved_ext = ['png', 'jpg', 'webp', 'gif']
 
         img_url = api_result['preview_url']
-        img_filename = utils.net.get_url_filename(img_url)
-        img = await utils.net.fetch_image(img_url)
+        image_filename = utils.net.get_url_filename(img_url)
+        image = await utils.net.fetch_image(img_url)
 
         embed = discord.Embed()
-        embed.set_image(url='attachment://' + img_filename)
+        embed.set_image(url='attachment://' + image_filename)
         embed.set_footer(
             text=self.bot.assets['sankaku']['name'],
             icon_url=self.bot.assets['sankaku']['favicon'])
 
-        await channel.send(file=discord.File(fp=img, filename=img_filename), embed=embed)
+        await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
 
     async def get_deviantart_post(self, msg, url):
         """Automatically fetch post from deviantart"""
@@ -405,18 +428,20 @@ async def generate_pixiv_embed(post, user):
             The post object
         user
             The artist of the post
+    Returns:
+        embed::discord.Embed
+        image_filename::str
     """
 
     img_url = post.image_urls.medium
     image_filename = utils.net.get_url_filename(img_url)
-    image = await utils.net.fetch_image(img_url, headers=koakuma.bot.assets['pixiv']['headers'])
 
     embed = discord.Embed()
     embed.set_author(
         name=user.name,
         url=f'https://www.pixiv.net/member.php?id={user.id}')
     embed.set_image(url=f'attachment://{image_filename}')
-    return embed, image, image_filename
+    return embed, img_url, image_filename
 
 
 def setup(bot: commands.Bot):

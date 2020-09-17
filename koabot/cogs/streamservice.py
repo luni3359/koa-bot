@@ -133,7 +133,7 @@ class StreamService(commands.Cog):
                 'grant_type': 'client_credentials'}
             response = (await utils.net.http_request(url, post=True, data=data, json=True)).json
 
-            os.makedirs(twitch_cache_dir)
+            os.makedirs(twitch_cache_dir, exist_ok=True)
 
             with open(token_path, 'w') as token_file:
                 self._twitch_access_token = response['access_token']

@@ -296,7 +296,7 @@ class Gallery(commands.Cog):
         else:
             self.pixiv_api.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
             self.pixiv_refresh_token = self.pixiv_api.refresh_token
-            os.makedirs(pixiv_cache_dir)
+            os.makedirs(pixiv_cache_dir, exist_ok=True)
             with open(token_path, 'w') as token_file:
                 token_file.write(self.pixiv_api.refresh_token)
 

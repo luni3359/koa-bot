@@ -1,9 +1,7 @@
 import os
 import sqlite3
 
-
 from koabot.koakuma import CACHE_DIR
-
 
 conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbTest.sqlite3'))
 c = conn.cursor()

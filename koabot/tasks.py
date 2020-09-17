@@ -31,7 +31,7 @@ async def check_live_streamers():
 
         for streamer in koakuma.bot.tasks['streamer_activity']['streamers']:
             if streamer['platform'] == 'twitch':
-                twitch_search += 'user_id=%s&' % streamer['user_id']
+                twitch_search += f"user_id={streamer['user_id']}&"
 
         twitch_query = await utils.net.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
@@ -69,7 +69,7 @@ async def check_live_streamers():
             embed = discord.Embed()
             embed.set_author(
                 name=streamer['streamer']['user_name'],
-                url='https://www.twitch.tv/' + streamer['streamer']['user_name'])
+                url=f"https://www.twitch.tv/{streamer['streamer']['user_name']}")
             embed.set_footer(
                 text=koakuma.bot.assets['twitch']['name'],
                 icon_url=koakuma.bot.assets['twitch']['favicon'])
@@ -80,9 +80,9 @@ async def check_live_streamers():
             thumbnail_url = thumbnail_url.replace('{height}', '350')
             thumbnail_filename = utils.net.get_url_filename(thumbnail_url)
             image = await utils.net.fetch_image(thumbnail_url)
-            embed.set_image(url='attachment://' + thumbnail_filename)
+            embed.set_image(url=f'attachment://{thumbnail_filename}')
 
-            stream_announcements.append({'message': '%s is now live!' % streamer['name'], 'embed': embed, 'image': image, 'filename': thumbnail_filename})
+            stream_announcements.append({'message': f"{streamer['name']} is now live!", 'embed': embed, 'image': image, 'filename': thumbnail_filename})
 
         for channel in koakuma.bot.tasks['streamer_activity']['channels_to_announce_on']:
             for batch in stream_announcements:
@@ -137,7 +137,7 @@ async def lookup_pending_posts():
         for post in posts:
             if not post['id'] in pending_posts:
                 pending_posts.append(post['id'])
-                url_to_append = 'https://danbooru.donmai.us/posts/%i' % post['id']
+                url_to_append = f"https://danbooru.donmai.us/posts/{post['id']}"
 
                 if post['rating'] is 's':
                     safe_posts.append(url_to_append)

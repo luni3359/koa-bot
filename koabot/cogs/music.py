@@ -13,7 +13,25 @@ class Music(commands.Cog):
 
     @commands.command()
     async def join(self, ctx):
-        pass
+        voice_client = ctx.voice_client
+        author_voice_channel = ctx.author.voice.channel
+
+        if not voice_client:
+            if author_voice_channel:
+                voice_client = await author_voice_channel.connect()
+                await ctx.send(f'Connected to **"{author_voice_channel.name}"** (your voice channel)!')
+            else:
+                if not ctx.guild.voice_channels:
+                    await ctx.send('There\'s no voice channels in this server...')
+                    return
+
+                for voice_channel in ctx.guild.voice_channels:
+                    voice_client = await voice_channel.connect()
+                    await ctx.send(f'Connected to **"{voice_channel.name}"** (the nearest voice channel)!')
+        else:
+            if author_voice_channel:
+                await voice_client.move_to(author_voice_channel)
+                await ctx.send(f'Moved to **"{author_voice_channel.name}"** (your voice channel)!')
 
     @commands.command()
     async def leave(self, ctx):
@@ -35,29 +53,12 @@ class Music(commands.Cog):
     async def test(self, ctx):
         """Music test"""
 
+        # join a voice channel
+        await ctx.invoke(self.bot.get_command('join'))
+
+        source = discord.FFmpegPCMAudio(os.path.join(SOURCE_DIR, 'assets', self.bot.testing['vc']['music-file']))
         voice_client = ctx.voice_client
         author_voice_channel = ctx.author.voice.channel
-        source = discord.FFmpegPCMAudio(os.path.join(SOURCE_DIR, 'assets', self.bot.testing['vc']['music-file']))
-
-        if not voice_client:
-            print('client doesn\'t exist!')
-            if author_voice_channel:
-                print('connecting to author\'s voice channel!')
-                voice_client = await author_voice_channel.connect()
-            else:
-                print('searching for a voice channel...')
-                if not ctx.guild.voice_channels:
-                    print('No voice channels in this server.')
-                    return
-
-                for voice_channel in ctx.guild.voice_channels:
-                    print('connecting to one...!')
-                    voice_client = await voice_channel.connect()
-        else:
-            print('client exists!')
-            if author_voice_channel:
-                print('moving!')
-                await voice_client.move_to(author_voice_channel)
 
         print('playing music now!')
         if voice_client.is_playing():

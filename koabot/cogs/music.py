@@ -1,12 +1,15 @@
 """Music functions!"""
 import os
 import random
+import re
 
 import discord
 import youtube_dl
 from discord.ext import commands
 
+import koabot.utils as utils
 from koabot.koakuma import SOURCE_DIR
+from koabot.patterns import URL_PATTERN
 
 
 class Music(commands.Cog):
@@ -54,18 +57,21 @@ class Music(commands.Cog):
     @commands.command()
     async def play(self, ctx, *search_or_url):
         """Plays a track (overrides current track)"""
-
-        if len(search_or_url) == 0:
-            await ctx.send('Please make a search or paste a link!')
-            return
-
         voice_client = ctx.voice_client
 
+        if len(search_or_url) == 0:
+            # test a random url while in development
+            url = random.choice(self.bot.testing['vc']['yt-suggestions'])
+        else:
+            # assuming it's always an url for now
+            search_or_url = ' '.join(search_or_url)
+            url = re.findall(URL_PATTERN, search_or_url)[0]
+
         ydl_opts = {
-            'format': 'bestaudio/best'
+            'format': 'bestaudio/best',
+            'source_address': '0.0.0.0'
         }
 
-        url = random.choice(self.bot.testing['vc']['yt-suggestions'])
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             track_info = ydl.extract_info(url, download=False)
             voice_client.play(discord.FFmpegPCMAudio(track_info['formats'][0]['url']))

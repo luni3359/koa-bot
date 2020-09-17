@@ -4,7 +4,6 @@ import random
 import shutil
 import typing
 
-import appdirs
 import discord
 import pixivpy3
 import tweepy

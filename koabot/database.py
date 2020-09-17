@@ -1,7 +1,6 @@
 import os
 import sqlite3
 
-import appdirs
 
 from koabot.koakuma import CACHE_DIR
 

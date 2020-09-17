@@ -3,7 +3,6 @@ import os
 import random
 import re
 
-import appdirs
 import discord
 from discord.ext import commands
 

@@ -12,6 +12,14 @@ class Music(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    async def join(self, ctx):
+        pass
+
+    @commands.command()
+    async def leave(self, ctx):
+        pass
+
+    @commands.command()
     async def play(self, ctx):
         pass
 

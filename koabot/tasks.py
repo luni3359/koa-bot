@@ -93,7 +93,7 @@ async def check_live_streamers():
                     await channel.send(batch['message'], embed=batch['embed'])
 
         # check every 5 minutes
-        await asyncio.sleep(60)
+        await asyncio.sleep(60 * 5)
 
 
 async def change_presence_periodically():
@@ -155,4 +155,5 @@ async def lookup_pending_posts():
             for channel in channel_categories['nsfw_channels']:
                 await channel.send(random.choice(koakuma.bot.quotes['posts_to_approve']) + '\n' + nsfw_posts)
 
+        # check every 5 minutes
         await asyncio.sleep(60 * 5)

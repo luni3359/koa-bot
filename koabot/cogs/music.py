@@ -13,6 +13,7 @@ class Music(commands.Cog):
 
     @commands.command()
     async def join(self, ctx):
+        """Joins a voice channel"""
         voice_client = ctx.voice_client
         author_voicestate = ctx.author.voice
 
@@ -35,7 +36,14 @@ class Music(commands.Cog):
 
     @commands.command()
     async def leave(self, ctx):
-        pass
+        """Leaves a voice channel"""
+        voice_client = ctx.voice_client
+
+        if voice_client:
+            await voice_client.disconnect()
+            await ctx.send(f'Disconnected from **"{voice_client.channel.name}"**!')
+        else:
+            await ctx.send('No voice channel to disconnect from...')
 
     @commands.command()
     async def play(self, ctx):
@@ -43,7 +51,11 @@ class Music(commands.Cog):
 
     @commands.command()
     async def stop(self, ctx):
-        pass
+        """Stops the current track"""
+        voice_client = ctx.voice_client
+
+        if voice_client and voice_client.is_playing():
+            voice_client.stop()
 
     @commands.command()
     async def echo(self, ctx):

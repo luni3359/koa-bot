@@ -1,7 +1,9 @@
 """Music functions!"""
 import os
+import random
 
 import discord
+import youtube_dl
 from discord.ext import commands
 
 from koabot.koakuma import SOURCE_DIR
@@ -50,8 +52,23 @@ class Music(commands.Cog):
             await ctx.send('No voice channel to disconnect from...')
 
     @commands.command()
-    async def play(self, ctx):
+    async def play(self, ctx, *search_or_url):
         """Plays a track (overrides current track)"""
+
+        if len(search_or_url) == 0:
+            await ctx.send('Please make a search or paste a link!')
+            return
+
+        voice_client = ctx.voice_client
+
+        ydl_opts = {
+            'format': 'bestaudio/best'
+        }
+
+        url = random.choice(self.bot.testing['vc']['yt-suggestions'])
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            track_info = ydl.extract_info(url, download=False)
+            voice_client.play(discord.FFmpegPCMAudio(track_info['formats'][0]['url']))
 
     @commands.command()
     async def stop(self, ctx):

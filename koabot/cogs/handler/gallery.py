@@ -12,9 +12,7 @@ from discord.ext import commands
 
 import koabot.koakuma as koakuma
 import koabot.utils as utils
-
-BOT_DIRNAME = 'koa-bot'
-CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
+from koabot.koakuma import CACHE_DIR
 
 
 class Gallery(commands.Cog):

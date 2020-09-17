@@ -10,9 +10,7 @@ from discord.ext import commands
 import koabot.utils as utils
 import koabot.utils.net
 import koabot.utils.posts
-
-BOT_DIRNAME = 'koa-bot'
-CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
+from koabot.koakuma import CACHE_DIR
 
 
 class StreamService(commands.Cog):

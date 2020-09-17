@@ -3,8 +3,7 @@ import sqlite3
 
 import appdirs
 
-BOT_DIRNAME = 'koa-bot'
-CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
+from koabot.koakuma import CACHE_DIR
 
 
 conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbTest.sqlite3'))

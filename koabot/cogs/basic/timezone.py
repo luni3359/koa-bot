@@ -30,7 +30,7 @@ class TimeZone(commands.Cog):
             tz = pytz.timezone(timezone)
             tz_time = datetime.now(tz)
             # https://strftime.org
-            tz_result += (label + ': ').ljust(8) + tz_time.strftime('%a, %b %d %H:%M:%S\n')
+            tz_result += (f"{label}: ").ljust(8) + tz_time.strftime('%a, %b %d %H:%M:%S\n')
 
         await ctx.send(tz_result + '```')
 

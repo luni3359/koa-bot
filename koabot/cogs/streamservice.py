@@ -3,7 +3,6 @@ import os
 import random
 import re
 
-import appdirs
 import discord
 from discord.ext import commands
 
@@ -121,7 +120,7 @@ class StreamService(commands.Cog):
         # if the file exists
         if os.path.exists(token_path) and not force:
             with open(token_path) as token_file:
-                self._twitch_acceqss_token = token_file.readline()
+                self._twitch_access_token = token_file.readline()
 
         if not self._twitch_access_token or force:
             url = 'https://id.twitch.tv/oauth2/token'

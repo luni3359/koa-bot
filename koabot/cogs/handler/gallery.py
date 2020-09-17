@@ -4,7 +4,6 @@ import random
 import shutil
 import typing
 
-import appdirs
 import discord
 import pixivpy3
 import tweepy
@@ -326,7 +325,7 @@ class Gallery(commands.Cog):
         image = await utils.net.fetch_image(img_url)
 
         embed = discord.Embed()
-        embed.set_image(url='attachment://' + image_filename)
+        embed.set_image(url=f"attachment://{image_filename}")
         embed.set_footer(
             text=self.bot.assets['sankaku']['name'],
             icon_url=self.bot.assets['sankaku']['favicon'])

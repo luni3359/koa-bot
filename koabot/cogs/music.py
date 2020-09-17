@@ -14,12 +14,12 @@ class Music(commands.Cog):
     @commands.command()
     async def join(self, ctx):
         voice_client = ctx.voice_client
-        author_voice_channel = ctx.author.voice.channel
+        author_voicestate = ctx.author.voice
 
         if not voice_client:
-            if author_voice_channel:
-                voice_client = await author_voice_channel.connect()
-                await ctx.send(f'Connected to **"{author_voice_channel.name}"** (your voice channel)!')
+            if author_voicestate:
+                voice_client = await author_voicestate.channel.connect()
+                await ctx.send(f'Connected to **"{author_voicestate.channel.name}"** (your voice channel)!')
             else:
                 if not ctx.guild.voice_channels:
                     await ctx.send('There\'s no voice channels in this server...')
@@ -29,9 +29,9 @@ class Music(commands.Cog):
                     voice_client = await voice_channel.connect()
                     await ctx.send(f'Connected to **"{voice_channel.name}"** (the nearest voice channel)!')
         else:
-            if author_voice_channel:
-                await voice_client.move_to(author_voice_channel)
-                await ctx.send(f'Moved to **"{author_voice_channel.name}"** (your voice channel)!')
+            if author_voicestate:
+                await voice_client.move_to(author_voicestate.channel)
+                await ctx.send(f'Moved to **"{author_voicestate.channel.name}"** (your voice channel)!')
 
     @commands.command()
     async def leave(self, ctx):
@@ -58,7 +58,6 @@ class Music(commands.Cog):
 
         source = discord.FFmpegPCMAudio(os.path.join(SOURCE_DIR, 'assets', self.bot.testing['vc']['music-file']))
         voice_client = ctx.voice_client
-        author_voice_channel = ctx.author.voice.channel
 
         print('playing music now!')
         if voice_client.is_playing():

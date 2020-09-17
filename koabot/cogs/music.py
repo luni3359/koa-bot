@@ -29,10 +29,14 @@ class Music(commands.Cog):
                 for voice_channel in ctx.guild.voice_channels:
                     voice_client = await voice_channel.connect()
                     await ctx.send(f'Connected to **"{voice_channel.name}"** (the nearest voice channel)!')
+                    break
         else:
             if author_voicestate:
-                await voice_client.move_to(author_voicestate.channel)
-                await ctx.send(f'Moved to **"{author_voicestate.channel.name}"** (your voice channel)!')
+                if voice_client.channel != author_voicestate.channel:
+                    await voice_client.move_to(author_voicestate.channel)
+                    await ctx.send(f'Moved to **"{author_voicestate.channel.name}"** (your voice channel)!')
+                else:
+                    await ctx.send(f'I\'m already in **"{author_voicestate.channel.name}"** (your voice channel)!')
 
     @commands.command()
     async def leave(self, ctx):
@@ -47,7 +51,7 @@ class Music(commands.Cog):
 
     @commands.command()
     async def play(self, ctx):
-        pass
+        """Plays a track (overrides current track)"""
 
     @commands.command()
     async def stop(self, ctx):
@@ -59,7 +63,7 @@ class Music(commands.Cog):
 
     @commands.command()
     async def echo(self, ctx):
-        pass
+        """Echoes sound"""
 
     @commands.command()
     async def test(self, ctx):

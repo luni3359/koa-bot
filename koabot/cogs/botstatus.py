@@ -18,22 +18,25 @@ class BotStatus(commands.Cog):
     async def report_bot_temp(self, ctx):
         """Show the bot's current temperature"""
 
-        temp_commands = ['vcgencmd measure_temp', 'sensors']
-        for cmd in temp_commands:
+        temperature_cmds = [
+            'vcgencmd measure_temp',
+            'sensors'
+        ]
+        for cmd in temperature_cmds:
             cmd_parts = cmd.split()
-            temp_command = cmd_parts[0]
+            temperature_cmd = cmd_parts[0]
 
             try:
                 current_temp = subprocess.run(cmd_parts, stdout=subprocess.PIPE, check=True, universal_newlines=True)
-                print(f'Using "{temp_command}".')
+                print(f'Using "{temperature_cmd}".')
                 break
             except FileNotFoundError:
-                print(f'"{temp_command}" is missing in system.')
+                print(f'"{temperature_cmd}" is missing in system.')
 
         try:
-            if temp_command == 'vcgencmd':
+            if temperature_cmd == 'vcgencmd':
                 cpu_temp = re.findall(r'([0-9]+\.[0-9]?)\'C', current_temp.stdout)[0]
-            elif temp_command == 'sensors':
+            elif temperature_cmd == 'sensors':
                 cpu_found = False
                 adapter_found = False
 

@@ -46,7 +46,7 @@ class ImageBoard(commands.Cog):
         elif board == 'imgur':
             await gallery_cog.get_imgur_gallery(msg, url)
         else:
-            raise ValueError('Board has no gallery entry.')
+            raise ValueError(f'Board "{board}" has no gallery entry.')
 
 
 def setup(bot: commands.Bot):

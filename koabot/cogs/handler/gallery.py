@@ -38,11 +38,11 @@ class Gallery(commands.Cog):
                 Url to get a gallery from
         Keywords:
             board::str
-                The board to handle. Default is 'danbooru'
+                Name of the board to handle. Default is 'danbooru'
             id_start::str
-                The point at which an url is stripped from
+                The point at which an url's id is stripped from
             id_end::str
-                The point at which an url is stripped to
+                The point at which an url's id is stripped to
             end_regex::bool
                 Whether or not id_end is regex. Default is False
         """
@@ -52,24 +52,24 @@ class Gallery(commands.Cog):
         id_end = kwargs.get('id_end')
         end_regex = kwargs.get('end_regex', False)
 
-        on_nsfw_channel = channel.is_nsfw()
         post_id = utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
         if not post_id:
             return
 
-        bot_cog = self.bot.get_cog('BotStatus')
         board_cog = self.bot.get_cog('Board')
-
         post = (await board_cog.search_query(board=board, post_id=post_id)).json
 
         if not post:
             return
 
+        bot_cog = self.bot.get_cog('BotStatus')
+        on_nsfw_channel = channel.is_nsfw()
+
         if 'post' in post:
             post = post['post']
 
-        if post['rating'] is not 's' and not on_nsfw_channel:
+        if post['rating'] != 's' and not on_nsfw_channel:
             embed = discord.Embed()
             if 'nsfw_placeholder' in self.bot.assets[board]:
                 embed.set_image(url=self.bot.assets[board]['nsfw_placeholder'])
@@ -80,28 +80,27 @@ class Gallery(commands.Cog):
 
             await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
-        single_post = False
         if board == 'e621':
-            if post['relationships']['has_active_children']:
-                search = f"parent:{post['id']} order:id"
-            elif post['relationships']['parent_id']:
-                search = [
-                    f"id:{post['relationships']['parent_id']}",
-                    f"parent:{post['relationships']['parent_id']} order:id -id:{post['id']}"
-                ]
-            else:
-                single_post = True
+            has_children = post['relationships']['has_active_children']
+            has_parent = post['relationships']['parent_id']
+            c_search = f"parent:{post['id']} order:id"
+            p_search = [
+                f"id:{post['relationships']['parent_id']}",
+                f"parent:{post['relationships']['parent_id']} order:id -id:{post['id']}"
+            ]
         else:
-            if post['has_children']:
-                search = f"parent:{post['id']} order:id -id:{post['id']}"
-            elif post['parent_id']:
-                search = f"parent:{post['parent_id']} order:id -id:{post['id']}"
-            else:
-                single_post = True
+            has_children = post['has_children']
+            has_parent = post['parent_id']
+            c_search = f"parent:{post['id']} order:id -id:{post['id']}"
+            p_search = f"parent:{post['parent_id']} order:id -id:{post['id']}"
 
-        if single_post:
+        if has_children:
+            search = c_search
+        elif has_parent:
+            search = p_search
+        else:
             if utils.posts.post_is_missing_preview(post, board=board):
-                if post['rating'] is 's' or on_nsfw_channel:
+                if post['rating'] == 's' or on_nsfw_channel:
                     await board_cog.send_posts(channel, post, board=board)
             return
 
@@ -122,11 +121,11 @@ class Gallery(commands.Cog):
         # Ought to respect the choice to display posts anyway but without thumbnail
         if not on_nsfw_channel:
             # filters all safe results into the posts variable
-            posts = [post for post in posts if post['rating'] is 's']
+            posts = [post for post in posts if post['rating'] == 's']
 
         post_included_in_results = False
         if utils.posts.post_is_missing_preview(post, board=board) and posts:
-            if post['rating'] is 's' or on_nsfw_channel:
+            if post['rating'] == 's' or on_nsfw_channel:
                 post_included_in_results = True
                 post = [post]
                 post.extend(posts)
@@ -189,7 +188,7 @@ class Gallery(commands.Cog):
             else:
                 await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
         else:
-            if post['rating'] is 's':
+            if post['rating'] == 's':
                 content = random.choice(self.bot.quotes['cannot_show_nsfw_gallery'])
             else:
                 content = random.choice(self.bot.quotes['rude_cannot_show_nsfw_gallery'])

@@ -139,7 +139,7 @@ async def lookup_pending_posts():
                 pending_posts.append(post['id'])
                 url_to_append = f"https://danbooru.donmai.us/posts/{post['id']}"
 
-                if post['rating'] is 's':
+                if post['rating'] == 's':
                     safe_posts.append(url_to_append)
                 else:
                     nsfw_posts.append(url_to_append)

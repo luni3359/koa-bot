@@ -29,6 +29,13 @@ class Gallery(commands.Cog):
 
     async def display_static(self, channel, msg, url, **kwargs):
         """Display posts from a gallery in separate unmodifiable embeds
+        Arguments:
+            channel::discord.TextChannel
+                Channel the message is in
+            msg::discord.Message
+                Message sent by the author
+            url::str
+                Url to get a gallery from
         Keywords:
             board::str
                 The board to handle. Default is 'danbooru'
@@ -332,6 +339,8 @@ class Gallery(commands.Cog):
         print('DONE PIXIV!')
 
     def reauthenticate_pixiv(self):
+        """Fetch and cache the refresh token"""
+
         pixiv_cache_dir = os.path.join(CACHE_DIR, 'pixiv')
         token_filename = 'refresh_token'
         token_path = os.path.join(pixiv_cache_dir, token_filename)

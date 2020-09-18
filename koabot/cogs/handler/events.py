@@ -40,10 +40,25 @@ class BotEvents(commands.Cog):
         if msg.author.bot:
             return
 
-        beta_bot = msg.guild.get_member(self.bot.koa['discord_user']['beta_id'])
-        if beta_bot and beta_bot.status == discord.Status.online and msg.guild.me.id != self.bot.koa['discord_user']['beta_id']:
-            # Beta bot overrides me in the servers we share
-            return
+        # Beta bot overrides me in the servers we share
+        beta_bot_id = self.bot.koa['discord_user']['beta_id']
+
+        # if it's a normal user
+        if msg.author.id not in self.bot.testing['debug_users']:
+            # ...and i'm the debug instance
+            if msg.guild.me.id == beta_bot_id:
+                # do nothing
+                return
+        # if it's a debug user
+        else:
+            beta_bot = msg.guild.get_member(beta_bot_id)
+
+            # ...and the debug instance is online
+            if beta_bot and beta_bot.status == discord.Status.online:
+                # ...and i'm not the debug instance
+                if msg.guild.me.id != beta_bot_id:
+                    # do nothing
+                    return
 
         channel = msg.channel
 

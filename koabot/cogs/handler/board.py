@@ -265,17 +265,16 @@ class Board(commands.Cog):
         else:
             fileurl = self.bot.assets['default']['failed_post_preview']
 
-        approved_ext = ['png', 'jpg', 'webp', 'gif']
         for res_key in self.bot.assets[board]['post_quality']:
             if res_key in post:
                 if board == 'e621':
-                    if utils.net.get_url_fileext(post[res_key]['url']) in approved_ext:
-                        fileurl = post[res_key]['url']
-                        break
+                    url_candidate = post[res_key]['url']
                 else:
-                    if utils.net.get_url_fileext(post[res_key]) in approved_ext:
-                        fileurl = post[res_key]
-                        break
+                    url_candidate = post[res_key]
+
+                if utils.net.get_url_fileext(url_candidate) in ['png', 'jpg', 'webp', 'gif']:
+                    fileurl = url_candidate
+                    break
 
         embed.set_image(url=fileurl)
         return embed

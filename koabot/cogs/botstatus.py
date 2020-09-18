@@ -18,10 +18,7 @@ class BotStatus(commands.Cog):
     async def report_bot_temp(self, ctx):
         """Show the bot's current temperature"""
 
-        temperature_cmds = [
-            'vcgencmd measure_temp',
-            'sensors'
-        ]
+        temperature_cmds = ['vcgencmd measure_temp', 'sensors']
         for cmd in temperature_cmds:
             cmd_parts = cmd.split()
             temperature_cmd = cmd_parts[0]
@@ -85,8 +82,23 @@ class BotStatus(commands.Cog):
     @commands.command()
     async def version(self, ctx):
         """Show bot's version"""
-        commit = subprocess.check_output(['git', 'describe', '--always']).strip()
-        await ctx.send(f"On commit ``{commit.decode('utf-8')}``.")
+        version_cmds = ['git describe --always']
+        version_cmd = ''
+
+        for cmd in version_cmds:
+            cmd_parts = cmd.split()
+            version_cmd = cmd_parts[0]
+
+            try:
+                output = subprocess.check_output(cmd_parts).strip()
+            except FileNotFoundError:
+                print(f'"{cmd}" is missing in system.')
+
+        if not version_cmd:
+            await ctx.send('I have no way to figure out what version I\'m in...')
+
+        if version_cmd == 'git':
+            await ctx.send(f"On commit ``{output.decode('utf-8')}``.")
 
     async def typing_a_message(self, ctx, **kwargs):
         """Make Koakuma seem alive with a 'is typing' delay

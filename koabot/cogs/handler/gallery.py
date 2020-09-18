@@ -66,6 +66,7 @@ class Gallery(commands.Cog):
         bot_cog = self.bot.get_cog('BotStatus')
         on_nsfw_channel = channel.is_nsfw()
 
+        # e621 fix for broken API
         if 'post' in post:
             post = post['post']
 
@@ -127,9 +128,7 @@ class Gallery(commands.Cog):
         if utils.posts.post_is_missing_preview(post, board=board) and posts:
             if post['rating'] == 's' or on_nsfw_channel:
                 post_included_in_results = True
-                post = [post]
-                post.extend(posts)
-                posts = post
+                posts.insert(0, post)
 
         # Check for duplicates
         parsed_posts = []
@@ -140,7 +139,6 @@ class Gallery(commands.Cog):
             test_posts = [post]
             test_posts.extend(posts)
 
-            approved_ext = ['png', 'jpg', 'webp']
             for test_post in test_posts:
                 for res_key in self.bot.assets[board]['post_quality']:
                     if res_key in test_post:
@@ -150,27 +148,27 @@ class Gallery(commands.Cog):
                             url_candidate = test_post[res_key]
 
                         file_ext = utils.net.get_url_fileext(url_candidate)
-                        if file_ext in approved_ext:
-                            fileurl = url_candidate
-                            filename = str(test_post['id']) + '.' + file_ext
+                        if file_ext in ['png', 'jpg', 'webp']:
+                            file_url = url_candidate
+                            file_name = str(test_post['id']) + '.' + file_ext
                             parsed_posts.append({
                                 'id': test_post['id'],
                                 'ext': file_ext,
-                                'filename': filename,
-                                'path': os.path.join(file_cache_dir, filename),
+                                'file_name': file_name,
+                                'path': os.path.join(file_cache_dir, file_name),
                                 'hash': None
                             })
                             break
 
                 print(f"Caching post #{test_post['id']}...")
-                file_name = f"{test_post['id']}.{file_ext}"
-                image_bytes = await utils.net.fetch_image(fileurl)
+                image_bytes = await utils.net.fetch_image(file_url)
                 with open(os.path.join(file_cache_dir, file_name), 'wb') as image_file:
                     shutil.copyfileobj(image_bytes, image_file)
 
             hash_method = imagehash.phash
             ground_truth = parsed_posts[0]
             ground_truth['hash'] = hash_method(Image.open(ground_truth['path']))
+
             print(str(ground_truth['id']) + ': ' + str(ground_truth['hash']) + ' (ground truth)')
             for parsed_post in parsed_posts[1:]:
                 parsed_post['hash'] = hash_method(Image.open(parsed_post['path']))

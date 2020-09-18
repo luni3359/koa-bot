@@ -5,9 +5,11 @@ import shutil
 import typing
 
 import discord
+import imagehash
 import pixivpy3
 import tweepy
 from discord.ext import commands
+from PIL import Image
 
 import koabot.koakuma as koakuma
 import koabot.utils as utils
@@ -122,6 +124,49 @@ class Gallery(commands.Cog):
                 post = [post]
                 post.extend(posts)
                 posts = post
+
+        # Check for duplicates
+        if board == 'danbooru' or board == 'e621':
+            file_cache_dir = os.path.join(CACHE_DIR, board, 'files')
+            os.makedirs(file_cache_dir, exist_ok=True)
+
+            parsed_posts = []
+            test_posts = [post]
+            test_posts.extend(posts)
+
+            approved_ext = ['png', 'jpg', 'webp']
+            for test_post in test_posts:
+                for res_key in self.bot.assets[board]['post_quality']:
+                    if res_key in test_post:
+                        if board == 'e621':
+                            url_candidate = test_post[res_key]['url']
+                        else:
+                            url_candidate = test_post[res_key]
+
+                        file_ext = utils.net.get_url_fileext(url_candidate)
+                        if file_ext in approved_ext:
+                            fileurl = url_candidate
+                            filename = str(test_post['id']) + '.' + file_ext
+                            parsed_posts.append({
+                                'ext': file_ext,
+                                'filename': filename,
+                                'path': os.path.join(file_cache_dir, filename),
+                                'hash': None
+                            })
+                            break
+
+                print(f"Caching post #{test_post['id']}...")
+                file_name = f"{test_post['id']}.{file_ext}"
+                image_bytes = await utils.net.fetch_image(fileurl)
+                with open(os.path.join(file_cache_dir, file_name), 'wb') as image_file:
+                    shutil.copyfileobj(image_bytes, image_file)
+
+            ground_truth = parsed_posts[0]
+            ground_truth['hash'] = imagehash.average_hash(Image.open(ground_truth['path']))
+            print('Ground truth hash: ' + str(ground_truth['hash']))
+            for parsed_post in parsed_posts[1:]:
+                parsed_post['hash'] = imagehash.average_hash(Image.open(parsed_post['path']))
+                print(parsed_post['hash'], ground_truth['hash'] - parsed_post['hash'])
 
         if posts:
             if post_included_in_results:

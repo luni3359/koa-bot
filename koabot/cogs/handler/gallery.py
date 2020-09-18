@@ -126,11 +126,11 @@ class Gallery(commands.Cog):
                 posts = post
 
         # Check for duplicates
+        parsed_posts = []
         if board == 'danbooru' or board == 'e621':
             file_cache_dir = os.path.join(CACHE_DIR, board, 'files')
             os.makedirs(file_cache_dir, exist_ok=True)
 
-            parsed_posts = []
             test_posts = [post]
             test_posts.extend(posts)
 
@@ -148,7 +148,7 @@ class Gallery(commands.Cog):
                             fileurl = url_candidate
                             filename = str(test_post['id']) + '.' + file_ext
                             parsed_posts.append({
-                                'id': str(test_post['id']),
+                                'id': test_post['id'],
                                 'ext': file_ext,
                                 'filename': filename,
                                 'path': os.path.join(file_cache_dir, filename),
@@ -165,12 +165,12 @@ class Gallery(commands.Cog):
             hash_method = imagehash.phash
             ground_truth = parsed_posts[0]
             ground_truth['hash'] = hash_method(Image.open(ground_truth['path']))
-            print(ground_truth['id'] + ': ' + str(ground_truth['hash']) + ' (ground truth)')
+            print(str(ground_truth['id']) + ': ' + str(ground_truth['hash']) + ' (ground truth)')
             for parsed_post in parsed_posts[1:]:
                 parsed_post['hash'] = hash_method(Image.open(parsed_post['path']))
                 hash_diff = ground_truth['hash'] - parsed_post['hash']
 
-                print(parsed_post['id'] + ': ' + str(parsed_post['hash']))
+                print(str(parsed_post['id']) + ': ' + str(parsed_post['hash']))
                 if hash_diff == 0:
                     print('Difference: ' + str(hash_diff) + ' (identical)')
                 else:

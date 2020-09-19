@@ -131,7 +131,7 @@ class Gallery(commands.Cog):
                 nsfw_culled = True
 
         parsed_posts = []
-        if board in ['danbooru', 'e621']:
+        if board == 'danbooru':
             file_cache_dir = os.path.join(CACHE_DIR, board, 'files')
             os.makedirs(file_cache_dir, exist_ok=True)
 
@@ -142,11 +142,7 @@ class Gallery(commands.Cog):
                 should_cache = True
                 for res_key in self.bot.assets[board]['post_quality']:
                     if res_key in test_post:
-                        if board == 'e621':
-                            url_candidate = test_post[res_key]['url']
-                        else:
-                            url_candidate = test_post[res_key]
-
+                        url_candidate = test_post[res_key]
                         file_ext = utils.net.get_url_fileext(url_candidate)
                         if file_ext in ['png', 'jpg', 'webp']:
                             file_url = url_candidate

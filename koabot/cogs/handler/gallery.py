@@ -3,11 +3,14 @@ import os
 import random
 import shutil
 import typing
+from pathlib import Path
 
 import discord
+import imagehash
 import pixivpy3
 import tweepy
 from discord.ext import commands
+from PIL import Image
 
 import koabot.koakuma as koakuma
 import koabot.utils as utils
@@ -27,13 +30,20 @@ class Gallery(commands.Cog):
 
     async def display_static(self, channel, msg, url, **kwargs):
         """Display posts from a gallery in separate unmodifiable embeds
+        Arguments:
+            channel::discord.TextChannel
+                Channel the message is in
+            msg::discord.Message
+                Message sent by the author
+            url::str
+                Url to get a gallery from
         Keywords:
             board::str
-                The board to handle. Default is 'danbooru'
+                Name of the board to handle. Default is 'danbooru'
             id_start::str
-                The point at which an url is stripped from
+                The point at which an url's id is stripped from
             id_end::str
-                The point at which an url is stripped to
+                The point at which an url's id is stripped to
             end_regex::bool
                 Whether or not id_end is regex. Default is False
         """
@@ -43,24 +53,27 @@ class Gallery(commands.Cog):
         id_end = kwargs.get('id_end')
         end_regex = kwargs.get('end_regex', False)
 
-        on_nsfw_channel = channel.is_nsfw()
         post_id = utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
         if not post_id:
             return
 
-        bot_cog = self.bot.get_cog('BotStatus')
         board_cog = self.bot.get_cog('Board')
-
         post = (await board_cog.search_query(board=board, post_id=post_id)).json
 
         if not post:
             return
 
+        # e621 fix for broken API
         if 'post' in post:
             post = post['post']
 
-        if post['rating'] is not 's' and not on_nsfw_channel:
+        bot_cog = self.bot.get_cog('BotStatus')
+        on_nsfw_channel = channel.is_nsfw()
+        first_post_missing_preview = utils.posts.post_is_missing_preview(post, board=board)
+        posts = []
+
+        if post['rating'] != 's' and not on_nsfw_channel:
             embed = discord.Embed()
             if 'nsfw_placeholder' in self.bot.assets[board]:
                 embed.set_image(url=self.bot.assets[board]['nsfw_placeholder'])
@@ -68,68 +81,140 @@ class Gallery(commands.Cog):
                 embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
             content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
-
             await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
-        single_post = False
         if board == 'e621':
-            if post['relationships']['has_active_children']:
-                search = f"parent:{post['id']} order:id"
-            elif post['relationships']['parent_id']:
-                search = [
-                    f"id:{post['relationships']['parent_id']}",
-                    f"parent:{post['relationships']['parent_id']} order:id -id:{post['id']}"
-                ]
-            else:
-                single_post = True
+            has_children = post['relationships']['has_active_children']
+            has_parent = post['relationships']['parent_id']
+            c_search = f"parent:{post['id']} order:id"
+            p_search = [
+                f"id:{post['relationships']['parent_id']}",
+                f"parent:{post['relationships']['parent_id']} order:id -id:{post['id']}"
+            ]
         else:
-            if post['has_children']:
-                search = f"parent:{post['id']} order:id -id:{post['id']}"
-            elif post['parent_id']:
-                search = f"parent:{post['parent_id']} order:id -id:{post['id']}"
-            else:
-                single_post = True
+            has_children = post['has_children']
+            has_parent = post['parent_id']
+            c_search = f"parent:{post['id']} order:id -id:{post['id']}"
+            p_search = f"parent:{post['parent_id']} order:id -id:{post['id']}"
 
-        if single_post:
-            if utils.posts.post_is_missing_preview(post, board=board):
-                if post['rating'] is 's' or on_nsfw_channel:
+        if has_children:
+            search = c_search
+        elif has_parent:
+            search = p_search
+        else:
+            if first_post_missing_preview:
+                if post['rating'] == 's' or on_nsfw_channel:
                     await board_cog.send_posts(channel, post, board=board)
             return
 
-        # If there's multiple searches, put them all in the posts list
-        if isinstance(search, typing.List):
-            posts = []
-            for query in search:
-                results = (await board_cog.search_query(board=board, tags=query, include_nsfw=on_nsfw_channel)).json
-                posts.extend(results['posts'])
-        else:
-            posts = (await board_cog.search_query(board=board, tags=search, include_nsfw=on_nsfw_channel)).json
+        if isinstance(search, str):
+            search = [search]
 
-        # e621 fix for broken API
-        if 'posts' in posts:
-            posts = posts['posts']
+        for s in search:
+            results = (await board_cog.search_query(board=board, tags=s, include_nsfw=on_nsfw_channel)).json
+
+            # e621 fix for broken API
+            if 'posts' in results:
+                results = results['posts']
+
+            posts.extend(results)
 
         # Rudimentary fix when NSFW results are returned and it's a safe channel (should actually revert at some point)
         # Ought to respect the choice to display posts anyway but without thumbnail
+        nsfw_culled = False
         if not on_nsfw_channel:
             # filters all safe results into the posts variable
-            posts = [post for post in posts if post['rating'] is 's']
+            total_posts_count = len(posts)
+            posts = [post for post in posts if post['rating'] == 's']
 
-        post_included_in_results = False
-        if utils.posts.post_is_missing_preview(post, board=board) and posts:
-            if post['rating'] is 's' or on_nsfw_channel:
-                post_included_in_results = True
-                post = [post]
-                post.extend(posts)
-                posts = post
+            if len(posts) != total_posts_count:
+                nsfw_culled = True
+
+        parsed_posts = []
+        if board in ['danbooru', 'e621']:
+            file_cache_dir = os.path.join(CACHE_DIR, board, 'files')
+            os.makedirs(file_cache_dir, exist_ok=True)
+
+            test_posts = [post]
+            test_posts.extend(posts)
+
+            for test_post in test_posts:
+                should_cache = True
+                for res_key in self.bot.assets[board]['post_quality']:
+                    if res_key in test_post:
+                        if board == 'e621':
+                            url_candidate = test_post[res_key]['url']
+                        else:
+                            url_candidate = test_post[res_key]
+
+                        file_ext = utils.net.get_url_fileext(url_candidate)
+                        if file_ext in ['png', 'jpg', 'webp']:
+                            file_url = url_candidate
+                            file_name = str(test_post['id']) + '.' + file_ext
+                            file_path = os.path.join(file_cache_dir, file_name)
+
+                            # TODO Add a hash check to verify if they should be redownloaded?
+                            if os.path.isfile(file_path):
+                                should_cache = False
+                                Path(file_path).touch()
+
+                            parsed_posts.append({
+                                'id': test_post['id'],
+                                'ext': file_ext,
+                                'file_name': file_name,
+                                'path': file_path,
+                                'hash': [],
+                                'score': []
+                            })
+                            break
+
+                if should_cache:
+                    print(f"Caching post #{test_post['id']}...")
+                    image_bytes = await utils.net.fetch_image(file_url)
+                    with open(os.path.join(file_cache_dir, file_name), 'wb') as image_file:
+                        shutil.copyfileobj(image_bytes, image_file)
+                else:
+                    print(f"Post #{test_post['id']} is already cached.")
+
+            print('Evaluating images...')
+
+            ground_truth = parsed_posts[0]
+            for hash_func in [imagehash.phash, imagehash.dhash, imagehash.average_hash, imagehash.colorhash]:
+                if hash_func == imagehash.colorhash:
+                    ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), binbits=6))
+                else:
+                    ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), hash_size=16))
+
+                for parsed_post in parsed_posts[1:]:
+                    if hash_func == imagehash.colorhash:
+                        parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), binbits=6))
+                    else:
+                        parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), hash_size=16))
+
+                    hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - parsed_post['hash'][len(parsed_post['hash']) - 1]
+                    parsed_post['score'].append(hash_diff)
+
+            print(f"Scores for post #{post['id']}")
+
+            for parsed_post in parsed_posts[1:]:
+                print('#' + str(parsed_post['id']), parsed_post['score'])
+                if sum(parsed_post['score']) <= 10:
+                    posts = posts[1:]
+
+        if first_post_missing_preview:
+            if post['rating'] == 's' or on_nsfw_channel:
+                posts.insert(0, post)
 
         if posts:
-            if post_included_in_results:
+            if first_post_missing_preview:
                 await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
             else:
                 await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
         else:
-            if post['rating'] is 's':
+            if post['rating'] == 's' and not nsfw_culled:
+                print('Removed all duplicates')
+                return
+            elif post['rating'] == 's':
                 content = random.choice(self.bot.quotes['cannot_show_nsfw_gallery'])
             else:
                 content = random.choice(self.bot.quotes['rude_cannot_show_nsfw_gallery'])
@@ -279,6 +364,8 @@ class Gallery(commands.Cog):
         print('DONE PIXIV!')
 
     def reauthenticate_pixiv(self):
+        """Fetch and cache the refresh token"""
+
         pixiv_cache_dir = os.path.join(CACHE_DIR, 'pixiv')
         token_filename = 'refresh_token'
         token_path = os.path.join(pixiv_cache_dir, token_filename)

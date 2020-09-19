@@ -153,6 +153,7 @@ class Gallery(commands.Cog):
                             file_path = os.path.join(file_cache_dir, file_name)
 
                             # TODO Add a hash check to verify if they should be redownloaded?
+                            # TODO Touch cached file if it exists
                             if os.path.isfile(file_path):
                                 should_cache = False
 
@@ -161,7 +162,8 @@ class Gallery(commands.Cog):
                                 'ext': file_ext,
                                 'file_name': file_name,
                                 'path': file_path,
-                                'hash': None
+                                'hash': [],
+                                'score': []
                             })
                             break
 
@@ -173,21 +175,33 @@ class Gallery(commands.Cog):
                 else:
                     print(f"Post #{test_post['id']} is already cached.")
 
-            hash_method = imagehash.phash
             ground_truth = parsed_posts[0]
-            ground_truth['hash'] = hash_method(Image.open(ground_truth['path']))
-
-            print(str(ground_truth['id']) + ': ' + str(ground_truth['hash']) + ' (ground truth)')
-            for parsed_post in parsed_posts[1:]:
-                parsed_post['hash'] = hash_method(Image.open(parsed_post['path']))
-                hash_diff = ground_truth['hash'] - parsed_post['hash']
-
-                print(str(parsed_post['id']) + ': ' + str(parsed_post['hash']))
-                if hash_diff == 0:
-                    print('Difference: ' + str(hash_diff) + ' (identical)')
-                    posts = posts[1:]
+            for hash_func in [imagehash.phash, imagehash.dhash, imagehash.average_hash, imagehash.colorhash]:
+                if hash_func == imagehash.colorhash:
+                    ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), binbits=6))
                 else:
-                    print('Difference: ' + str(hash_diff))
+                    ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), hash_size=16))
+
+                print(str(ground_truth['id']) + ': ' + str(ground_truth['hash'][len(ground_truth['hash']) - 1]) + ' (ground truth)')
+                for parsed_post in parsed_posts[1:]:
+                    if hash_func == imagehash.colorhash:
+                        parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), binbits=6))
+                    else:
+                        parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), hash_size=16))
+
+                    hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - parsed_post['hash'][len(parsed_post['hash']) - 1]
+                    parsed_post['score'].append(hash_diff)
+
+                    print(str(parsed_post['id']) + ': ' + str(parsed_post['hash'][len(parsed_post['hash']) - 1]))
+                    if hash_diff == 0:
+                        print('Difference: ' + str(hash_diff) + ' (identical)')
+                    else:
+                        print('Difference: ' + str(hash_diff))
+
+            for parsed_post in parsed_posts[1:]:
+                print(parsed_post['id'], parsed_post['score'])
+                if sum(parsed_post['score']) <= 10:
+                    posts = posts[1:]
 
         if first_post_missing_preview:
             if post['rating'] == 's' or on_nsfw_channel:

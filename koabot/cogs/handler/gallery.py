@@ -63,12 +63,14 @@ class Gallery(commands.Cog):
         if not post:
             return
 
-        bot_cog = self.bot.get_cog('BotStatus')
-        on_nsfw_channel = channel.is_nsfw()
-
         # e621 fix for broken API
         if 'post' in post:
             post = post['post']
+
+        bot_cog = self.bot.get_cog('BotStatus')
+        on_nsfw_channel = channel.is_nsfw()
+        first_post_missing_preview = utils.posts.post_is_missing_preview(post, board=board)
+        posts = []
 
         if post['rating'] != 's' and not on_nsfw_channel:
             embed = discord.Embed()
@@ -78,7 +80,6 @@ class Gallery(commands.Cog):
                 embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
             content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
-
             await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
         if board == 'e621':
@@ -100,39 +101,36 @@ class Gallery(commands.Cog):
         elif has_parent:
             search = p_search
         else:
-            if utils.posts.post_is_missing_preview(post, board=board):
+            if first_post_missing_preview:
                 if post['rating'] == 's' or on_nsfw_channel:
                     await board_cog.send_posts(channel, post, board=board)
             return
 
-        # If there's multiple searches, put them all in the posts list
-        if isinstance(search, typing.List):
-            posts = []
-            for query in search:
-                results = (await board_cog.search_query(board=board, tags=query, include_nsfw=on_nsfw_channel)).json
-                posts.extend(results['posts'])
-        else:
-            posts = (await board_cog.search_query(board=board, tags=search, include_nsfw=on_nsfw_channel)).json
+        if isinstance(search, str):
+            search = [search]
 
-        # e621 fix for broken API
-        if 'posts' in posts:
-            posts = posts['posts']
+        for s in search:
+            results = (await board_cog.search_query(board=board, tags=s, include_nsfw=on_nsfw_channel)).json
+
+            # e621 fix for broken API
+            if 'posts' in results:
+                results = results['posts']
+
+            posts.extend(results)
 
         # Rudimentary fix when NSFW results are returned and it's a safe channel (should actually revert at some point)
         # Ought to respect the choice to display posts anyway but without thumbnail
+        nsfw_culled = False
         if not on_nsfw_channel:
             # filters all safe results into the posts variable
+            total_posts_count = len(posts)
             posts = [post for post in posts if post['rating'] == 's']
 
-        post_included_in_results = False
-        if utils.posts.post_is_missing_preview(post, board=board) and posts:
-            if post['rating'] == 's' or on_nsfw_channel:
-                post_included_in_results = True
-                posts.insert(0, post)
+            if len(posts) != total_posts_count:
+                nsfw_culled = True
 
-        # Check for duplicates
         parsed_posts = []
-        if board == 'danbooru' or board == 'e621':
+        if board in ['danbooru', 'e621']:
             file_cache_dir = os.path.join(CACHE_DIR, board, 'files')
             os.makedirs(file_cache_dir, exist_ok=True)
 
@@ -140,6 +138,7 @@ class Gallery(commands.Cog):
             test_posts.extend(posts)
 
             for test_post in test_posts:
+                should_cache = True
                 for res_key in self.bot.assets[board]['post_quality']:
                     if res_key in test_post:
                         if board == 'e621':
@@ -151,19 +150,28 @@ class Gallery(commands.Cog):
                         if file_ext in ['png', 'jpg', 'webp']:
                             file_url = url_candidate
                             file_name = str(test_post['id']) + '.' + file_ext
+                            file_path = os.path.join(file_cache_dir, file_name)
+
+                            # TODO Add a hash check to verify if they should be redownloaded?
+                            if os.path.isfile(file_path):
+                                should_cache = False
+
                             parsed_posts.append({
                                 'id': test_post['id'],
                                 'ext': file_ext,
                                 'file_name': file_name,
-                                'path': os.path.join(file_cache_dir, file_name),
+                                'path': file_path,
                                 'hash': None
                             })
                             break
 
-                print(f"Caching post #{test_post['id']}...")
-                image_bytes = await utils.net.fetch_image(file_url)
-                with open(os.path.join(file_cache_dir, file_name), 'wb') as image_file:
-                    shutil.copyfileobj(image_bytes, image_file)
+                if should_cache:
+                    print(f"Caching post #{test_post['id']}...")
+                    image_bytes = await utils.net.fetch_image(file_url)
+                    with open(os.path.join(file_cache_dir, file_name), 'wb') as image_file:
+                        shutil.copyfileobj(image_bytes, image_file)
+                else:
+                    print(f"Post #{test_post['id']} is already cached.")
 
             hash_method = imagehash.phash
             ground_truth = parsed_posts[0]
@@ -177,16 +185,24 @@ class Gallery(commands.Cog):
                 print(str(parsed_post['id']) + ': ' + str(parsed_post['hash']))
                 if hash_diff == 0:
                     print('Difference: ' + str(hash_diff) + ' (identical)')
+                    posts = posts[1:]
                 else:
                     print('Difference: ' + str(hash_diff))
 
+        if first_post_missing_preview:
+            if post['rating'] == 's' or on_nsfw_channel:
+                posts.insert(0, post)
+
         if posts:
-            if post_included_in_results:
+            if first_post_missing_preview:
                 await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
             else:
                 await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
         else:
-            if post['rating'] == 's':
+            if post['rating'] == 's' and not nsfw_culled:
+                print('Removed all duplicates')
+                return
+            elif post['rating'] == 's':
                 content = random.choice(self.bot.quotes['cannot_show_nsfw_gallery'])
             else:
                 content = random.choice(self.bot.quotes['rude_cannot_show_nsfw_gallery'])

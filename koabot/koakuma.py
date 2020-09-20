@@ -133,13 +133,17 @@ def start(debugging=False):
     ]
 
     for filename in data_filenames:
-        with open(os.path.join(CONFIG_DIR, filename)) as json_file:
-            bot_data.update(commentjson.load(json_file))
+        try:
+            with open(os.path.join(CONFIG_DIR, filename)) as json_file:
+                bot_data.update(commentjson.load(json_file))
+        except FileNotFoundError as e:
+            print(e)
 
     bot.__dict__.update(bot_data)
 
     print('Connecting to database...')
     start_load_time = timeit.default_timer()
+
     try:
         bot.sqlite_conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbBeta.sqlite3'))
 

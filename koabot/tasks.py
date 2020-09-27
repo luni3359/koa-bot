@@ -137,7 +137,7 @@ async def lookup_pending_posts():
         for post in posts:
             if not post['id'] in pending_posts:
                 pending_posts.append(post['id'])
-                url_to_append = f"https://danbooru.donmai.us/posts/{post['id']}"
+                url_to_append = koakuma.bot.assets['danbooru']['search_url'].format(post['id'])
 
                 if post['rating'] == 's':
                     safe_posts.append(url_to_append)

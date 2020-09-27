@@ -361,7 +361,6 @@ class Gallery(commands.Cog):
 
     def reauthenticate_pixiv(self):
         """Fetch and cache the refresh token"""
-
         pixiv_cache_dir = os.path.join(CACHE_DIR, 'pixiv')
         token_filename = 'refresh_token'
         token_path = os.path.join(pixiv_cache_dir, token_filename)
@@ -379,6 +378,30 @@ class Gallery(commands.Cog):
             os.makedirs(pixiv_cache_dir, exist_ok=True)
             with open(token_path, 'w') as token_file:
                 token_file.write(self.pixiv_api.refresh_token)
+
+    async def generate_pixiv_embed(self, post, user):
+        """Generate embeds for pixiv urls
+        Arguments:
+            post
+                The post object
+            user
+                The artist of the post
+        Returns:
+            embed::discord.Embed
+                Embed object
+            image_filename::str
+                Image filename, extension included
+        """
+
+        img_url = post.image_urls.medium
+        image_filename = utils.net.get_url_filename(img_url)
+
+        embed = discord.Embed()
+        embed.set_author(
+            name=user.name,
+            url=f'https://www.pixiv.net/member.php?id={user.id}')
+        embed.set_image(url=f'attachment://{image_filename}')
+        return embed, img_url, image_filename
 
     async def get_sankaku_post(self, msg, url):
         """Automatically fetch a bigger preview from Sankaku Complex"""
@@ -499,29 +522,6 @@ class Gallery(commands.Cog):
                     icon_url=self.bot.assets['imgur']['favicon']['size32'])
 
             await channel.send(embed=embed)
-
-
-async def generate_pixiv_embed(post, user):
-    """Generate embeds for pixiv urls
-    Arguments:
-        post
-            The post object
-        user
-            The artist of the post
-    Returns:
-        embed::discord.Embed
-        image_filename::str
-    """
-
-    img_url = post.image_urls.medium
-    image_filename = utils.net.get_url_filename(img_url)
-
-    embed = discord.Embed()
-    embed.set_author(
-        name=user.name,
-        url=f'https://www.pixiv.net/member.php?id={user.id}')
-    embed.set_image(url=f'attachment://{image_filename}')
-    return embed, img_url, image_filename
 
 
 def setup(bot: commands.Bot):

@@ -320,7 +320,7 @@ class Gallery(commands.Cog):
             for i, picture in enumerate(pictures[:total_to_preview]):
                 print(f'Retrieving picture from #{post_id}...')
 
-                (embed, url, filename) = await generate_pixiv_embed(picture, illust.user)
+                (embed, url, filename) = await self.generate_pixiv_embed(picture, illust.user)
                 print(f'Retrieved more from #{post_id} (maybe)')
 
                 # create if pixiv cache directory if it doesn't exist

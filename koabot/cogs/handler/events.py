@@ -23,7 +23,10 @@ class BotEvents(commands.Cog):
         self.valid_urls = []
         for group, contents in self.bot.url_matches.items():
             for match in contents:
-                self.valid_urls.append({'group': group, 'url': match['url'], 'action': match['action']})
+                url_pattern = match['url']
+                url_pattern = url_pattern.replace('.', '\.')
+                url_pattern = url_pattern.replace('*', '(.*?)')
+                self.valid_urls.append({'group': group, 'url': url_pattern, 'action': match['action']})
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -111,7 +114,7 @@ class BotEvents(commands.Cog):
         for url_match in url_matches_found:
             for valid_url in self.valid_urls:
                 group = valid_url['group']
-                url = valid_url['url']
+                url_pattern = valid_url['url']
                 actions = valid_url['action']
 
                 # ignore rules from repeated groups
@@ -119,7 +122,7 @@ class BotEvents(commands.Cog):
                     continue
 
                 # match() matches only from the start of the string
-                if re.compile(url).match(url_match['fqdn']):
+                if not re.match(url_pattern, url_match['fqdn']):
                     continue
 
                 for action in actions:
@@ -142,6 +145,7 @@ class BotEvents(commands.Cog):
                         if picarto_preview_shown and msg.content[0] == '!':
                             await msg.delete()
 
+                # done with this url
                 break
 
         if self.bot.last_channel != channel.id or url_matches_found or msg.attachments:

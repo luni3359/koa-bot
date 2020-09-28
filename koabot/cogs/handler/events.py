@@ -1,11 +1,11 @@
 """Bot events"""
 import random
+import re
 from datetime import datetime
 
 import discord
 import tldextract
 from discord.ext import commands
-
 from koabot.patterns import URL_PATTERN
 
 
@@ -118,7 +118,8 @@ class BotEvents(commands.Cog):
                 if group in expended_groups:
                     continue
 
-                if url_match['fqdn'] != url:
+                # match() matches only from the start of the string
+                if re.compile(url).match(url_match['fqdn']):
                     continue
 
                 for action in actions:
@@ -141,7 +142,7 @@ class BotEvents(commands.Cog):
                         if picarto_preview_shown and msg.content[0] == '!':
                             await msg.delete()
 
-                    break
+                break
 
         if self.bot.last_channel != channel.id or url_matches_found or msg.attachments:
             self.bot.last_channel = channel.id

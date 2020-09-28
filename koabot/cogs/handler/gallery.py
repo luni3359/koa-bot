@@ -318,10 +318,9 @@ class Gallery(commands.Cog):
 
             total_to_preview = 5
             for i, picture in enumerate(pictures[:total_to_preview]):
-                print(f'Retrieving picture from #{post_id}...')
+                print(f'Retrieving picture #{post_id}...')
 
                 (embed, url, filename) = await self.generate_pixiv_embed(picture, illust.user)
-                print(f'Retrieved more from #{post_id} (maybe)')
 
                 # create if pixiv cache directory if it doesn't exist
                 file_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'files')

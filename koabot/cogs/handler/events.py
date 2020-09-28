@@ -20,6 +20,11 @@ class BotEvents(commands.Cog):
         self.bot.last_channel_message_count = 0
         self.bot.last_channel_warned = False
 
+        self.valid_urls = []
+        for group, contents in self.bot.url_matches.items():
+            for match in contents:
+                self.valid_urls.append({'group': group, 'url': match['url'], 'action': match['action']})
+
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         """Make the embeds created by the bot unsuppressable"""
@@ -79,19 +84,22 @@ class BotEvents(commands.Cog):
             origin_embed.description = f'Mention by {msg.author.mention} to {mentioned_channel.mention}\n\n[Click to go there]({target_channel_msg.jump_url})'
             await channel.send(embed=origin_embed)
 
-        url_matches = []
+        url_matches_found = []
         escaped_url = False
         i = 0
         while i < len(msg.content):
+            # check for urls, ignoring those with escaped embeds
             if msg.content[i] == '<':
                 escaped_url = True
                 i += 1
                 continue
 
             url_match = URL_PATTERN.match(msg.content, i)
+            # TODO Soon... in Python 3.8
+            # if (url_match := URL_PATTERN.match(msg.content, i)):
             if url_match:
                 if not escaped_url or url_match.end() >= len(msg.content) or url_match.end() < len(msg.content) and msg.content[url_match.end()] != '>':
-                    url_matches.append(url_match.group())
+                    url_matches_found.append({'full_url': url_match.group(), 'fqdn': tldextract.extract(url_match.group()).fqdn})
 
                 i = url_match.end()
                 continue
@@ -99,25 +107,35 @@ class BotEvents(commands.Cog):
             escaped_url = False
             i += 1
 
-        for url in url_matches:
-            for domain_name, asset in self.bot.assets.items():
-                url_domain_name = tldextract.extract(url).fqdn
-                if 'domain' in self.bot.assets[domain_name] and asset['domain'] == url_domain_name and 'type' in asset:
-                    if asset['type'] == 'gallery':
+        for url_match in url_matches_found:
+            for valid_url in self.valid_urls:
+                group = valid_url['group']
+                url = valid_url['url']
+                actions = valid_url['action']
+
+                if url_match['fqdn'] != url:
+                    continue
+
+                for action in actions:
+                    action_type = action['type']
+                    action_task = action['task']
+
+                    if not self.bot.actions[action_type][action_task]:
+                        raise ValueError('Undefined action.')
+
+                    full_url = url_match['full_url']
+
+                    if action_type == 'gallery':
                         imageboard_cog = self.bot.get_cog('ImageBoard')
-
-                        await imageboard_cog.show_gallery(msg, url, board=domain_name)
-                    elif asset['type'] == 'stream' and domain_name == 'picarto':
+                        await imageboard_cog.show_gallery(msg, full_url, board=group)
+                    elif action_type == 'stream' and group == 'picarto':
                         streams_cog = self.bot.get_cog('StreamService')
+                        picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url)
 
-                        picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, url)
                         if picarto_preview_shown and msg.content[0] == '!':
                             await msg.delete()
 
-                    # found a match, no need to keep testing
-                    break
-
-        if self.bot.last_channel != channel.id or url_matches or msg.attachments:
+        if self.bot.last_channel != channel.id or url_matches_found or msg.attachments:
             self.bot.last_channel = channel.id
             self.bot.last_channel_message_count = 0
         else:

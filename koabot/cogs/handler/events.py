@@ -107,23 +107,29 @@ class BotEvents(commands.Cog):
             escaped_url = False
             i += 1
 
+        expended_groups = []
         for url_match in url_matches_found:
             for valid_url in self.valid_urls:
                 group = valid_url['group']
                 url = valid_url['url']
                 actions = valid_url['action']
 
+                # ignore rules from repeated groups
+                if group in expended_groups:
+                    continue
+
                 if url_match['fqdn'] != url:
                     continue
 
                 for action in actions:
                     action_type = action['type']
-                    action_task = action['task']
+                    action_name = action['name']
 
-                    if not self.bot.actions[action_type][action_task]:
+                    if not self.bot.actions[action_type][action_name]:
                         raise ValueError('Undefined action.')
 
                     full_url = url_match['full_url']
+                    expended_groups.append(group)
 
                     if action_type == 'gallery':
                         imageboard_cog = self.bot.get_cog('ImageBoard')
@@ -134,6 +140,8 @@ class BotEvents(commands.Cog):
 
                         if picarto_preview_shown and msg.content[0] == '!':
                             await msg.delete()
+
+                    break
 
         if self.bot.last_channel != channel.id or url_matches_found or msg.attachments:
             self.bot.last_channel = channel.id

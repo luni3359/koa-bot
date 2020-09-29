@@ -1,4 +1,5 @@
 """Bot events"""
+import copy
 import random
 import re
 from datetime import datetime
@@ -27,6 +28,23 @@ class BotEvents(commands.Cog):
                 url_pattern = url_pattern.replace('.', '\.')
                 url_pattern = url_pattern.replace('*', '(.*?)')
                 self.valid_urls.append({'group': group, 'url': url_pattern, 'action': match['action']})
+
+        for action_type, v in self.bot.actions.items():
+            for action_name, action_content in v.items():
+                if 'inherits' not in action_content:
+                    continue
+
+                action_to_inherit = action_content['inherits'].split('/')
+
+                if len(action_to_inherit) > 1:
+                    target_action = self.bot.actions[action_to_inherit[0]][action_to_inherit[1]]
+                else:
+                    target_action = self.bot.actions[action_type][action_to_inherit[0]]
+
+                source_action = self.bot.actions[action_type][action_name]
+                source_action_copy = copy.deepcopy(source_action)
+                source_action.update(target_action)
+                source_action.update(source_action_copy)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):

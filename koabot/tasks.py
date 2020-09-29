@@ -135,9 +135,10 @@ async def lookup_pending_posts():
         safe_posts = []
         nsfw_posts = []
         for post in posts:
-            if not post['id'] in pending_posts:
-                pending_posts.append(post['id'])
-                url_to_append = koakuma.bot.assets['danbooru']['search_url'].format(post['id'])
+            post_id = post['id']
+            if not post_id in pending_posts:
+                pending_posts.append(post_id)
+                url_to_append = koakuma.bot.assets['danbooru']['search_url'].format(post_id)
 
                 if post['rating'] == 's':
                     safe_posts.append(url_to_append)

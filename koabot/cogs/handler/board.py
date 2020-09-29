@@ -178,7 +178,8 @@ class Board(commands.Cog):
 
         for post in posts:
             posts_processed += 1
-            print(f"Parsing post #{post['id']} ({posts_processed}/{min(total_posts, max_posts)})...")
+            post_id = post['id']
+            print(f'Parsing post #{post_id} ({posts_processed}/{min(total_posts, max_posts)})...')
 
             embed = self.generate_embed(post, board=board, guide=guide)
 
@@ -218,7 +219,7 @@ class Board(commands.Cog):
                 else:
                     raise ValueError('Board embed send not configured.')
 
-            print(f"Post #{post['id']} complete")
+            print(f'Post #{post_id} complete')
 
     def generate_embed(self, post, **kwargs):
         """Generate embeds for image board post urls

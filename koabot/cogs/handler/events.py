@@ -1,5 +1,4 @@
 """Bot events"""
-import copy
 import random
 import re
 from datetime import datetime
@@ -8,6 +7,7 @@ import discord
 import tldextract
 from discord.ext import commands
 from koabot.patterns import URL_PATTERN
+from mergedeep import merge
 
 
 class BotEvents(commands.Cog):
@@ -35,16 +35,14 @@ class BotEvents(commands.Cog):
                     continue
 
                 action_to_inherit = action_content['inherits'].split('/')
+                source_action = self.bot.actions[action_type][action_name]
 
                 if len(action_to_inherit) > 1:
                     target_action = self.bot.actions[action_to_inherit[0]][action_to_inherit[1]]
                 else:
                     target_action = self.bot.actions[action_type][action_to_inherit[0]]
 
-                source_action = self.bot.actions[action_type][action_name]
-                source_action_copy = copy.deepcopy(source_action)
-                source_action.update(target_action)
-                source_action.update(source_action_copy)
+                source_action.update(merge(target_action, source_action))
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):

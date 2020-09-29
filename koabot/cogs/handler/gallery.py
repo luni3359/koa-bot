@@ -189,15 +189,14 @@ class Gallery(commands.Cog):
             ground_truth = parsed_posts[0]
             for hash_func in [imagehash.phash, imagehash.dhash, imagehash.average_hash, imagehash.colorhash]:
                 if hash_func == imagehash.colorhash:
-                    ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), binbits=6))
+                    hash_param = {'binbits': 6}
                 else:
-                    ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), hash_size=16))
+                    hash_param = {'hash_size': 16}
+
+                ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), **hash_param))
 
                 for parsed_post in parsed_posts[1:]:
-                    if hash_func == imagehash.colorhash:
-                        parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), binbits=6))
-                    else:
-                        parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), hash_size=16))
+                    parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), **hash_param))
 
                     hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - parsed_post['hash'][len(parsed_post['hash']) - 1]
                     parsed_post['score'].append(hash_diff)
@@ -214,7 +213,6 @@ class Gallery(commands.Cog):
                 posts.insert(0, post)
 
         if posts:
-
             if first_post_missing_preview:
                 await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel, max_posts=5)
             else:

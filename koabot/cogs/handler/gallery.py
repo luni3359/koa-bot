@@ -68,7 +68,8 @@ class Gallery(commands.Cog):
             return
 
         board_cog = self.bot.get_cog('Board')
-        post = (await board_cog.search_query(board=board, post_id=post_id)).json
+
+        post = (await board_cog.search_query(board=board, guide=guide, post_id=post_id)).json
 
         if not post:
             return
@@ -101,6 +102,7 @@ class Gallery(commands.Cog):
                 f"parent:{post['relationships']['parent_id']} order:id -id:{post['id']}"
             ]
         else:
+<<<<<<< HEAD
             has_children = post['has_children']
             has_parent = post['parent_id']
             c_search = f"parent:{post['id']} order:id -id:{post['id']}"
@@ -118,6 +120,29 @@ class Gallery(commands.Cog):
 
         if isinstance(search, str):
             search = [search]
+=======
+            if post['has_children']:
+                search = f"parent:{post['id']} order:id -id:{post['id']}"
+            elif post['parent_id']:
+                search = f"parent:{post['parent_id']} order:id -id:{post['id']}"
+            else:
+                single_post = True
+
+        if single_post:
+            if utils.posts.post_is_missing_preview(post, board=board):
+                if post['rating'] is 's' or on_nsfw_channel:
+                    await board_cog.send_posts(channel, post, board=board, guide=guide)
+            return
+
+        # If there's multiple searches, put them all in the posts list
+        if isinstance(search, typing.List):
+            posts = []
+            for query in search:
+                results = (await board_cog.search_query(board=board, guide=guide, tags=query, include_nsfw=on_nsfw_channel)).json
+                posts.extend(results['posts'])
+        else:
+            posts = (await board_cog.search_query(board=board, guide=guide, tags=search, include_nsfw=on_nsfw_channel)).json
+>>>>>>> Add missing guide references
 
         for s in search:
             results = (await board_cog.search_query(board=board, tags=s, include_nsfw=on_nsfw_channel)).json
@@ -211,10 +236,15 @@ class Gallery(commands.Cog):
                 posts.insert(0, post)
 
         if posts:
+<<<<<<< HEAD
             if first_post_missing_preview:
                 await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
+=======
+            if post_included_in_results:
+                await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel, max_posts=5)
+>>>>>>> Add missing guide references
             else:
-                await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
+                await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
         else:
             if post['rating'] == 's' and not nsfw_culled:
                 print('Removed all duplicates')

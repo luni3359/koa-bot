@@ -127,16 +127,12 @@ class BotEvents(commands.Cog):
             escaped_url = False
             i += 1
 
-        expended_groups = []
+        gallery = []
         for url_match in url_matches_found:
             for valid_url in self.valid_urls:
                 group = valid_url['group']
                 url_pattern = valid_url['url']
                 guides = valid_url['guide']
-
-                # ignore rules from repeated groups
-                if group in expended_groups:
-                    continue
 
                 # match() matches only from the start of the string
                 if not re.match(url_pattern, url_match['fqdn']):
@@ -153,11 +149,9 @@ class BotEvents(commands.Cog):
                         continue
 
                     full_url = url_match['full_url']
-                    expended_groups.append(group)
 
                     if guide_type == 'gallery':
-                        imageboard_cog = self.bot.get_cog('ImageBoard')
-                        await imageboard_cog.show_gallery(msg, full_url, board=group, guide=guide_content)
+                        gallery.append({'url': full_url, 'board': group, 'guide': guide_content})
                     elif guide_type == 'stream' and group == 'picarto':
                         streams_cog = self.bot.get_cog('StreamService')
                         picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url)
@@ -167,6 +161,12 @@ class BotEvents(commands.Cog):
 
                 # done with this url
                 break
+
+        # post gallery only if there's one to show
+        if len(gallery) == 1:
+            gallery = gallery[0]
+            imageboard_cog = self.bot.get_cog('ImageBoard')
+            await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'])
 
         if self.bot.last_channel != channel.id or url_matches_found or msg.attachments:
             self.bot.last_channel = channel.id

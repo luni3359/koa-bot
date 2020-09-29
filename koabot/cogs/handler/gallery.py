@@ -256,12 +256,20 @@ class Gallery(commands.Cog):
 
             await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
-    async def get_twitter_gallery(self, msg, url):
-        """Automatically fetch and post any image galleries from twitter"""
+    async def get_twitter_gallery(self, msg, url, **kwargs):
+        """Automatically fetch and post any image galleries from twitter
+        Keywords:
+            guide::dict
+                The data which holds the board information
+        """
 
         channel = msg.channel
+        guide = kwargs.get('guide', self.bot.guides['gallery']['twitter-gallery'])
 
-        post_id = utils.posts.get_post_id(url, '/status/', '?')
+        id_start = guide['post']['id_start']
+        id_end = guide['post']['id_end']
+
+        post_id = utils.posts.get_post_id(url, id_start, id_end)
         if not post_id:
             return
 
@@ -286,14 +294,14 @@ class Gallery(commands.Cog):
             embed = discord.Embed()
             embed.set_author(
                 name=f'{tweet.author.name} (@{tweet.author.screen_name})',
-                url=f'https://twitter.com/{tweet.author.screen_name}',
+                url=guide['post']['url'].format(tweet.author.screen_name),
                 icon_url=tweet.author.profile_image_url_https)
             embed.set_image(url=picture)
 
             # If it's the last picture to show, add a brand footer
             if total_gallery_pics <= 0:
                 embed.set_footer(
-                    text=self.bot.assets['twitter']['name'],
+                    text=guide['embed']['footer_text'],
                     icon_url=self.bot.assets['twitter']['favicon'])
 
             await channel.send(embed=embed)

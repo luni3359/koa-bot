@@ -30,10 +30,13 @@ class Board(commands.Cog):
             board::str
                 The board to manage. Default is 'danbooru'
         Keywords:
+            guide::dict
+                The data which holds the board information
             hide_posts_remaining::bool
                 Omit the final remaining count on the final post. False by default.
         """
 
+        guide = kwargs.get('guide', None)
         hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
 
         if len(tags) == 0:
@@ -46,7 +49,7 @@ class Board(commands.Cog):
         on_nsfw_channel = ctx.channel.is_nsfw()
 
         async with ctx.typing():
-            posts = (await self.search_query(board=board, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)).json
+            posts = (await self.search_query(board=board, guide=guide, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)).json
 
         if not posts:
             await ctx.send('Sorry, nothing found!')
@@ -55,13 +58,15 @@ class Board(commands.Cog):
         if 'posts' in posts:
             posts = posts['posts']
 
-        await self.send_posts(ctx, posts[:3], board=board, hide_posts_remaining=hide_posts_remaining)
+        await self.send_posts(ctx, posts[:3], board=board, guide=guide, hide_posts_remaining=hide_posts_remaining)
 
     async def search_query(self, **kwargs):
         """Handle searching in boards
         Keywords:
             board::str
                 Specify what board to search on. Default is 'danbooru'
+            guide::dict
+                The data which holds the board information
             post_id::int
                 Used for searching by post id on a board
             tags::str
@@ -79,6 +84,7 @@ class Board(commands.Cog):
         """
 
         board = kwargs.get('board', 'danbooru')
+        guide = kwargs.get('guide', None)
         post_id = kwargs.get('post_id')
         tags = kwargs.get('tags')
         limit = kwargs.get('limit', 0)
@@ -95,7 +101,7 @@ class Board(commands.Cog):
 
         if board == 'danbooru':
             if post_id:
-                url = f'https://danbooru.donmai.us/posts/{post_id}.json'
+                url = guide['api']['id_search_url'].format(post_id)
                 return await utils.net.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
             elif tags:
                 if include_nsfw:
@@ -141,6 +147,8 @@ class Board(commands.Cog):
         Keywords:
             board::str
                 The board to manage. Default is 'danbooru'
+            guide::dict
+                The data which holds the board information
             show_nsfw::bool
                 Whether or not nsfw posts should have their previews shown. True by default.
             max_posts::int
@@ -151,6 +159,7 @@ class Board(commands.Cog):
         """
 
         board = kwargs.get('board', 'danbooru')
+        guide = kwargs.get('guide', None)
         show_nsfw = kwargs.get('show_nsfw', True)
         max_posts = kwargs.get('max_posts', 4)
         hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
@@ -188,7 +197,7 @@ class Board(commands.Cog):
                             icon_url=self.bot.assets[board]['favicon']['size16'])
                     else:
                         embed.set_footer(
-                            text=self.bot.assets[board]['name'],
+                            text=guide['embed']['footer_text'],
                             icon_url=self.bot.assets[board]['favicon']['size16'])
 
             if not show_nsfw and post['rating'] is not 's':

@@ -44,15 +44,24 @@ class Gallery(commands.Cog):
                 The point at which an url's id is stripped from
             id_end::str
                 The point at which an url's id is stripped to
+                The board to handle. Default is 'danbooru'
+            guide::dict
+                The data which holds the board information
             end_regex::bool
                 Whether or not id_end is regex. Default is False
         """
 
         board = kwargs.get('board', 'danbooru')
-        id_start = kwargs.get('id_start')
-        id_end = kwargs.get('id_end')
+        guide = kwargs.get('guide', None)
         end_regex = kwargs.get('end_regex', False)
 
+        if not guide:
+            raise ValueError('The \'guide\' keyword argument is not defined.')
+
+        id_start = guide['post']['id_start']
+        id_end = guide['post']['id_end']
+
+        on_nsfw_channel = channel.is_nsfw()
         post_id = utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
         if not post_id:

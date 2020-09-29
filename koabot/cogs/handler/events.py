@@ -153,7 +153,7 @@ class BotEvents(commands.Cog):
 
                     if guide_type == 'gallery':
                         imageboard_cog = self.bot.get_cog('ImageBoard')
-                        await imageboard_cog.show_gallery(msg, full_url, board=group)
+                        await imageboard_cog.show_gallery(msg, full_url, board=group, guide=self.bot.guides[guide_type][guide_name])
                     elif guide_type == 'stream' and group == 'picarto':
                         streams_cog = self.bot.get_cog('StreamService')
                         picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url)

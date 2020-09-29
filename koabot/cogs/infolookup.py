@@ -5,8 +5,8 @@ import re
 import typing
 import urllib
 
+import mediawiki
 import discord
-import wikipedia
 from discord.ext import commands
 
 import koabot.koakuma as koakuma
@@ -18,24 +18,25 @@ class InfoLookup(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.wikipedia = mediawiki.MediaWiki()
 
     @commands.command(name='wikipedia', aliases=['wk', 'wp'])
     async def search_wikipedia(self, ctx, *words):
         """Search for articles in Wikipedia"""
         search_term = ' '.join(words)
         try:
-            bot_msg = wikipedia.summary(search_term)
-            await ctx.send(bot_msg)
-        except wikipedia.exceptions.DisambiguationError as e:
+            summary = self.wikipedia.summary(search_term, auto_suggest=False)
+            await ctx.send(summary)
+        except mediawiki.exceptions.DisambiguationError as e:
             bot_msg = 'There are many definitions for that... do you see anything that matches?\n'
 
             for suggestion in e.options[0:3]:
                 bot_msg += f'* {suggestion}\n'
 
             await ctx.send(bot_msg)
-        except wikipedia.exceptions.PageError:
+        except mediawiki.exceptions.PageError:
             bot_msg = 'Oh, I can\'t find anything like that... how about these?\n'
-            suggestions = wikipedia.search(search_term, results=3)
+            suggestions = self.wikipedia.search(search_term, results=3)
 
             for suggestion in suggestions:
                 bot_msg += f'* {suggestion}\n'

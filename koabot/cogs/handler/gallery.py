@@ -78,6 +78,8 @@ class Gallery(commands.Cog):
         if 'post' in post:
             post = post['post']
 
+        post_id = post['id']
+
         bot_cog = self.bot.get_cog('BotStatus')
         on_nsfw_channel = channel.is_nsfw()
         first_post_missing_preview = utils.posts.post_is_missing_preview(post, board=board)
@@ -95,21 +97,21 @@ class Gallery(commands.Cog):
 
         if board == 'e621':
             has_children = post['relationships']['has_active_children']
-            has_parent = post['relationships']['parent_id']
-            c_search = f"parent:{post['id']} order:id"
+            parent_id = post['relationships']['parent_id']
+            c_search = f'parent:{post_id} order:id'
             p_search = [
-                f"id:{post['relationships']['parent_id']}",
-                f"parent:{post['relationships']['parent_id']} order:id -id:{post['id']}"
+                f'id:{parent_id}',
+                f'parent:{parent_id} order:id -id:{post_id}'
             ]
         else:
             has_children = post['has_children']
-            has_parent = post['parent_id']
-            c_search = f"parent:{post['id']} order:id -id:{post['id']}"
-            p_search = f"parent:{post['parent_id']} order:id -id:{post['id']}"
+            parent_id = post['parent_id']
+            c_search = f'parent:{post_id} order:id -id:{post_id}'
+            p_search = f'parent:{parent_id} order:id -id:{post_id}'
 
         if has_children:
             search = c_search
-        elif has_parent:
+        elif parent_id:
             search = p_search
         else:
             if first_post_missing_preview:
@@ -200,7 +202,7 @@ class Gallery(commands.Cog):
                     hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - parsed_post['hash'][len(parsed_post['hash']) - 1]
                     parsed_post['score'].append(hash_diff)
 
-            print(f"Scores for post #{post['id']}")
+            print(f'Scores for post #{post_id}')
 
             for parsed_post in parsed_posts[1:]:
                 print('#' + str(parsed_post['id']), parsed_post['score'])

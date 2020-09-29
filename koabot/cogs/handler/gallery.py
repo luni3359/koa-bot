@@ -44,22 +44,32 @@ class Gallery(commands.Cog):
                 The point at which an url's id is stripped from
             id_end::str
                 The point at which an url's id is stripped to
+                The board to handle. Default is 'danbooru'
+            guide::dict
+                The data which holds the board information
             end_regex::bool
                 Whether or not id_end is regex. Default is False
         """
 
         board = kwargs.get('board', 'danbooru')
-        id_start = kwargs.get('id_start')
-        id_end = kwargs.get('id_end')
+        guide = kwargs.get('guide', None)
         end_regex = kwargs.get('end_regex', False)
 
+        if not guide:
+            raise ValueError('The \'guide\' keyword argument is not defined.')
+
+        id_start = guide['post']['id_start']
+        id_end = guide['post']['id_end']
+
+        on_nsfw_channel = channel.is_nsfw()
         post_id = utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
         if not post_id:
             return
 
         board_cog = self.bot.get_cog('Board')
-        post = (await board_cog.search_query(board=board, post_id=post_id)).json
+
+        post = (await board_cog.search_query(board=board, guide=guide, post_id=post_id)).json
 
         if not post:
             return
@@ -67,6 +77,8 @@ class Gallery(commands.Cog):
         # e621 fix for broken API
         if 'post' in post:
             post = post['post']
+
+        post_id = post['id']
 
         bot_cog = self.bot.get_cog('BotStatus')
         on_nsfw_channel = channel.is_nsfw()
@@ -85,33 +97,33 @@ class Gallery(commands.Cog):
 
         if board == 'e621':
             has_children = post['relationships']['has_active_children']
-            has_parent = post['relationships']['parent_id']
-            c_search = f"parent:{post['id']} order:id"
+            parent_id = post['relationships']['parent_id']
+            c_search = f'parent:{post_id} order:id'
             p_search = [
-                f"id:{post['relationships']['parent_id']}",
-                f"parent:{post['relationships']['parent_id']} order:id -id:{post['id']}"
+                f'id:{parent_id}',
+                f'parent:{parent_id} order:id -id:{post_id}'
             ]
         else:
             has_children = post['has_children']
-            has_parent = post['parent_id']
-            c_search = f"parent:{post['id']} order:id -id:{post['id']}"
-            p_search = f"parent:{post['parent_id']} order:id -id:{post['id']}"
+            parent_id = post['parent_id']
+            c_search = f'parent:{post_id} order:id -id:{post_id}'
+            p_search = f'parent:{parent_id} order:id -id:{post_id}'
 
         if has_children:
             search = c_search
-        elif has_parent:
+        elif parent_id:
             search = p_search
         else:
             if first_post_missing_preview:
                 if post['rating'] == 's' or on_nsfw_channel:
-                    await board_cog.send_posts(channel, post, board=board)
+                    await board_cog.send_posts(channel, post, board=board, guide=guide)
             return
 
         if isinstance(search, str):
             search = [search]
 
         for s in search:
-            results = (await board_cog.search_query(board=board, tags=s, include_nsfw=on_nsfw_channel)).json
+            results = (await board_cog.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)).json
 
             # e621 fix for broken API
             if 'posts' in results:
@@ -190,7 +202,7 @@ class Gallery(commands.Cog):
                     hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - parsed_post['hash'][len(parsed_post['hash']) - 1]
                     parsed_post['score'].append(hash_diff)
 
-            print(f"Scores for post #{post['id']}")
+            print(f'Scores for post #{post_id}')
 
             for parsed_post in parsed_posts[1:]:
                 print('#' + str(parsed_post['id']), parsed_post['score'])
@@ -202,10 +214,11 @@ class Gallery(commands.Cog):
                 posts.insert(0, post)
 
         if posts:
+
             if first_post_missing_preview:
-                await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel, max_posts=5)
+                await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel, max_posts=5)
             else:
-                await board_cog.send_posts(channel, posts, board=board, show_nsfw=on_nsfw_channel)
+                await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
         else:
             if post['rating'] == 's' and not nsfw_culled:
                 print('Removed all duplicates')
@@ -217,12 +230,20 @@ class Gallery(commands.Cog):
 
             await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
-    async def get_twitter_gallery(self, msg, url):
-        """Automatically fetch and post any image galleries from twitter"""
+    async def get_twitter_gallery(self, msg, url, **kwargs):
+        """Automatically fetch and post any image galleries from twitter
+        Keywords:
+            guide::dict
+                The data which holds the board information
+        """
 
         channel = msg.channel
+        guide = kwargs.get('guide', self.bot.guides['gallery']['twitter-gallery'])
 
-        post_id = utils.posts.get_post_id(url, '/status/', '?')
+        id_start = guide['post']['id_start']
+        id_end = guide['post']['id_end']
+
+        post_id = utils.posts.get_post_id(url, id_start, id_end)
         if not post_id:
             return
 
@@ -247,14 +268,14 @@ class Gallery(commands.Cog):
             embed = discord.Embed()
             embed.set_author(
                 name=f'{tweet.author.name} (@{tweet.author.screen_name})',
-                url=f'https://twitter.com/{tweet.author.screen_name}',
+                url=guide['post']['url'].format(tweet.author.screen_name),
                 icon_url=tweet.author.profile_image_url_https)
             embed.set_image(url=picture)
 
             # If it's the last picture to show, add a brand footer
             if total_gallery_pics <= 0:
                 embed.set_footer(
-                    text=self.bot.assets['twitter']['name'],
+                    text=guide['embed']['footer_text'],
                     icon_url=self.bot.assets['twitter']['favicon'])
 
             await channel.send(embed=embed)
@@ -318,10 +339,9 @@ class Gallery(commands.Cog):
 
             total_to_preview = 5
             for i, picture in enumerate(pictures[:total_to_preview]):
-                print(f'Retrieving picture from #{post_id}...')
+                print(f'Retrieving picture #{post_id}...')
 
-                (embed, url, filename) = await generate_pixiv_embed(picture, illust.user)
-                print(f'Retrieved more from #{post_id} (maybe)')
+                (embed, url, filename) = await self.generate_pixiv_embed(picture, illust.user)
 
                 # create if pixiv cache directory if it doesn't exist
                 file_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'files')
@@ -361,7 +381,6 @@ class Gallery(commands.Cog):
 
     def reauthenticate_pixiv(self):
         """Fetch and cache the refresh token"""
-
         pixiv_cache_dir = os.path.join(CACHE_DIR, 'pixiv')
         token_filename = 'refresh_token'
         token_path = os.path.join(pixiv_cache_dir, token_filename)
@@ -379,6 +398,30 @@ class Gallery(commands.Cog):
             os.makedirs(pixiv_cache_dir, exist_ok=True)
             with open(token_path, 'w') as token_file:
                 token_file.write(self.pixiv_api.refresh_token)
+
+    async def generate_pixiv_embed(self, post, user):
+        """Generate embeds for pixiv urls
+        Arguments:
+            post
+                The post object
+            user
+                The artist of the post
+        Returns:
+            embed::discord.Embed
+                Embed object
+            image_filename::str
+                Image filename, extension included
+        """
+
+        img_url = post.image_urls.medium
+        image_filename = utils.net.get_url_filename(img_url)
+
+        embed = discord.Embed()
+        embed.set_author(
+            name=user.name,
+            url=f'https://www.pixiv.net/member.php?id={user.id}')
+        embed.set_image(url=f'attachment://{image_filename}')
+        return embed, img_url, image_filename
 
     async def get_sankaku_post(self, msg, url):
         """Automatically fetch a bigger preview from Sankaku Complex"""
@@ -499,29 +542,6 @@ class Gallery(commands.Cog):
                     icon_url=self.bot.assets['imgur']['favicon']['size32'])
 
             await channel.send(embed=embed)
-
-
-async def generate_pixiv_embed(post, user):
-    """Generate embeds for pixiv urls
-    Arguments:
-        post
-            The post object
-        user
-            The artist of the post
-    Returns:
-        embed::discord.Embed
-        image_filename::str
-    """
-
-    img_url = post.image_urls.medium
-    image_filename = utils.net.get_url_filename(img_url)
-
-    embed = discord.Embed()
-    embed.set_author(
-        name=user.name,
-        url=f'https://www.pixiv.net/member.php?id={user.id}')
-    embed.set_image(url=f'attachment://{image_filename}')
-    return embed, img_url, image_filename
 
 
 def setup(bot: commands.Bot):

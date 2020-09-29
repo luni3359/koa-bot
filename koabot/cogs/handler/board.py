@@ -30,10 +30,13 @@ class Board(commands.Cog):
             board::str
                 The board to manage. Default is 'danbooru'
         Keywords:
+            guide::dict
+                The data which holds the board information
             hide_posts_remaining::bool
                 Omit the final remaining count on the final post. False by default.
         """
 
+        guide = kwargs.get('guide', None)
         hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
 
         if len(tags) == 0:
@@ -46,7 +49,7 @@ class Board(commands.Cog):
         on_nsfw_channel = ctx.channel.is_nsfw()
 
         async with ctx.typing():
-            posts = (await self.search_query(board=board, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)).json
+            posts = (await self.search_query(board=board, guide=guide, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)).json
 
         if not posts:
             await ctx.send('Sorry, nothing found!')
@@ -55,13 +58,15 @@ class Board(commands.Cog):
         if 'posts' in posts:
             posts = posts['posts']
 
-        await self.send_posts(ctx, posts[:3], board=board, hide_posts_remaining=hide_posts_remaining)
+        await self.send_posts(ctx, posts[:3], board=board, guide=guide, hide_posts_remaining=hide_posts_remaining)
 
     async def search_query(self, **kwargs):
         """Handle searching in boards
         Keywords:
             board::str
                 Specify what board to search on. Default is 'danbooru'
+            guide::dict
+                The data which holds the board information
             post_id::int
                 Used for searching by post id on a board
             tags::str
@@ -79,6 +84,7 @@ class Board(commands.Cog):
         """
 
         board = kwargs.get('board', 'danbooru')
+        guide = kwargs.get('guide', None)
         post_id = kwargs.get('post_id')
         tags = kwargs.get('tags')
         limit = kwargs.get('limit', 0)
@@ -95,7 +101,7 @@ class Board(commands.Cog):
 
         if board == 'danbooru':
             if post_id:
-                url = f'https://danbooru.donmai.us/posts/{post_id}.json'
+                url = guide['api']['id_search_url'].format(post_id)
                 return await utils.net.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
             elif tags:
                 if include_nsfw:
@@ -106,10 +112,10 @@ class Board(commands.Cog):
                 return await utils.net.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
         elif board == 'e621':
             # e621 requires to know the User-Agent
-            headers = self.bot.assets['e621']['headers']
+            headers = guide['api']['headers']
 
             if post_id:
-                url = f'https://e621.net/posts/{post_id}.json'
+                url = guide['api']['id_search_url'].format(post_id)
                 return await utils.net.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
             elif tags:
                 if include_nsfw:
@@ -121,11 +127,11 @@ class Board(commands.Cog):
                 return await utils.net.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
         elif board == 'sankaku':
             if post_id:
-                url = f"{self.bot.assets['sankaku']['id_search_url']}{post_id}"
+                url = guide['api']['id_search_url'].format(post_id)
                 return await utils.net.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
             elif tags:
                 search_query = '+'.join(tags.split(' '))
-                url = f"{self.bot.assets['sankaku']['search_url']}{search_query}"
+                url = guide['api']['tag_search_url'].format(search_query)
                 return await utils.net.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
         else:
             raise ValueError(f'Board "{board}" can\'t be handled by the post searcher.')
@@ -141,6 +147,8 @@ class Board(commands.Cog):
         Keywords:
             board::str
                 The board to manage. Default is 'danbooru'
+            guide::dict
+                The data which holds the board information
             show_nsfw::bool
                 Whether or not nsfw posts should have their previews shown. True by default.
             max_posts::int
@@ -151,6 +159,7 @@ class Board(commands.Cog):
         """
 
         board = kwargs.get('board', 'danbooru')
+        guide = kwargs.get('guide', None)
         show_nsfw = kwargs.get('show_nsfw', True)
         max_posts = kwargs.get('max_posts', 4)
         hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
@@ -169,9 +178,10 @@ class Board(commands.Cog):
 
         for post in posts:
             posts_processed += 1
-            print(f"Parsing post #{post['id']} ({posts_processed}/{min(total_posts, max_posts)})...")
+            post_id = post['id']
+            print(f'Parsing post #{post_id} ({posts_processed}/{min(total_posts, max_posts)})...')
 
-            embed = self.generate_embed(post, board=board)
+            embed = self.generate_embed(post, board=board, guide=guide)
 
             # if there's no image file or image url, send a link
             if not embed.image.url:
@@ -188,7 +198,7 @@ class Board(commands.Cog):
                             icon_url=self.bot.assets[board]['favicon']['size16'])
                     else:
                         embed.set_footer(
-                            text=self.bot.assets[board]['name'],
+                            text=guide['embed']['footer_text'],
                             icon_url=self.bot.assets[board]['favicon']['size16'])
 
             if not show_nsfw and post['rating'] is not 's':
@@ -209,7 +219,7 @@ class Board(commands.Cog):
                 else:
                     raise ValueError('Board embed send not configured.')
 
-            print(f"Post #{post['id']} complete")
+            print(f'Post #{post_id} complete')
 
     def generate_embed(self, post, **kwargs):
         """Generate embeds for image board post urls
@@ -220,10 +230,15 @@ class Board(commands.Cog):
         Keywords:
             board::str
                 The board to handle. Default is 'danbooru'
+            guide::dict
+                The data which holds the board information
         """
 
         board = kwargs.get('board', 'danbooru')
+        guide = kwargs.get('guide', None)
         embed = discord.Embed()
+
+        post_id = post['id']
 
         if board == 'danbooru':
             post_char = re.sub(r' \(.*?\)', '', utils.posts.combine_tags(post['tag_string_character']))
@@ -244,7 +259,7 @@ class Board(commands.Cog):
                 embed_post_title += f' drawn by {post_artist}'
 
             if not post_char and not post_copy and not post_artist:
-                embed_post_title += f"#{post['id']}"
+                embed_post_title += f"#{post_id}"
 
             embed_post_title += ' | Danbooru'
             if len(embed_post_title) >= self.bot.assets['danbooru']['max_embed_title_length']:
@@ -252,20 +267,20 @@ class Board(commands.Cog):
 
             embed.title = embed_post_title
         elif board == 'e621':
-            embed.title = f"#{post['id']}: {utils.posts.combine_tags(post['tags']['artist'])} - e621"
+            embed.title = f"#{post_id}: {utils.posts.combine_tags(post['tags']['artist'])} - e621"
         elif board == 'sankaku':
-            embed.title = f"Post {post['id']}"
+            embed.title = f"Post {post_id}"
         else:
             raise ValueError('Board embed title not configured.')
 
-        embed.url = self.bot.assets[board]['post_url'].format(post['id'])
+        embed.url = self.bot.assets[board]['post_url'].format(post_id)
 
         if 'failed_post_preview' in self.bot.assets[board]:
             fileurl = self.bot.assets[board]['failed_post_preview']
         else:
             fileurl = self.bot.assets['default']['failed_post_preview']
 
-        for res_key in self.bot.assets[board]['post_quality']:
+        for res_key in guide['post']['resolutions']:
             if res_key in post:
                 if board == 'e621':
                     url_candidate = post[res_key]['url']

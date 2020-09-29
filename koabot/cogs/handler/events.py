@@ -42,7 +42,8 @@ class BotEvents(commands.Cog):
                 else:
                     target_guide = self.bot.guides[guide_type][guide_to_inherit[0]]
 
-                source_guide.update(merge(target_guide, source_guide))
+                combined_guide = merge({}, target_guide, source_guide)
+                self.bot.guides[guide_type][guide_name] = combined_guide
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):

@@ -279,12 +279,7 @@ class Board(commands.Cog):
         else:
             fileurl = self.bot.assets['default']['failed_post_preview']
 
-<<<<<<< HEAD
-        for res_key in self.bot.assets[board]['post_quality']:
-=======
-        approved_ext = ['png', 'jpg', 'webp', 'gif']
         for res_key in guide['post']['resolutions']:
->>>>>>> Implement guides more deeply into the system
             if res_key in post:
                 if board == 'e621':
                     url_candidate = post[res_key]['url']

@@ -22,27 +22,27 @@ class BotEvents(commands.Cog):
         self.bot.last_channel_warned = False
 
         self.valid_urls = []
-        for group, contents in self.bot.url_matches.items():
+        for group, contents in self.bot.match_groups.items():
             for match in contents:
                 url_pattern = match['url']
                 url_pattern = url_pattern.replace('.', '\.')
                 url_pattern = url_pattern.replace('*', '(.*?)')
-                self.valid_urls.append({'group': group, 'url': url_pattern, 'action': match['action']})
+                self.valid_urls.append({'group': group, 'url': url_pattern, 'guide': match['guide']})
 
-        for action_type, v in self.bot.actions.items():
-            for action_name, action_content in v.items():
-                if 'inherits' not in action_content:
+        for guide_type, v in self.bot.guides.items():
+            for guide_name, guide_content in v.items():
+                if 'inherits' not in guide_content:
                     continue
 
-                action_to_inherit = action_content['inherits'].split('/')
-                source_action = self.bot.actions[action_type][action_name]
+                guide_to_inherit = guide_content['inherits'].split('/')
+                source_guide = self.bot.guides[guide_type][guide_name]
 
-                if len(action_to_inherit) > 1:
-                    target_action = self.bot.actions[action_to_inherit[0]][action_to_inherit[1]]
+                if len(guide_to_inherit) > 1:
+                    target_guide = self.bot.guides[guide_to_inherit[0]][guide_to_inherit[1]]
                 else:
-                    target_action = self.bot.actions[action_type][action_to_inherit[0]]
+                    target_guide = self.bot.guides[guide_type][guide_to_inherit[0]]
 
-                source_action.update(merge(target_action, source_action))
+                source_guide.update(merge(target_guide, source_guide))
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -131,7 +131,7 @@ class BotEvents(commands.Cog):
             for valid_url in self.valid_urls:
                 group = valid_url['group']
                 url_pattern = valid_url['url']
-                actions = valid_url['action']
+                guides = valid_url['guide']
 
                 # ignore rules from repeated groups
                 if group in expended_groups:
@@ -141,20 +141,20 @@ class BotEvents(commands.Cog):
                 if not re.match(url_pattern, url_match['fqdn']):
                     continue
 
-                for action in actions:
-                    action_type = action['type']
-                    action_name = action['name']
+                for guide in guides:
+                    guide_type = guide['type']
+                    guide_name = guide['name']
 
-                    if not self.bot.actions[action_type][action_name]:
-                        raise ValueError('Undefined action.')
+                    if not self.bot.guides[guide_type][guide_name]:
+                        raise ValueError('Undefined guide.')
 
                     full_url = url_match['full_url']
                     expended_groups.append(group)
 
-                    if action_type == 'gallery':
+                    if guide_type == 'gallery':
                         imageboard_cog = self.bot.get_cog('ImageBoard')
                         await imageboard_cog.show_gallery(msg, full_url, board=group)
-                    elif action_type == 'stream' and group == 'picarto':
+                    elif guide_type == 'stream' and group == 'picarto':
                         streams_cog = self.bot.get_cog('StreamService')
                         picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url)
 

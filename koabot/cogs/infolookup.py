@@ -26,6 +26,16 @@ class InfoLookup(commands.Cog):
         search_term = ' '.join(words)
         try:
             summary = self.wikipedia.summary(search_term, auto_suggest=False)
+
+            if len(summary) > 2000:
+                summary = summary[:2000]
+                for i in range(2000):
+                    if summary[len(summary) - i - 1] != ' ':
+                        continue
+
+                    summary = summary[:len(summary) - i - 1] + '…'
+                    break
+
             await ctx.send(summary)
         except mediawiki.exceptions.DisambiguationError as e:
             bot_msg = 'There are many definitions for that... do you see anything that matches?\n'

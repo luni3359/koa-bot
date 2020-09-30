@@ -25,10 +25,8 @@ class InfoLookup(commands.Cog):
         """Search for articles in Wikipedia"""
         search_term = ' '.join(words)
 
-        page_results = self.wikipedia.opensearch(search_term)
-
-        first_page_result = page_results[0]
-        page_title = first_page_result[0]
+        page_results = self.wikipedia.search(search_term)
+        page_title = page_results[0]
 
         try:
             page = self.wikipedia.page(page_title, auto_suggest=False)

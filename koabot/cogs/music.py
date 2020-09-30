@@ -1,4 +1,5 @@
 """Music functions!"""
+import asyncio
 import os
 import random
 import re
@@ -10,6 +11,39 @@ from discord.ext import commands
 import koabot.utils as utils
 from koabot.koakuma import SOURCE_DIR
 from koabot.patterns import URL_PATTERN
+
+ydl_opts = {
+    'format': 'bestaudio/best',
+    'source_address': '0.0.0.0'
+}
+ffmpeg_opts = {
+    'options': '-vn'
+}
+ytdl = youtube_dl.YoutubeDL(ydl_opts)
+
+
+# https://stackoverflow.com/a/56709893/7688278
+# look into this https://gist.github.com/vbe0201/ade9b80f2d3b64643d854938d40a0a2d
+class YTDLSource(discord.PCMVolumeTransformer):
+    def __init__(self, source, *, data, volume=0.5):
+        super().__init__(source, volume)
+
+        self.data = data
+
+        self.title = data.get('title')
+        self.url = data.get('url')
+
+    @classmethod
+    async def from_url(cls, url, *, loop=None):
+        loop = loop or asyncio.get_event_loop()
+        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+
+        if 'entries' in data:
+            # take first item from a playlist
+            data = data['entries'][0]
+
+        filename = data['url']
+        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_opts), data=data)
 
 
 class Music(commands.Cog):
@@ -57,6 +91,8 @@ class Music(commands.Cog):
     @commands.command()
     async def play(self, ctx, *search_or_url):
         """Plays a track (overrides current track)"""
+        # TODO https://stackoverflow.com/a/62360149/7688278
+        # Allow links to play from specified timestamps
         voice_client = ctx.voice_client
 
         if len(search_or_url) == 0:
@@ -67,14 +103,8 @@ class Music(commands.Cog):
             search_or_url = ' '.join(search_or_url)
             url = re.findall(URL_PATTERN, search_or_url)[0]
 
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'source_address': '0.0.0.0'
-        }
-
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            track_info = ydl.extract_info(url, download=False)
-            voice_client.play(discord.FFmpegPCMAudio(track_info['formats'][0]['url']))
+        stream = await YTDLSource.from_url(url, loop=self.bot.loop)
+        voice_client.play(stream, after=lambda e: print('Stream error.') if e else None)
 
     @commands.command()
     async def stop(self, ctx):

@@ -25,7 +25,7 @@ class InfoLookup(commands.Cog):
         """Search for articles in Wikipedia"""
         search_term = ' '.join(words)
         try:
-            summary = self.wikipedia.summary(search_term, auto_suggest=False)
+            summary = self.wikipedia.summary(search_term)
 
             if len(summary) > 2000:
                 summary = summary[:2000]

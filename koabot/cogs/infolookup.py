@@ -24,8 +24,15 @@ class InfoLookup(commands.Cog):
     async def search_wikipedia(self, ctx, *words):
         """Search for articles in Wikipedia"""
         search_term = ' '.join(words)
+
+        page_results = self.wikipedia.opensearch(search_term)
+
+        first_page_result = page_results[0]
+        page_title = first_page_result[0]
+
         try:
-            summary = self.wikipedia.summary(search_term)
+            page = self.wikipedia.page(page_title, auto_suggest=False)
+            summary = page.summary
 
             if len(summary) > 2000:
                 summary = summary[:2000]

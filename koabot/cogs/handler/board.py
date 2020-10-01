@@ -49,7 +49,11 @@ class Board(commands.Cog):
         on_nsfw_channel = ctx.channel.is_nsfw()
 
         async with ctx.typing():
-            posts = (await self.search_query(board=board, guide=guide, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)).json
+            try:
+                posts = (await self.search_query(board=board, guide=guide, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)).json
+            except AttributeError as e:
+                # query errored out
+                posts = None
 
         if not posts:
             await ctx.send('Sorry, nothing found!')
@@ -57,6 +61,11 @@ class Board(commands.Cog):
 
         if 'posts' in posts:
             posts = posts['posts']
+
+        # if the query is weird, ids won't appear in the results
+        if 'id' not in posts[0]:
+            await ctx.send('Sorry, nothing found!')
+            return
 
         await self.send_posts(ctx, posts[:3], board=board, guide=guide, hide_posts_remaining=hide_posts_remaining)
 
@@ -88,13 +97,15 @@ class Board(commands.Cog):
         post_id = kwargs.get('post_id')
         tags = kwargs.get('tags')
         limit = kwargs.get('limit', 0)
-        random_arg = kwargs.get('random', False)
+        random = kwargs.get('random', False)
         include_nsfw = kwargs.get('include_nsfw', False)
 
         data_arg = {
-            'tags': tags,
-            'random': random_arg
+            'tags': tags
         }
+
+        if random:
+            data_arg['random'] = random
 
         if limit and limit > 0:
             data_arg['limit'] = limit

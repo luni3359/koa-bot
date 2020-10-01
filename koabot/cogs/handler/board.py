@@ -50,7 +50,7 @@ class Board(commands.Cog):
 
         async with ctx.typing():
             try:
-                posts = (await self.search_query(board=board, guide=guide, tags=search, random=True, include_nsfw=on_nsfw_channel)).json
+                posts = (await self.search_query(board=board, guide=guide, tags=search, limit=3, random=True, include_nsfw=on_nsfw_channel)).json
             except AttributeError as e:
                 # query errored out
                 posts = None

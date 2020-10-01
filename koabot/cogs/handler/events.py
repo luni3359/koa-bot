@@ -168,7 +168,15 @@ class BotEvents(commands.Cog):
             imageboard_cog = self.bot.get_cog('ImageBoard')
             await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'])
 
-        if self.bot.last_channel != channel.id or url_matches_found or msg.attachments:
+        # checking if a command has been issued
+        command_issued = False
+        if msg.content[0] == '!':
+            command_name_regex = re.search(r'^!([a-zA-Z0-9]+)', msg.content)
+            if command_name_regex:
+                cmd = self.bot.get_command(command_name_regex.group(1))
+                command_issued = bool(cmd)
+
+        if self.bot.last_channel != channel.id or url_matches_found or msg.attachments or command_issued:
             self.bot.last_channel = channel.id
             self.bot.last_channel_message_count = 0
         else:

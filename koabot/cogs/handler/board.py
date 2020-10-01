@@ -55,13 +55,17 @@ class Board(commands.Cog):
                 # query errored out
                 posts = None
 
-        # if the query is weird, ids won't appear in the results
-        if not posts or posts[0]['id']:
+        if not posts:
             await ctx.send('Sorry, nothing found!')
             return
 
         if 'posts' in posts:
             posts = posts['posts']
+
+        # if the query is weird, ids won't appear in the results
+        if 'id' not in posts[0]:
+            await ctx.send('Sorry, nothing found!')
+            return
 
         await self.send_posts(ctx, posts[:3], board=board, guide=guide, hide_posts_remaining=hide_posts_remaining)
 

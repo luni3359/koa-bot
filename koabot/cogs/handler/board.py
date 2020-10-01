@@ -284,7 +284,7 @@ class Board(commands.Cog):
         else:
             raise ValueError('Board embed title not configured.')
 
-        embed.url = self.bot.assets[board]['post_url'].format(post_id)
+        embed.url = guide['post']['url'].format(post_id)
 
         if 'failed_post_preview' in self.bot.assets[board]:
             fileurl = self.bot.assets[board]['failed_post_preview']

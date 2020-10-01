@@ -50,12 +50,13 @@ class Board(commands.Cog):
 
         async with ctx.typing():
             try:
-                posts = (await self.search_query(board=board, guide=guide, tags=search, include_nsfw=on_nsfw_channel)).json
+                posts = (await self.search_query(board=board, guide=guide, tags=search, random=True, include_nsfw=on_nsfw_channel)).json
             except AttributeError as e:
                 # query errored out
                 posts = None
 
-        if not posts:
+        # if the query is weird, ids won't appear in the results
+        if not posts or posts[0]['id']:
             await ctx.send('Sorry, nothing found!')
             return
 

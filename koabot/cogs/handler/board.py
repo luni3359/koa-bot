@@ -88,13 +88,15 @@ class Board(commands.Cog):
         post_id = kwargs.get('post_id')
         tags = kwargs.get('tags')
         limit = kwargs.get('limit', 0)
-        random_arg = kwargs.get('random', False)
+        random = kwargs.get('random', False)
         include_nsfw = kwargs.get('include_nsfw', False)
 
         data_arg = {
-            'tags': tags,
-            'random': random_arg
+            'tags': tags
         }
+
+        if random:
+            data_arg['random'] = random
 
         if limit and limit > 0:
             data_arg['limit'] = limit

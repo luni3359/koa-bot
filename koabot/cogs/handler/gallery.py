@@ -218,7 +218,7 @@ class Gallery(commands.Cog):
             else:
                 await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
         else:
-            if post['rating'] == 's' and not nsfw_culled:
+            if post['rating'] == 's' and not nsfw_culled or on_nsfw_channel:
                 print('Removed all duplicates')
                 return
             elif post['rating'] == 's':

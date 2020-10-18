@@ -102,9 +102,9 @@ class InfoLookup(commands.Cog):
 
             embed.description += f'\n{what_it_is}'
 
-            if jlpt_level:
-                jlpt_level = jlpt_level.replace('jlpt-n', 'N')
-                embed.description += f' [{jlpt_level}]'
+            # if jlpt_level:
+            #     jlpt_level = jlpt_level.replace('jlpt-n', 'N')
+            #     embed.description += f' [{jlpt_level}]'
 
             embed.description += f': {definitions}'
 

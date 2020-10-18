@@ -82,21 +82,36 @@ class InfoLookup(commands.Cog):
         embed.url = self.bot.assets['jisho']['dictionary_url'] + urllib.parse.quote(words)
         embed.description = ''
 
-        for entry in js['data'][:4]:
-            kanji = 'word' in entry['japanese'][0] and entry['japanese'][0]['word'] or 'reading' in entry['japanese'][0] and entry['japanese'][0]['reading']
-            primary_reading = 'reading' in entry['japanese'][0] and entry['japanese'][0]['reading'] or None
-            jlpt_level = '; '.join(entry['jlpt'])
-            definitions = '; '.join(entry['senses'][0]['english_definitions'])
-            what_it_is = '; '.join(entry['senses'][0]['parts_of_speech'])
-            tags = '; '.join(entry['senses'][0]['tags'])
+        for word in js['data'][:4]:
+            kanji = 'word' in word['japanese'][0] and word['japanese'][0]['word'] or 'reading' in word['japanese'][0] and word['japanese'][0]['reading']
+            primary_reading = 'reading' in word['japanese'][0] and word['japanese'][0]['reading'] or None
+            jlpt_level = ', '.join(word['jlpt'])
+            definitions = '; '.join(word['senses'][0]['english_definitions'])
+            what_it_is = '; '.join(word['senses'][0]['parts_of_speech'])
+            tags = '; '.join(word['senses'][0]['tags'])
+
+            definition_clarification = 'info' in word['senses'][0] and ', '.join(word['senses'][0]['info']) or None
+
+            embed.description += f'►{kanji}'
+
+            if primary_reading and primary_reading != kanji:
+                embed.description += f'【{primary_reading}】'
 
             if tags:
-                tags = f'\n*{tags}*'
+                embed.description += f'\n*{tags}*'
 
-            if primary_reading:
-                embed.description += f'►{kanji}【{primary_reading}】\n{what_it_is}: {jlpt_level}{definitions} {tags}\n\n'
-            else:
-                embed.description += f'►{kanji}\n{what_it_is}: {jlpt_level}{definitions} {tags}\n\n'
+            embed.description += f'\n{what_it_is}'
+
+            # if jlpt_level:
+            #     jlpt_level = jlpt_level.replace('jlpt-n', 'N')
+            #     embed.description += f' [{jlpt_level}]'
+
+            embed.description += f': {definitions}'
+
+            if definition_clarification:
+                embed.description += f'\n*{definition_clarification}*'
+
+            embed.description += '\n\n'
 
         if len(embed.description) > 2048:
             embed.description = embed.description[:2048]

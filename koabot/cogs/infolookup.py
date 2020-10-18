@@ -94,9 +94,13 @@ class InfoLookup(commands.Cog):
                 tags = f'\n*{tags}*'
 
             if primary_reading:
-                embed.description += f'►{kanji}【{primary_reading}】\n{what_it_is}: {jlpt_level}{definitions} {tags}\n\n'
+                if jlpt_level:
+                    jlpt_level = jlpt_level.replace('jlpt-n', 'N')
+                    embed.description += f'►{kanji}【{primary_reading}】\n{what_it_is} [{jlpt_level}]: {definitions} {tags}\n\n'
+                else:
+                    embed.description += f'►{kanji}【{primary_reading}】\n{what_it_is}: {definitions} {tags}\n\n'
             else:
-                embed.description += f'►{kanji}\n{what_it_is}: {jlpt_level}{definitions} {tags}\n\n'
+                embed.description += f'►{kanji}\n{what_it_is} [{jlpt_level}]: {definitions} {tags}\n\n'
 
         if len(embed.description) > 2048:
             embed.description = embed.description[:2048]

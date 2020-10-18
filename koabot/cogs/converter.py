@@ -63,45 +63,34 @@ class Converter(commands.Cog):
     async def convert_units(self, ctx, units):
         """Convert units found to their opposite (SI <-> imp)"""
 
-        imperial_units = [
-            'feet',
-            'inches',
-            'miles',
-            'pounds',
-        ]
-        si_units = [
-            'meters',
-            'centimeters',
-            'kilometers',
-            'kilograms'
-        ]
-
         if not units:
             return
 
         conversion_str = random.choice(self.bot.quotes['converting_units']) + '```'
 
-        for quantity in units:
-            if quantity[0] == 'footinches':
-                value = quantity[1]
-                value2 = quantity[2]
+        for unit, value, *extra_value in units:
+            if unit == 'footinches':
+                extra_value = extra_value[0]
+                converted_value = (value * self.ureg.foot + extra_value * self.ureg.inch).to_base_units()
+                calculation_str = f'{value * self.ureg.foot} {extra_value * self.ureg.inch} → {converted_value}'
 
-                converted_value = (value * self.ureg.foot + value2 * self.ureg.inch).to_base_units()
-                calculation_str = f'{value * self.ureg.foot} {value2 * self.ureg.inch} → {converted_value}'
                 print(calculation_str)
                 conversion_str += f'\n{calculation_str}'
                 continue
 
-            (unit, value) = quantity
-            value = value * self.ureg[unit]
+            unit = self.ureg[unit]
+            value = value * unit
 
-            if unit in imperial_units:
+            if str(unit.dimensionality) == '[temperature]':
+                pass
+
+            if unit.u in dir(self.ureg.sys.imperial):
                 converted_value = value.to_base_units()
                 converted_value = converted_value.to_compact()
-            elif unit in si_units:
-                if unit == 'kilometers':
+            elif unit.u in dir(self.ureg.sys.mks):
+                if unit == 'kilometer':
                     converted_value = value.to(self.ureg.miles)
-                elif unit == 'kilograms':
+                elif unit == 'kilogram':
                     converted_value = value.to(self.ureg.pounds)
                 elif value.magnitude >= 300:
                     converted_value = value.to(self.ureg.yards)
@@ -111,6 +100,9 @@ class Converter(commands.Cog):
                     feet = int(inches.magnitude / 12)
                     remainder_inches = round(inches.magnitude % 12)
                     converted_value = f'{feet} ft {remainder_inches} in ({raw_feet})'
+            else:
+                await ctx.send('I cannot convert that!')
+                return
 
             calculation_str = f'{value} → {converted_value}'
             print(calculation_str)

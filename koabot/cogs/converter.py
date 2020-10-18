@@ -100,7 +100,7 @@ class Converter(commands.Cog):
                 elif unit == self.ureg['kilogram']:
                     converted_value = value.to(self.ureg.pounds)
 
-                elif unit == self.ureg['celsius'] or unit == self.ureg['kelvin']:
+                elif str(unit.dimensionality) == '[temperature]':
                     converted_value = value.to(self.ureg.fahrenheit)
 
             calculation_str = f'{value} → {converted_value}'

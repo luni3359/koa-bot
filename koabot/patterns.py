@@ -4,6 +4,7 @@ import re
 URL_PATTERN = re.compile(r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-;?-_=@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)')
 
 NUMBER_PATTERN = re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)')
+
 UNIT_PATTERN_TUPLE = [
     ('feet', re.compile(r' *(\'|foot|feet|ft)(?!\w)')),
     ('inches', re.compile(r' *("|inch|inches|ins?)(?!\w)')),
@@ -13,7 +14,11 @@ UNIT_PATTERN_TUPLE = [
     ('centimeters', re.compile(r' *(centimeters?|centimetres?|cms?)(?!\w)')),
     ('kilometers', re.compile(r' *(kilometers?|kilometres?|kms?)(?!\w)')),
     ('kilograms', re.compile(r' *(kilograms?|kgs?)(?!\w)')),
+    ('celsius', re.compile(r' *(°|degrees?)? *([Cc]|[CcSs]el[sc]ius)(?!\w)')),
+    ('fahrenheit', re.compile(r' *(°|degrees?)? *([Ff]|[Ff]h?ah?rh?enheit)(?!\w)')),
+    ('kelvin', re.compile(r' *(°|degrees?)? *([Kk]|[Kk]el[vb]in)(?!\w)')),
 ]
+
 SPECIAL_UNIT_PATTERN_TUPLE = ('footinches', re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)\'(\.\d+|\d[,\d]*(?:\.\d+)?)"?'))
 
 DICE_PATTERN = r'(\d*)d(\d+)(?:\ ?([+-]\d+))?'

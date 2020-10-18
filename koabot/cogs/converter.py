@@ -81,9 +81,12 @@ class Converter(commands.Cog):
             unit = self.ureg[unit_str]
             value = self.Q_(value, unit)
 
-            if unit.u in dir(self.ureg.sys.imperial):
-                converted_value = value.to_base_units()
-                converted_value = converted_value.to_compact()
+            if unit.u in dir(self.ureg.sys.imperial) or unit == self.ureg['fahrenheit']:
+                if str(unit.dimensionality) == '[temperature]':
+                    converted_value = value.to(self.ureg.celsius)
+                else:
+                    converted_value = value.to_base_units()
+                    converted_value = converted_value.to_compact()
             elif unit.u in dir(self.ureg.sys.mks):
                 if str(unit.dimensionality) == '[length]':
                     if unit == self.ureg['kilometer']:

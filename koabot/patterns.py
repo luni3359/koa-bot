@@ -6,14 +6,14 @@ URL_PATTERN = re.compile(r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-;?-_=@.&+]|[!*\(\),]
 NUMBER_PATTERN = re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)')
 
 UNIT_PATTERN_TUPLE = [
-    ('feet', re.compile(r' *(\'|foot|feet|ft)(?!\w)')),
-    ('inches', re.compile(r' *("|inch|inches|ins?)(?!\w)')),
-    ('miles', re.compile(r' *(miles?|mi)(?!\w)')),
-    ('pounds', re.compile(r' *(pounds?|lbs?)(?!\w)')),
-    ('meters', re.compile(r' *(meters?|metres?|mt?r?s?)(?!\w)')),
-    ('centimeters', re.compile(r' *(centimeters?|centimetres?|cms?)(?!\w)')),
-    ('kilometers', re.compile(r' *(kilometers?|kilometres?|kms?)(?!\w)')),
-    ('kilograms', re.compile(r' *(kilograms?|kgs?)(?!\w)')),
+    ('foot', re.compile(r' *(\'|foot|feet|ft)(?!\w)')),
+    ('inch', re.compile(r' *("|inch|inches|ins?)(?!\w)')),
+    ('mile', re.compile(r' *(miles?|mi)(?!\w)')),
+    ('pound', re.compile(r' *(pounds?|lbs?)(?!\w)')),
+    ('meter', re.compile(r' *(meters?|metres?|mt?r?s?)(?!\w)')),
+    ('centimeter', re.compile(r' *(centimeters?|centimetres?|cms?)(?!\w)')),
+    ('kilometer', re.compile(r' *(kilometers?|kilometres?|kms?)(?!\w)')),
+    ('kilogram', re.compile(r' *(kilograms?|kgs?)(?!\w)')),
     ('celsius', re.compile(r' *(°|degrees?)? *([Cc]|[CcSs]el[sc]ius)(?!\w)')),
     ('fahrenheit', re.compile(r' *(°|degrees?)? *([Ff]|[Ff]h?ah?rh?enheit)(?!\w)')),
     ('kelvin', re.compile(r' *(°|degrees?)? *([Kk]|[Kk]el[vb]in)(?!\w)')),

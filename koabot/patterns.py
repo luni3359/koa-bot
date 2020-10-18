@@ -17,6 +17,7 @@ UNIT_PATTERN_TUPLE = [
     ('celsius', re.compile(r' *(°|degrees?|degs?)? *([Cc]|[CcSs]el[sc]ius)(?!\w)')),
     ('fahrenheit', re.compile(r' *(°|degrees?|degs?)? *([Ff]|[Ff]h?ah?rh?enheit)(?!\w)')),
     ('kelvin', re.compile(r' *(°|degrees?|degs?)? *([Kk]|[Kk]el[vb]in)(?!\w)')),
+    ('rankine', re.compile(r' *(°|degrees?|degs?)? *([Rr]|[Rr]ankine?)(?!\w)')),
 ]
 
 SPECIAL_UNIT_PATTERN_TUPLE = ('footinches', re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)\'(\.\d+|\d[,\d]*(?:\.\d+)?)"?'))

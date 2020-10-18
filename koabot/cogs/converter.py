@@ -68,8 +68,8 @@ class Converter(commands.Cog):
 
         conversion_str = random.choice(self.bot.quotes['converting_units']) + '```'
 
-        for unit, value, *extra_value in units:
-            if unit == 'footinches':
+        for unit_str, value, *extra_value in units:
+            if unit_str == 'footinches':
                 extra_value = extra_value[0]
                 converted_value = (value * self.ureg.foot + extra_value * self.ureg.inch).to_base_units()
                 calculation_str = f'{value * self.ureg.foot} {extra_value * self.ureg.inch} → {converted_value}'
@@ -78,31 +78,30 @@ class Converter(commands.Cog):
                 conversion_str += f'\n{calculation_str}'
                 continue
 
-            unit = self.ureg[unit]
-            value = value * unit
-
-            if str(unit.dimensionality) == '[temperature]':
-                pass
+            unit = self.ureg[unit_str]
+            value = self.Q_(value, unit)
 
             if unit.u in dir(self.ureg.sys.imperial):
                 converted_value = value.to_base_units()
                 converted_value = converted_value.to_compact()
             elif unit.u in dir(self.ureg.sys.mks):
-                if unit == 'kilometer':
-                    converted_value = value.to(self.ureg.miles)
-                elif unit == 'kilogram':
+                if str(unit.dimensionality) == '[length]':
+                    if unit == self.ureg['kilometer']:
+                        converted_value = value.to(self.ureg.miles)
+                    elif value.magnitude >= 300:
+                        converted_value = value.to(self.ureg.yards)
+                    else:
+                        raw_feet = value.to(self.ureg.feet)
+                        inches = value.to(self.ureg.inch)
+                        feet = int(inches.magnitude / 12)
+                        remainder_inches = round(inches.magnitude % 12)
+                        converted_value = f'{feet} ft {remainder_inches} in ({raw_feet})'
+
+                elif unit == self.ureg['kilogram']:
                     converted_value = value.to(self.ureg.pounds)
-                elif value.magnitude >= 300:
-                    converted_value = value.to(self.ureg.yards)
-                else:
-                    raw_feet = value.to(self.ureg.feet)
-                    inches = value.to(self.ureg.inch)
-                    feet = int(inches.magnitude / 12)
-                    remainder_inches = round(inches.magnitude % 12)
-                    converted_value = f'{feet} ft {remainder_inches} in ({raw_feet})'
-            else:
-                await ctx.send('I cannot convert that!')
-                return
+
+                elif unit == self.ureg['celsius'] or unit == self.ureg['kelvin']:
+                    converted_value = value.to(self.ureg.fahrenheit)
 
             calculation_str = f'{value} → {converted_value}'
             print(calculation_str)

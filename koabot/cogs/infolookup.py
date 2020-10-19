@@ -193,39 +193,35 @@ class InfoLookup(commands.Cog):
 
         js = (await utils.net.http_request(user_search, json=True)).json
 
-        if not js:
-            await ctx.send('Oops. What?')
-            return
-
         # Check if there are any results at all
         if not js:
             await ctx.send(random.choice(self.bot.quotes['dictionary_no_results']))
             return
 
-        # If word has no direct definitions
-        if not 'def' in js[0]:
-            # If there's suggestions only
-            if isinstance(js[0], str):
-                suggestions = js[:5]
+        # If word has no direct definitions, they're word suggestions
+        # (if there's no dicts, it's safe to assume they're strings)
+        if not isinstance(js[0], dict):
+            suggestions = js[:5]
 
-                for i, suggestion in enumerate(suggestions):
-                    suggestions[i] = f'• {suggestion}'
+            for i, suggestion in enumerate(suggestions):
+                suggestions[i] = f'• {suggestion}'
 
-                embed = discord.Embed()
-                suggestion_list = '\n\n'.join(suggestions)
-                embed.description = f"*{suggestion_list}*"
-                embed.set_footer(
-                    text=self.bot.assets['merriam-webster']['name'],
-                    icon_url=self.bot.assets['merriam-webster']['favicon'])
-                await ctx.send(random.choice(self.bot.quotes['dictionary_try_this']), embed=embed)
-                return
-            # If there's suggestions to a different grammatical tense
-            else:
-                tense = js[0]['cxs'][0]
-                suggested_tense_word = tense['cxtis'][0]['cxt']
-                await ctx.send('Hmm... Let\'s see...')
-                await ctx.invoke(self.bot.get_command('word'), suggested_tense_word)
-                return
+            embed = discord.Embed()
+            suggestion_list = '\n\n'.join(suggestions)
+            embed.description = f"*{suggestion_list}*"
+            embed.set_footer(
+                text=self.bot.assets['merriam-webster']['name'],
+                icon_url=self.bot.assets['merriam-webster']['favicon'])
+            await ctx.send(random.choice(self.bot.quotes['dictionary_try_this']), embed=embed)
+            return
+        # If there's suggestions to a different grammatical tense
+        elif 'def' not in js[0]:
+            tense_group = js[0]['cxs'][0]
+            tense_name = tense_group['cxl'].replace(' of', '')
+            suggested_tense_word = tense_group['cxtis'][0]['cxt']
+            await ctx.send(f'The word **"{words}"** is the *{tense_name}* of the verb **"{suggested_tense_word}"**. Here\'s its definition.')
+            await ctx.invoke(self.bot.get_command('word'), suggested_tense_word)
+            return
 
         embed = discord.Embed()
         embed.title = words

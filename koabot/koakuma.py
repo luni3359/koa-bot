@@ -13,7 +13,12 @@ from discord.ext import commands
 
 import koabot.tasks
 
-bot = commands.Bot(command_prefix='!', description='')
+intents = discord.Intents.default()
+intents.members = True
+intents.presences = True
+
+bot = commands.Bot(command_prefix='!', description='', intents=intents)
+
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 BOT_DIRNAME = 'koa-bot'
 

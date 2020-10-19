@@ -99,11 +99,13 @@ async def debug_check(ctx):
 
     beta_bot_id = bot.koa['discord_user']['beta_id']
 
+    # if the author is not a debug user
     if ctx.author.id not in bot.testing['debug_users']:
         return ctx.guild.me.id != beta_bot_id
 
     beta_bot = ctx.guild.get_member(beta_bot_id)
 
+    # if the beta bot is online
     if beta_bot and beta_bot.status == discord.Status.online:
         return ctx.guild.me.id == beta_bot_id
 

@@ -7,9 +7,9 @@ from pathlib import Path
 
 import discord
 import imagehash
-import pixivpy3
 import tweepy
 from discord.ext import commands
+from pixivpy_async import *
 from PIL import Image
 
 import koabot.koakuma as koakuma
@@ -25,7 +25,7 @@ class Gallery(commands.Cog):
         twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
         twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
         self.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
-        self.pixiv_api = pixivpy3.AppPixivAPI()
+        self.pixiv_aapi = AppPixivAPI()
         self.pixiv_refresh_token = None
 
     async def display_static(self, channel, msg, url, **kwargs):
@@ -290,14 +290,14 @@ class Gallery(commands.Cog):
         print(f'Now starting to process pixiv link #{post_id}')
 
         # Login
-        if self.pixiv_api.access_token is None:
-            self.reauthenticate_pixiv()
+        if self.pixiv_aapi.access_token is None:
+            await self.reauthenticate_pixiv()
         else:
-            self.pixiv_api.auth(refresh_token=self.pixiv_refresh_token)
+            self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
 
         try:
-            illust_json = self.pixiv_api.illust_detail(post_id, req_auth=True)
-        except pixivpy3.PixivError as e:
+            illust_json = await self.pixiv_aapi.illust_detail(post_id, req_auth=True)
+        except PixivError as e:
             await channel.send('Odd...')
             print(e)
             return
@@ -377,25 +377,25 @@ class Gallery(commands.Cog):
         await temp_message.delete()
         print('DONE PIXIV!')
 
-    def reauthenticate_pixiv(self):
+    async def reauthenticate_pixiv(self):
         """Fetch and cache the refresh token"""
         pixiv_cache_dir = os.path.join(CACHE_DIR, 'pixiv')
         token_filename = 'refresh_token'
         token_path = os.path.join(pixiv_cache_dir, token_filename)
 
         if self.pixiv_refresh_token:
-            self.pixiv_api.auth(refresh_token=self.pixiv_refresh_token)
+            await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
         elif os.path.exists(token_path):
             with open(token_path) as token_file:
                 token = token_file.readline()
                 self.pixiv_refresh_token = token
-                self.pixiv_api.auth(refresh_token=token)
+                await self.pixiv_aapi.login(refresh_token=token)
         else:
-            self.pixiv_api.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
-            self.pixiv_refresh_token = self.pixiv_api.refresh_token
+            await self.pixiv_aapi.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
+            self.pixiv_refresh_token = self.pixiv_aapi.refresh_token
             os.makedirs(pixiv_cache_dir, exist_ok=True)
             with open(token_path, 'w') as token_file:
-                token_file.write(self.pixiv_api.refresh_token)
+                token_file.write(self.pixiv_aapi.refresh_token)
 
     async def generate_pixiv_embed(self, post, user):
         """Generate embeds for pixiv urls

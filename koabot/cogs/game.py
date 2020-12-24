@@ -1,3 +1,4 @@
+"""Fun games that are barely playable, yay!"""
 import random
 import re
 
@@ -22,7 +23,16 @@ class Game(commands.Cog):
         dice_matches = re.findall(DICE_PATTERN, ' '.join(dice))
 
         if not dice_matches:
-            await ctx.send('Sorry, I can\'t do that...')
+            roll_suggestions = [
+                f"・ **d{random.randint(3,12)}**",
+                f"・ **{random.randint(2,5)}d{random.randint(3,6)} {random.choice(['-','+'])}{random.randint(1,5)}**",
+                f"・ **{random.randint(2,5)}d{random.randint(3,6)} {random.randint(2,5)}d{random.randint(3,6)} {random.choice(['-','+'])}{random.randint(1,5)} {random.randint(2,5)}d{random.randint(3,6)} {random.choice(['-','+'])}{random.randint(1,5)}**",
+            ]
+            apology = "Sorry, I can\'t do that... Please try with any of the following examples:\n"
+
+            random.shuffle(roll_suggestions)
+
+            await ctx.send(apology + '\n'.join(roll_suggestions))
             return
 
         dice_single_or_many = len(dice_matches) > 1 or (dice_matches[0][0] and int(dice_matches[0][0]) > 1)

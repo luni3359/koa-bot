@@ -31,6 +31,9 @@ class InfoLookup(commands.Cog):
         try:
             page = self.wikipedia.page(page_title, auto_suggest=False)
             summary = page.summary
+            embed = discord.Embed()
+            embed.title = page.title
+            embed.url= page.url
 
             if len(summary) > 2000:
                 summary = summary[:2000]
@@ -41,7 +44,17 @@ class InfoLookup(commands.Cog):
                     summary = summary[:len(summary) - i - 1] + '…'
                     break
 
-            await ctx.send(summary)
+            if page.images:
+                for image in page.images:
+                    if image in page.html:
+                        embed.set_image(url=image)
+                        break
+
+            embed.description = summary
+            embed.set_footer(
+                text=self.bot.guides['explanation']['wikipedia-default']['embed']['footer_text'],
+                icon_url=self.bot.guides['explanation']['wikipedia-default']['favicon']['size16'])
+            await ctx.send(embed=embed)
         except mediawiki.exceptions.DisambiguationError as e:
             bot_msg = 'There are many definitions for that... do you see anything that matches?\n'
 
@@ -49,6 +62,7 @@ class InfoLookup(commands.Cog):
                 bot_msg += f'* {suggestion}\n'
 
             await ctx.send(bot_msg)
+
         except mediawiki.exceptions.PageError:
             bot_msg = 'Oh, I can\'t find anything like that... how about these?\n'
             suggestions = self.wikipedia.search(search_term, results=3)

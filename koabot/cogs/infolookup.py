@@ -33,7 +33,7 @@ class InfoLookup(commands.Cog):
             summary = page.summary
             embed = discord.Embed()
             embed.title = page.title
-            embed.url= page.url
+            embed.url = page.url
 
             if len(summary) > 2000:
                 summary = summary[:2000]
@@ -44,11 +44,9 @@ class InfoLookup(commands.Cog):
                     summary = summary[:len(summary) - i - 1] + '…'
                     break
 
-            if page.images:
-                for image in page.images:
-                    if image in page.html:
-                        embed.set_image(url=image)
-                        break
+            js = (await utils.net.http_request(f"https://en.wikipedia.org/api/rest_v1/page/summary/{page_title}", json=True)).json
+            if 'thumbnail' in js:
+                embed.set_image(url=js['thumbnail']['source'])
 
             embed.description = summary
             embed.set_footer(

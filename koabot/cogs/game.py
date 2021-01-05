@@ -40,11 +40,29 @@ class Game(commands.Cog):
         pip_sum = 0
 
         for match in dice_matches:
-            quantity = match[0] and int(match[0]) or 1
+            quantity = 1
             pips = match[1] and int(match[1]) or 1
             bonus_points = match[2] and int(match[2]) or 0
 
-            message += f"{num2words(quantity).capitalize()} {pips}-sided {quantity > 1 and 'dice' or 'die'} for a "
+            if match[0]:
+                quantity = int(match[0])
+
+            if quantity == 0:
+                message += f"{num2words(quantity).capitalize()} {pips}-sided dice. Nothing to roll."
+                if bonus_points:
+                    pip_sum += bonus_points
+
+                    if bonus_points > 0:
+                        message += f' +{bonus_points}'
+                    else:
+                        message += f' {bonus_points}'
+                else:
+                    message += ' **0.**'
+
+                message += '\n'
+                continue
+
+            message += f"{num2words(quantity).capitalize()} {pips}-sided {quantity != 1 and 'dice' or 'die'} for a "
 
             for i in range(0, quantity):
                 die_roll = random.randint(1, pips)

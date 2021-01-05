@@ -26,7 +26,14 @@ class InfoLookup(commands.Cog):
         search_term = ' '.join(words)
 
         page_results = self.wikipedia.search(search_term)
-        page_title = page_results[0]
+        page_title = []
+
+        try:
+            page_title = page_results[0]
+        except IndexError as e:
+            bot_msg = 'I can\'t find anything relevant. Sorry...'
+            await ctx.send(bot_msg)
+            return
 
         try:
             page = self.wikipedia.page(page_title, auto_suggest=False)

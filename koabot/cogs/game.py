@@ -41,14 +41,14 @@ class Game(commands.Cog):
 
         for match in dice_matches:
             quantity = 1
-            pips = match[1] and int(match[1]) or 1
+            pips = match[1] and int(match[1]) or 0
             bonus_points = match[2] and int(match[2]) or 0
 
             if match[0]:
                 quantity = int(match[0])
 
-            if quantity == 0:
-                message += f"{num2words(quantity).capitalize()} {pips}-sided dice. Nothing to roll."
+            if quantity == 0 or pips == 0:
+                message += f"{num2words(quantity).capitalize()} {pips}-sided {quantity != 1 and 'dice' or 'die'}. Nothing to roll."
                 if bonus_points:
                     pip_sum += bonus_points
 

@@ -26,12 +26,21 @@ class InfoLookup(commands.Cog):
         search_term = ' '.join(words)
 
         page_results = self.wikipedia.search(search_term)
-        page_title = page_results[0]
+        page_title = []
+
+        try:
+            page_title = page_results[0]
+        except IndexError as e:
+            bot_msg = 'I can\'t find anything relevant. Sorry...'
+            await ctx.send(bot_msg)
+            return
 
         try:
             page = self.wikipedia.page(page_title, auto_suggest=False)
             summary = page.summary
-
+            embed = discord.Embed()
+            embed.title = page.title
+            embed.url = page.url
             if len(summary) > 2000:
                 summary = summary[:2000]
                 for i in range(2000):
@@ -41,7 +50,15 @@ class InfoLookup(commands.Cog):
                     summary = summary[:len(summary) - i - 1] + '…'
                     break
 
-            await ctx.send(summary)
+            js = (await utils.net.http_request(f"https://en.wikipedia.org/api/rest_v1/page/summary/{page_title}", json=True)).json
+            if 'thumbnail' in js:
+                embed.set_image(url=js['thumbnail']['source'])
+
+            embed.description = summary
+            embed.set_footer(
+                text=self.bot.guides['explanation']['wikipedia-default']['embed']['footer_text'],
+                icon_url=self.bot.guides['explanation']['wikipedia-default']['favicon']['size16'])
+            await ctx.send(embed=embed)
         except mediawiki.exceptions.DisambiguationError as e:
             bot_msg = 'There are many definitions for that... do you see anything that matches?\n'
 

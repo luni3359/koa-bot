@@ -87,24 +87,24 @@ class Converter(commands.Cog):
                 else:
                     converted_value = value.to_base_units()
                     converted_value = converted_value.to_compact()
-            elif unit.u in dir(self.ureg.sys.mks):
-                if str(unit.dimensionality) == '[length]':
-                    if unit == self.ureg['kilometer']:
-                        converted_value = value.to(self.ureg.miles)
-                    elif value.magnitude >= 300:
-                        converted_value = value.to(self.ureg.yards)
-                    else:
-                        raw_feet = value.to(self.ureg.feet)
-                        inches = value.to(self.ureg.inch)
-                        feet = int(inches.magnitude / 12)
-                        remainder_inches = round(inches.magnitude % 12)
-                        converted_value = f'{feet} ft {remainder_inches} in ({raw_feet})'
+            # elif unit.u in dir(self.ureg.sys.mks):
+            elif str(unit.dimensionality) == '[length]':
+                if unit == self.ureg['kilometer']:
+                    converted_value = value.to(self.ureg.miles)
+                elif value.magnitude >= 300:
+                    converted_value = value.to(self.ureg.yards)
+                else:
+                    raw_feet = value.to(self.ureg.feet)
+                    inches = value.to(self.ureg.inch)
+                    feet = int(inches.magnitude / 12)
+                    remainder_inches = round(inches.magnitude % 12)
+                    converted_value = f'{feet} ft {remainder_inches} in ({raw_feet})'
 
-                elif unit == self.ureg['kilogram']:
-                    converted_value = value.to(self.ureg.pounds)
+            elif str(unit.dimensionality) == '[mass]':
+                converted_value = value.to(self.ureg.pounds)
 
-                elif str(unit.dimensionality) == '[temperature]':
-                    converted_value = value.to(self.ureg.fahrenheit)
+            elif str(unit.dimensionality) == '[temperature]':
+                converted_value = value.to(self.ureg.fahrenheit)
 
             calculation_str = f'{value} → {converted_value}'
             print(calculation_str)

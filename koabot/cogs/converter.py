@@ -81,7 +81,7 @@ class Converter(commands.Cog):
             unit = self.ureg[unit_str]
             value = self.Q_(value, unit)
 
-            if unit.u in dir(self.ureg.sys.imperial) or unit == self.ureg['fahrenheit']:
+            if unit.u in dir(self.ureg.sys.imperial) or unit in (self.ureg['fahrenheit'], self.ureg['gallon']):
                 if str(unit.dimensionality) == '[temperature]':
                     converted_value = value.to(self.ureg.celsius)
                 else:
@@ -99,6 +99,9 @@ class Converter(commands.Cog):
                     feet = int(inches.magnitude / 12)
                     remainder_inches = round(inches.magnitude % 12)
                     converted_value = f'{feet} ft {remainder_inches} in ({raw_feet})'
+
+            elif str(unit.dimensionality) == '[length] ** 3':
+                converted_value = value.to(self.ureg.gallon)
 
             elif str(unit.dimensionality) == '[mass]':
                 converted_value = value.to(self.ureg.pounds)

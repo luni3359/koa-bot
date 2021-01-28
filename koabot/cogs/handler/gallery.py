@@ -251,8 +251,11 @@ class Gallery(commands.Cog):
             print('Preview gallery not applicable.')
             return
 
+        # Supress original embed (sorry, desktop-only users)
+        await msg.edit(suppress=True)
+
         gallery_pics = []
-        for picture in tweet.extended_entities['media'][1:]:
+        for picture in tweet.extended_entities['media'][0:]:
             if picture['type'] != 'photo':
                 return
 
@@ -264,17 +267,23 @@ class Gallery(commands.Cog):
             total_gallery_pics -= 1
 
             embed = discord.Embed()
-            embed.set_author(
-                name=f'{tweet.author.name} (@{tweet.author.screen_name})',
-                url=guide['post']['url'].format(tweet.author.screen_name),
-                icon_url=tweet.author.profile_image_url_https)
             embed.set_image(url=picture)
             embed.colour = discord.Colour.from_rgb(29, 161, 242) # Twitter color
+
+            # If it's the first picture to show, add author, body, and counters
+            if total_gallery_pics + 1 == len(gallery_pics):
+                embed.set_author(
+                    name=f'{tweet.author.name} (@{tweet.author.screen_name})',
+                    url=guide['post']['url'].format(tweet.author.screen_name),
+                    icon_url=tweet.author.profile_image_url_https)
+                embed.description = tweet.full_text[tweet.display_text_range[0]:tweet.display_text_range[1]]
+                embed.add_field(name='Retweets', value=tweet.retweet_count)
+                embed.add_field(name='Likes', value=tweet.favorite_count)
 
             # If it's the last picture to show, add a brand footer
             if total_gallery_pics <= 0:
                 embed.set_footer(
-                    text=guide['embed']['footer_text'],
+                    text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
                     icon_url=self.bot.assets['twitter']['favicon'])
 
             await channel.send(embed=embed)

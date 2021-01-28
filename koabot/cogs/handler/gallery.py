@@ -251,8 +251,11 @@ class Gallery(commands.Cog):
             print('Preview gallery not applicable.')
             return
 
+        # Supress original embed (sorry, desktop-only users)
+        await msg.edit(suppress=True)
+
         gallery_pics = []
-        for picture in tweet.extended_entities['media'][1:]:
+        for picture in tweet.extended_entities['media'][0:]:
             if picture['type'] != 'photo':
                 return
 
@@ -274,7 +277,7 @@ class Gallery(commands.Cog):
             # If it's the last picture to show, add a brand footer
             if total_gallery_pics <= 0:
                 embed.set_footer(
-                    text=guide['embed']['footer_text'],
+                    text=guide['embed']['footer_text'] + ", Mobile-friendly viewer",
                     icon_url=self.bot.assets['twitter']['favicon'])
 
             await channel.send(embed=embed)

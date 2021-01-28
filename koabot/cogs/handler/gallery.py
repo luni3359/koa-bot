@@ -267,12 +267,16 @@ class Gallery(commands.Cog):
             total_gallery_pics -= 1
 
             embed = discord.Embed()
-            embed.set_author(
-                name=f'{tweet.author.name} (@{tweet.author.screen_name})',
-                url=guide['post']['url'].format(tweet.author.screen_name),
-                icon_url=tweet.author.profile_image_url_https)
             embed.set_image(url=picture)
             embed.colour = discord.Colour.from_rgb(29, 161, 242) # Twitter color
+
+            # If it's the first picture to show, add the tweet autho and body
+            if total_gallery_pics + 1 == len(gallery_pics):
+                embed.set_author(
+                    name=f'{tweet.author.name} (@{tweet.author.screen_name})',
+                    url=guide['post']['url'].format(tweet.author.screen_name),
+                    icon_url=tweet.author.profile_image_url_https)
+                embed.description = tweet.full_text[tweet.display_text_range[0]:tweet.display_text_range[1]]
 
             # If it's the last picture to show, add a brand footer
             if total_gallery_pics <= 0:

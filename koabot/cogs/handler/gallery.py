@@ -86,14 +86,16 @@ class Gallery(commands.Cog):
         posts = []
 
         if post['rating'] != 's' and not on_nsfw_channel:
-            embed = discord.Embed()
-            if 'nsfw_placeholder' in self.bot.assets[board]:
-                embed.set_image(url=self.bot.assets[board]['nsfw_placeholder'])
-            else:
-                embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
+            # Silently ignore
+            return
+            # embed = discord.Embed()
+            # if 'nsfw_placeholder' in self.bot.assets[board]:
+            #     embed.set_image(url=self.bot.assets[board]['nsfw_placeholder'])
+            # else:
+            #     embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-            content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
-            await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+            # content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
+            # await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
         if board == 'e621':
             has_children = post['relationships']['has_active_children']

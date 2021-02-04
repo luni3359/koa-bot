@@ -323,20 +323,20 @@ class Gallery(commands.Cog):
         print(f'Pixiv auth passed! (for #{post_id})')
 
         illust = illust_json.illust
-        if illust.x_restrict != 0 and not channel.is_nsfw():
-            embed = discord.Embed()
+        # if illust.x_restrict != 0 and not channel.is_nsfw():
+        #     embed = discord.Embed()
 
-            if 'nsfw_placeholder' in self.bot.assets['pixiv']:
-                embed.set_image(url=self.bot.assets['pixiv']['nsfw_placeholder'])
-            else:
-                embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
+        #     if 'nsfw_placeholder' in self.bot.assets['pixiv']:
+        #         embed.set_image(url=self.bot.assets['pixiv']['nsfw_placeholder'])
+        #     else:
+        #         embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-            content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
+        #     content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
 
-            bot_cog = self.bot.get_cog('BotStatus')
+        #     bot_cog = self.bot.get_cog('BotStatus')
 
-            await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
-            return
+        #     await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+        #     return
 
         temp_message = await channel.send(f"***{random.choice(self.bot.quotes['processing_long_task'])}***")
         async with channel.typing():

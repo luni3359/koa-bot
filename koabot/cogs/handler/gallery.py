@@ -302,10 +302,7 @@ class Gallery(commands.Cog):
         print(f'Now starting to process pixiv link #{post_id}')
 
         # Login
-        if self.pixiv_aapi.access_token is None:
-            await self.reauthenticate_pixiv()
-        else:
-            self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
+        await self.reauthenticate_pixiv()
 
         try:
             illust_json = await self.pixiv_aapi.illust_detail(post_id, req_auth=True)
@@ -391,13 +388,15 @@ class Gallery(commands.Cog):
 
     async def reauthenticate_pixiv(self):
         """Fetch and cache the refresh token"""
+        if self.pixiv_refresh_token:
+            await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
+            return
+
         pixiv_cache_dir = os.path.join(CACHE_DIR, 'pixiv')
         token_filename = 'refresh_token'
         token_path = os.path.join(pixiv_cache_dir, token_filename)
 
-        if self.pixiv_refresh_token:
-            await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
-        elif os.path.exists(token_path):
+        if os.path.exists(token_path):
             with open(token_path) as token_file:
                 token = token_file.readline()
                 self.pixiv_refresh_token = token

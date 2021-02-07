@@ -253,7 +253,7 @@ class Board(commands.Cog):
 
         if board == 'danbooru':
             post_char = re.sub(r' \(.*?\)', '', utils.posts.combine_tags(post['tag_string_character']))
-            post_copy = utils.posts.combine_tags(post['tag_string_copyright'])
+            post_copy = utils.posts.combine_tags(post['tag_string_copyright'], maximum=1)
             post_artist = utils.posts.combine_tags(post['tag_string_artist'])
             embed_post_title = ''
 

@@ -31,20 +31,35 @@ def get_post_id(url: str, words_to_match, trim_to, has_regex: bool = False):
     return url.split(matching_word)[1].split(trim_to)[0]
 
 
-def combine_tags(tags):
+def combine_tags(tags, **kwargs):
     """Combine tags and give them a readable format
     Arguments:
         tags::str or list
+
+    Keywords:
+        maximum::int
+            How many tags should be taken into account
     """
 
-    if isinstance(tags, typing.List):
-        tag_list = tags
-    else:
-        tag_list = tags.split()[:5]
+    maximum = kwargs.get('maximum', 5)
 
-    if len(tag_list) > 1:
-        joint_tags = ', '.join(tag_list[:-1])
-        joint_tags += ' and ' + tag_list[-1]
+    if not isinstance(tags, typing.List):
+        tag_list = tags.split()
+    else:
+        tag_list = tags
+
+    tag_count = len(tag_list)
+
+    if tag_count > 1:
+        tag_list = tag_list[:maximum]
+
+        if tag_count > maximum:
+            joint_tags = ', '.join(tag_list)
+            joint_tags += f' and {tag_count - maximum} more'
+        else:
+            joint_tags = ', '.join(tag_list[:-1])
+            joint_tags += ' and ' + tag_list[-1]
+
         return joint_tags.strip().replace('_', ' ')
 
     return ''.join(tag_list).strip().replace('_', ' ')

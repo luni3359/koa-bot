@@ -2,14 +2,13 @@
 import os
 import random
 import shutil
-import typing
 from pathlib import Path
 
 import discord
 import imagehash
+import pixivpy_async
 import tweepy
 from discord.ext import commands
-from pixivpy_async import *
 from PIL import Image
 
 import koabot.koakuma as koakuma
@@ -25,7 +24,7 @@ class Gallery(commands.Cog):
         twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
         twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
         self.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
-        self.pixiv_aapi = AppPixivAPI()
+        self.pixiv_aapi = pixivpy_async.AppPixivAPI()
         self.pixiv_refresh_token = None
 
     async def display_static(self, channel, msg, url, **kwargs):
@@ -306,7 +305,7 @@ class Gallery(commands.Cog):
 
         try:
             illust_json = await self.pixiv_aapi.illust_detail(post_id, req_auth=True)
-        except PixivError as e:
+        except pixivpy_async.PixivError as e:
             await channel.send('Odd...')
             print(e)
             return

@@ -1,7 +1,10 @@
 """Get user information"""
+import re
+
 import discord
+import emoji
 from discord.ext import commands
-from koabot.patterns import CHANNEL_URL_PATTERN
+from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 
 
 class UserActions(commands.Cog):
@@ -88,7 +91,17 @@ class UserActions(commands.Cog):
             x += role.name + ', '
 
         e = ''
-        await ctx.send(f'Roles sent: {x}\nEmojis sent: {e}')
+        emoji_list = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) + re.findall(emoji.get_emoji_regexp(), ctx.message.content))
+
+        for em in emoji_list:
+            e += em + ', '
+
+        test = await ctx.send(f'Roles sent: {x}\nEmojis sent: {e}')
+
+        # for em in emoji_list:
+            # await test.add_reaction(em)
+
+        await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
         # self.rr_temporary_list[author_id][bind_tag].append()
 

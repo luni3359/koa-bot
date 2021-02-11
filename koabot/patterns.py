@@ -35,4 +35,4 @@ DICE_PATTERN = r'(\d*)\ ?d(\d+)(?:\ ?([+-]\d+))?'
 
 CHANNEL_URL_PATTERN = re.compile(r'https:\/\/discord(?:app)?\.com\/channels(?:\/\d{18}){3}')
 
-EMOJI_PATTERN = re.compile(r'(<:[\w_]{1,32}:\d{18}>|\\U[0-9a-f]{8})')
+DISCORD_EMOJI_PATTERN = re.compile(r'(<:[\w_]{1,32}:\d{18}>)')

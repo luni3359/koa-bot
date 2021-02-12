@@ -70,40 +70,95 @@ class UserActions(commands.Cog):
             return
 
         # make a queue for the emojis for the current user if it doesn't exist
-        author_id = str(ctx.author.id)
-        if author_id not in self.rr_temporary_list:
-            self.rr_temporary_list[author_id] = {}
-
-        bind_tag = f'{channel_id}/{message_id}'
-        if bind_tag in self.rr_temporary_list[author_id]:
+        author_id = ctx.author.id
+        server_id = url_matches.group(0).split('/')[-3]
+        bind_tag = f'{author_id}/{server_id}'
+        if bind_tag in self.rr_temporary_list:
             await ctx.send('You\'re already in the process of assigning roles and emojis to this message!')
             return
 
-        self.rr_temporary_list[author_id][bind_tag] = []
+        self.rr_temporary_list[bind_tag] = {}
+        self.rr_temporary_list[bind_tag]['bind_message'] = message_id
+        self.rr_temporary_list[bind_tag]['rr_links'] = []
 
         await ctx.send('I will listen to your messages now. Ping your roles (preferably in a hidden channel) along with any number of emojis and they will seamlessly bind each other when they\'re reacted to. As long as your messages contain only emojis and roles, I will accept them.\n\nIf you\'re not satisfied with a change you made, please use `!rr undo last` to undo the latest input I accepted, or `!rr undo all` to start from scratch.\n\nOnce you\'re done, please run the command `!rr save`. If you don\'t want to proceed, call `!rr cancel` to quit.')
 
     @reaction_roles.command()
     async def bind(self, ctx):
         """Add a new binding to the current message in use"""
-        x = ''
-        for role in ctx.message.role_mentions:
-            x += role.name + ', '
+        bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
-        e = ''
+        if bind_tag not in self.rr_temporary_list:
+            await ctx.send('You\'re not currently assigning any bindings!')
+
         emoji_list = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) + re.findall(emoji.get_emoji_regexp(), ctx.message.content))
+        roles_list = [rl.id for rl in ctx.message.role_mentions]
 
-        for em in emoji_list:
-            e += em + ', '
+        exit_reason = None
+        if not emoji_list and not roles_list:
+            exit_reason = 'one emoji and one role'
+        elif not emoji_list:
+            exit_reason = 'one emoji'
+        elif not roles_list:
+            exit_reason = 'one role'
 
-        test = await ctx.send(f'Roles sent: {x}\nEmojis sent: {e}')
+        if exit_reason:
+            exit_emoji = emoji.emojize(':confetti_ball:')
+            exit_emoji2 = emoji.emojize(':tada:')
+            await ctx.send(f'Please include at least {exit_reason} to bind to. How you arrange them does not matter.\n\nFor example:\n{exit_emoji} \@Party → Reacting with {exit_emoji} will assign the \@Party role.\n{exit_emoji2} \@Party \@Yay {exit_emoji} → Reacting with {exit_emoji} AND {exit_emoji2} will assign the \@Party and \@Yay roles.')
+            return
 
-        # for em in emoji_list:
-            # await test.add_reaction(em)
+        # prevent duplicate role bindings from being created
+        binding_to_overwrite = None
+        for binding in self.rr_temporary_list[bind_tag]['rr_links']:
+            if len(roles_list) != len(binding['roles']):
+                continue
+
+            roles_are_duplicate = True
+            for rl in roles_list:
+                if rl not in binding['roles']:
+                    roles_are_duplicate = False
+
+            if roles_are_duplicate:
+                # check if the emojis are also identical
+                if len(emoji_list) != len(binding['reactions']):
+                    binding_to_overwrite = binding
+                    break
+
+                for em in emoji_list:
+                    if em not in binding['reactions']:
+                        binding_to_overwrite = binding
+                        break
+
+                # reactions are also identical
+                if not binding_to_overwrite:
+                    await ctx.message.add_reaction(emoji.emojize(':interrobang:', use_aliases=True))
+                    await ctx.send('You\'ve already made this binding before!')
+                    return
+
+                break
+
+        if binding_to_overwrite:
+            em_joined = ' AND '.join(emoji_list)
+            rl_joined = ' AND '.join([str(rl) for rl in binding_to_overwrite['roles']])
+            maru = emoji.emojize(':o:', use_aliases=True)
+            batu = emoji.emojize(':x:', use_aliases=True)
+            tmp_msg = await ctx.send(f'This binding already exists. Would you like to change it to the following?\n\nReact to {em_joined} to get {rl_joined}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.')
+            await tmp_msg.add_reaction(maru)
+            await tmp_msg.add_reaction(batu)
+            return
+
+        # if binding_to_overwrite:
+        #     bind_object = binding_to_overwrite
+        #     bind_object['reactions'] = set(bind_object['reactions'] + emoji_list)
+        # else:
+        bind_object = {}
+        bind_object['reactions'] = emoji_list
+        bind_object['roles'] = roles_list
+
+        self.rr_temporary_list[bind_tag]['rr_links'].append(bind_object)
 
         await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
-
-        # self.rr_temporary_list[author_id][bind_tag].append()
 
     @reaction_roles.command()
     async def undo(self, ctx):
@@ -118,7 +173,14 @@ class UserActions(commands.Cog):
     @reaction_roles.command(aliases=['quit', 'exit', 'stop'])
     async def cancel(self, ctx):
         """Quit the reaction roles binding process"""
-        pass
+        bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
+
+        if bind_tag not in self.rr_temporary_list:
+            await ctx.send('You\'re not currently assigning any bindings!')
+        else:
+            self.rr_temporary_list.pop(bind_tag)
+            await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
+
 
 
 def setup(bot: commands.Bot):

@@ -34,7 +34,7 @@ class UserActions(commands.Cog):
                 icon_url=ctx.message.author.avatar_url)
             await ctx.send(embed=embed)
 
-    @commands.group(aliases=['rr'])
+    @commands.group(aliases=['reactionroles', 'reactionrole', 'rr'])
     async def reaction_roles(self, ctx):
         """Grant users roles upon reacting to a message"""
         if ctx.invoked_subcommand is None:
@@ -180,7 +180,6 @@ class UserActions(commands.Cog):
         else:
             self.rr_temporary_list.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
-
 
 
 def setup(bot: commands.Bot):

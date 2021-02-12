@@ -57,6 +57,9 @@ class BotEvents(commands.Cog):
     def add_rr_watch(self, message_id, links):
         self.rr_assignments[message_id] = links
 
+    def assign_roles(self):
+        pass
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         handle_confirmation = payload.message_id in self.rr_confirmations
@@ -121,7 +124,7 @@ class BotEvents(commands.Cog):
 
             # match with links
             for link in self.rr_assignments[payload.message_id]:
-                for user_id, user_contents in users_that_reacted.items():
+                for _, user_contents in users_that_reacted.items():
                     link_fully_matches = link['reactions'].issubset(user_contents['reactions'])
 
                     if not link_fully_matches:

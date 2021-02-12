@@ -81,7 +81,7 @@ class UserActions(commands.Cog):
         self.rr_temporary_list[bind_tag]['bind_message'] = message_id
         self.rr_temporary_list[bind_tag]['rr_links'] = []
 
-        await ctx.send('I will listen to your messages now. Ping your roles (preferably in a hidden channel) along with any number of emojis and they will seamlessly bind each other when they\'re reacted to. As long as your messages contain only emojis and roles, I will accept them.\n\nIf you\'re not satisfied with a change you made, please use `!rr undo last` to undo the latest input I accepted, or `!rr undo all` to start from scratch.\n\nOnce you\'re done, please run the command `!rr save`. If you don\'t want to proceed, call `!rr cancel` to quit.')
+        await ctx.send('Now you can use `!rr bind` to send your reactions with roles. At the end of the command ping your roles (preferably in a hidden channel) along with any number of emojis and they will seamlessly bind each other when they\'re reacted to. As long as your messages contain only emojis and roles, I will accept them.\n\nIf you\'re not satisfied with a change you made, please use `!rr undo last` to undo the latest input I accepted, or `!rr undo all` to start from scratch.\n\nOnce you\'re done, please run the command `!rr save`. If you don\'t want to proceed, call `!rr cancel` to quit.')
 
     @reaction_roles.command()
     async def bind(self, ctx):
@@ -90,6 +90,7 @@ class UserActions(commands.Cog):
 
         if bind_tag not in self.rr_temporary_list:
             await ctx.send('You\'re not currently assigning any bindings!')
+            return
 
         emoji_list = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) + re.findall(emoji.get_emoji_regexp(), ctx.message.content))
         roles_list = [rl.id for rl in ctx.message.role_mentions]
@@ -144,14 +145,14 @@ class UserActions(commands.Cog):
             maru = emoji.emojize(':o:', use_aliases=True)
             batu = emoji.emojize(':x:', use_aliases=True)
             tmp_msg = await ctx.send(f'This binding already exists. Would you like to change it to the following?\n\nReact to {em_joined} to get {rl_joined}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.')
+
+            events_cog = self.bot.get_cog('BotEvents')
+            events_cog.add_rr_confirmation(tmp_msg.id, bind_tag, emoji_list)
+
             await tmp_msg.add_reaction(maru)
             await tmp_msg.add_reaction(batu)
             return
 
-        # if binding_to_overwrite:
-        #     bind_object = binding_to_overwrite
-        #     bind_object['reactions'] = set(bind_object['reactions'] + emoji_list)
-        # else:
         bind_object = {}
         bind_object['reactions'] = emoji_list
         bind_object['roles'] = roles_list
@@ -161,14 +162,40 @@ class UserActions(commands.Cog):
         await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
     @reaction_roles.command()
-    async def undo(self, ctx):
+    async def undo(self, ctx, call_type: str):
         """Cancel the last issued reaction roles entry"""
-        pass
+        bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
+
+        if bind_tag not in self.rr_temporary_list:
+            await ctx.send('You\'re not currently assigning any bindings!')
+            return
+
+        if call_type == 'last':
+            self.rr_temporary_list[bind_tag]['rr_links'].pop()
+        elif call_type == 'all':
+            self.rr_temporary_list[bind_tag]['rr_links'] = []
 
     @reaction_roles.command()
     async def save(self, ctx):
         """Complete the role-emoji registration"""
-        pass
+        bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
+
+        if bind_tag not in self.rr_temporary_list:
+            await ctx.send('You\'re not currently assigning any bindings!')
+            return
+
+        tmp_root = self.rr_temporary_list[bind_tag]
+
+        if not tmp_root['rr_links']:
+            await ctx.send('You can\'t save without making any bindings. Please use the command `!rr bind` to add at least one reaction roles binding.')
+            return
+
+        events_cog = self.bot.get_cog('BotEvents')
+        events_cog.add_rr_watch(tmp_root['bind_message'], tmp_root['rr_links'])
+
+        self.rr_temporary_list.pop(bind_tag)
+
+        await ctx.send('Registration complete!')
 
     @reaction_roles.command(aliases=['quit', 'exit', 'stop'])
     async def cancel(self, ctx):
@@ -180,6 +207,10 @@ class UserActions(commands.Cog):
         else:
             self.rr_temporary_list.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
+
+    def rr_conflict_response(self, bind_tag, emoji_list):
+        bind_object = self.rr_temporary_list[bind_tag]
+        bind_object['reactions'] = emoji_list
 
 
 def setup(bot: commands.Bot):

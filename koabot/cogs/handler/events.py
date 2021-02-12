@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 
 import discord
+import emoji
 import tldextract
 from discord.ext import commands
 from koabot.patterns import URL_PATTERN
@@ -20,6 +21,8 @@ class BotEvents(commands.Cog):
         self.bot.last_channel = 0
         self.bot.last_channel_message_count = 0
         self.bot.last_channel_warned = False
+        self.rr_confirmations = {}
+        self.rr_assignments = {}
 
         self.valid_urls = []
         for group, contents in self.bot.match_groups.items():
@@ -44,6 +47,48 @@ class BotEvents(commands.Cog):
 
                 combined_guide = merge({}, target_guide, source_guide)
                 self.bot.guides[guide_type][guide_name] = combined_guide
+
+    def add_rr_confirmation(self, message_id, bind_tag, emoji_list):
+        self.rr_confirmations[message_id] = {}
+        self.rr_confirmations[message_id]['bind_tag'] = bind_tag
+        self.rr_confirmations[message_id]['emoji_list'] = emoji_list
+
+    def add_rr_watch(self, message_id, links):
+        self.rr_assignments[message_id] = links
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        if payload.message_id not in self.rr_confirmations:
+            return
+
+        tmp_root = self.rr_confirmations[payload.message_id]
+
+        if str(payload.user_id) != tmp_root['bind_tag'].split('/')[0]:
+            return
+
+        reaction = payload.emoji
+
+        valid_options = [emoji.emojize(':o:', use_aliases=True), emoji.emojize(':x:', use_aliases=True)]
+
+        if reaction.name not in valid_options:
+            pass
+
+        useractions_cog = self.bot.get_cog('UserActions')
+        useractions_cog.rr_conflict_response(tmp_root['bind_tag'], tmp_root['emoji_list'])
+
+        self.rr_confirmations.pop(payload.message_id)
+
+        channel = self.bot.get_channel(payload.channel_id)
+
+        message = await channel.fetch_message(payload.message_id)
+        await message.clear_reactions()
+        await message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+        channel = self.bot.get_channel(payload.channel_id)
+        member = self.bot.get_guild(payload.guild_id).get_member(payload.user_id)
+        print(f'{member.mention} removed an emoji!')
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):

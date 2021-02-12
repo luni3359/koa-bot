@@ -110,44 +110,44 @@ class UserActions(commands.Cog):
             return
 
         # prevent duplicate role bindings from being created
-        binding_to_overwrite = None
-        for binding in self.rr_temporary_list[bind_tag]['rr_links']:
-            if len(roles_list) != len(binding['roles']):
+        link_to_overwrite = None
+        for link in self.rr_temporary_list[bind_tag]['rr_links']:
+            if len(roles_list) != len(link['roles']):
                 continue
 
             roles_are_duplicate = True
             for rl in roles_list:
-                if rl not in binding['roles']:
+                if rl not in link['roles']:
                     roles_are_duplicate = False
 
             if roles_are_duplicate:
                 # check if the emojis are also identical
-                if len(emoji_list) != len(binding['reactions']):
-                    binding_to_overwrite = binding
+                if len(emoji_list) != len(link['reactions']):
+                    link_to_overwrite = link
                     break
 
                 for em in emoji_list:
-                    if em not in binding['reactions']:
-                        binding_to_overwrite = binding
+                    if em not in link['reactions']:
+                        link_to_overwrite = link
                         break
 
                 # reactions are also identical
-                if not binding_to_overwrite:
+                if not link_to_overwrite:
                     await ctx.message.add_reaction(emoji.emojize(':interrobang:', use_aliases=True))
                     await ctx.send('You\'ve already made this binding before!')
                     return
 
                 break
 
-        if binding_to_overwrite:
+        if link_to_overwrite:
             em_joined = ' AND '.join(emoji_list)
-            rl_joined = ' AND '.join([str(rl) for rl in binding_to_overwrite['roles']])
+            rl_joined = ' AND '.join([str(rl) for rl in link_to_overwrite['roles']])
             maru = emoji.emojize(':o:', use_aliases=True)
             batu = emoji.emojize(':x:', use_aliases=True)
             tmp_msg = await ctx.send(f'This binding already exists. Would you like to change it to the following?\n\nReact to {em_joined} to get {rl_joined}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.')
 
             events_cog = self.bot.get_cog('BotEvents')
-            events_cog.add_rr_confirmation(tmp_msg.id, bind_tag, emoji_list)
+            events_cog.add_rr_confirmation(tmp_msg.id, bind_tag, link_to_overwrite, emoji_list)
 
             await tmp_msg.add_reaction(maru)
             await tmp_msg.add_reaction(batu)
@@ -208,10 +208,9 @@ class UserActions(commands.Cog):
             self.rr_temporary_list.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
-    def rr_conflict_response(self, bind_tag, emoji_list):
-        bind_object = self.rr_temporary_list[bind_tag]
-        bind_object['reactions'] = emoji_list
-
+    def rr_conflict_response(self, bind_tag, rr_link, emoji_list):
+        rr_link['reactions'] = emoji_list
+        # self.rr_temporary_list[bind_tag]['rr_links']['reactions'] = emoji_list
 
 def setup(bot: commands.Bot):
     """Initiate cog"""

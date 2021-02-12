@@ -48,10 +48,11 @@ class BotEvents(commands.Cog):
                 combined_guide = merge({}, target_guide, source_guide)
                 self.bot.guides[guide_type][guide_name] = combined_guide
 
-    def add_rr_confirmation(self, message_id, bind_tag, emoji_list):
+    def add_rr_confirmation(self, message_id, bind_tag, rr_link, emoji_list):
         self.rr_confirmations[message_id] = {}
         self.rr_confirmations[message_id]['bind_tag'] = bind_tag
         self.rr_confirmations[message_id]['emoji_list'] = emoji_list
+        self.rr_confirmations[message_id]['rr_link'] = rr_link
 
     def add_rr_watch(self, message_id, links):
         self.rr_assignments[message_id] = links
@@ -75,7 +76,7 @@ class BotEvents(commands.Cog):
                 pass
 
             useractions_cog = self.bot.get_cog('UserActions')
-            useractions_cog.rr_conflict_response(tmp_root['bind_tag'], tmp_root['emoji_list'])
+            useractions_cog.rr_conflict_response(tmp_root['bind_tag'], tmp_root['rr_link'], tmp_root['emoji_list'])
 
             self.rr_confirmations.pop(payload.message_id)
 

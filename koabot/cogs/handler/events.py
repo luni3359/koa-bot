@@ -58,31 +58,82 @@ class BotEvents(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        if payload.message_id not in self.rr_confirmations:
-            return
+        handle_confirmation = payload.message_id in self.rr_confirmations
+        handle_reactionrole = payload.message_id in self.rr_assignments
 
-        tmp_root = self.rr_confirmations[payload.message_id]
+        if handle_confirmation:
+            tmp_root = self.rr_confirmations[payload.message_id]
 
-        if str(payload.user_id) != tmp_root['bind_tag'].split('/')[0]:
-            return
+            if str(payload.user_id) != tmp_root['bind_tag'].split('/')[0]:
+                return
 
-        reaction = payload.emoji
+            reaction = payload.emoji
 
-        valid_options = [emoji.emojize(':o:', use_aliases=True), emoji.emojize(':x:', use_aliases=True)]
+            valid_options = [emoji.emojize(':o:', use_aliases=True), emoji.emojize(':x:', use_aliases=True)]
 
-        if reaction.name not in valid_options:
-            pass
+            if reaction.name not in valid_options:
+                pass
 
-        useractions_cog = self.bot.get_cog('UserActions')
-        useractions_cog.rr_conflict_response(tmp_root['bind_tag'], tmp_root['emoji_list'])
+            useractions_cog = self.bot.get_cog('UserActions')
+            useractions_cog.rr_conflict_response(tmp_root['bind_tag'], tmp_root['emoji_list'])
 
-        self.rr_confirmations.pop(payload.message_id)
+            self.rr_confirmations.pop(payload.message_id)
 
-        channel = self.bot.get_channel(payload.channel_id)
+            channel = self.bot.get_channel(payload.channel_id)
 
-        message = await channel.fetch_message(payload.message_id)
-        await message.clear_reactions()
-        await message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
+            message = await channel.fetch_message(payload.message_id)
+            await message.clear_reactions()
+            await message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
+        elif handle_reactionrole:
+            channel = self.bot.get_channel(payload.channel_id)
+            message = await channel.fetch_message(payload.message_id)
+
+            emojis_in_message = [str(em) for em in message.reactions if not isinstance(em, str)]
+            emojis_in_message += [em for em in message.reactions if isinstance(em, str)]
+            emojis_in_message = set(emojis_in_message)
+
+            emojis_in_links = set()
+
+            for link in self.rr_assignments[payload.message_id]:
+                # get only reactions with bound emojis
+                emojis_in_links.update(link['reactions'])
+
+            emojis_in_use = emojis_in_links.intersection(emojis_in_message)
+            users_that_reacted = {}
+
+            for reaction in message.reactions:
+                if not isinstance(reaction.emoji, str):
+                    em = str(reaction.emoji)
+                else:
+                    em = reaction.emoji
+
+                if em not in emojis_in_use:
+                    continue
+
+                for user in await reaction.users().flatten():
+                    if user.id not in users_that_reacted:
+                        users_that_reacted[user.id] = {}
+                        users_that_reacted[user.id]['discord_user'] = user
+                        users_that_reacted[user.id]['reactions'] = []
+
+                    users_that_reacted[user.id]['reactions'].append(em)
+
+            # match with links
+            for link in self.rr_assignments[payload.message_id]:
+                for user_id, user_contents in users_that_reacted.items():
+                    link_fully_matches = link['reactions'].issubset(user_contents['reactions'])
+
+                    if not link_fully_matches:
+                        continue
+
+                    user_mention = user_contents['discord_user'].mention
+
+                    if len(link['roles']) > 1:
+                        roles = ', '.join(str(r) for r in link['roles'])
+                        await channel.send(f'Congrats, {user_mention}. You get the {roles} roles!')
+                    else:
+                        role = link['roles'][0]
+                        await channel.send(f'Congrats, {user_mention}. You get the {role} role!')
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):

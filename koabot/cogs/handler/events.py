@@ -57,8 +57,62 @@ class BotEvents(commands.Cog):
     def add_rr_watch(self, message_id, links):
         self.rr_assignments[message_id] = links
 
-    def assign_roles(self):
-        pass
+    async def assign_roles(self, user, message_id, channel_id):
+        """Updates the roles of the given user
+        Parameters:
+            user::discord.Member|int
+            message_id::int
+            channel_id::int
+        """
+        channel = self.bot.get_channel(channel_id)
+        message = await channel.fetch_message(message_id)
+
+        emojis_in_message = [str(em) for em in message.reactions if not isinstance(em, str)]
+        emojis_in_message += [em for em in message.reactions if isinstance(em, str)]
+        emojis_in_message = set(emojis_in_message)
+
+        emojis_in_links = set()
+
+        for link in self.rr_assignments[message_id]:
+            # get only reactions with bound emojis
+            emojis_in_links.update(link['reactions'])
+
+        emojis_in_use = emojis_in_links.intersection(emojis_in_message)
+        users_that_reacted = {}
+
+        for reaction in message.reactions:
+            if not isinstance(reaction.emoji, str):
+                em = str(reaction.emoji)
+            else:
+                em = reaction.emoji
+
+            if em not in emojis_in_use:
+                continue
+
+            for u in await reaction.users().flatten():
+                if u.id not in users_that_reacted:
+                    users_that_reacted[u.id] = {}
+                    users_that_reacted[u.id]['discord_user'] = u
+                    users_that_reacted[u.id]['reactions'] = []
+
+                users_that_reacted[u.id]['reactions'].append(em)
+
+        # match with links
+        for link in self.rr_assignments[message_id]:
+            for _, user_contents in users_that_reacted.items():
+                link_fully_matches = link['reactions'].issubset(user_contents['reactions'])
+
+                if not link_fully_matches:
+                    continue
+
+                user_mention = user_contents['discord_user'].mention
+
+                if len(link['roles']) > 1:
+                    roles = ', '.join(str(r) for r in link['roles'])
+                    await channel.send(f'Congrats, {user_mention}. You get the {roles} roles!')
+                else:
+                    role = link['roles'][0]
+                    await channel.send(f'Congrats, {user_mention}. You get the {role} role!')
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -89,61 +143,19 @@ class BotEvents(commands.Cog):
             await message.clear_reactions()
             await message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
         elif handle_reactionrole:
-            channel = self.bot.get_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
+            if payload.member:
+                mbm = payload.member
+            else:
+                mbm = payload.user_id
 
-            emojis_in_message = [str(em) for em in message.reactions if not isinstance(em, str)]
-            emojis_in_message += [em for em in message.reactions if isinstance(em, str)]
-            emojis_in_message = set(emojis_in_message)
-
-            emojis_in_links = set()
-
-            for link in self.rr_assignments[payload.message_id]:
-                # get only reactions with bound emojis
-                emojis_in_links.update(link['reactions'])
-
-            emojis_in_use = emojis_in_links.intersection(emojis_in_message)
-            users_that_reacted = {}
-
-            for reaction in message.reactions:
-                if not isinstance(reaction.emoji, str):
-                    em = str(reaction.emoji)
-                else:
-                    em = reaction.emoji
-
-                if em not in emojis_in_use:
-                    continue
-
-                for user in await reaction.users().flatten():
-                    if user.id not in users_that_reacted:
-                        users_that_reacted[user.id] = {}
-                        users_that_reacted[user.id]['discord_user'] = user
-                        users_that_reacted[user.id]['reactions'] = []
-
-                    users_that_reacted[user.id]['reactions'].append(em)
-
-            # match with links
-            for link in self.rr_assignments[payload.message_id]:
-                for _, user_contents in users_that_reacted.items():
-                    link_fully_matches = link['reactions'].issubset(user_contents['reactions'])
-
-                    if not link_fully_matches:
-                        continue
-
-                    user_mention = user_contents['discord_user'].mention
-
-                    if len(link['roles']) > 1:
-                        roles = ', '.join(str(r) for r in link['roles'])
-                        await channel.send(f'Congrats, {user_mention}. You get the {roles} roles!')
-                    else:
-                        role = link['roles'][0]
-                        await channel.send(f'Congrats, {user_mention}. You get the {role} role!')
+            await self.assign_roles(mbm, payload.message_id, payload.channel_id)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
-        channel = self.bot.get_channel(payload.channel_id)
-        member = self.bot.get_guild(payload.guild_id).get_member(payload.user_id)
-        print(f'{member.mention} removed an emoji!')
+        handle_reactionrole = payload.message_id in self.rr_assignments
+
+        if handle_reactionrole:
+            await self.assign_roles(payload.user_id, payload.message_id, payload.channel_id)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -292,7 +304,6 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         """On bot start"""
-
         print(f'Logged in to Discord  [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
 
         # Change play status to something fitting

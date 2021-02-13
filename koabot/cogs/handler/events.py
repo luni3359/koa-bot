@@ -130,11 +130,15 @@ class BotEvents(commands.Cog):
 
             valid_options = [emoji.emojize(':o:', use_aliases=True), emoji.emojize(':x:', use_aliases=True)]
 
-            if reaction.name not in valid_options:
-                pass
+            if str(reaction) not in valid_options:
+                return
 
             useractions_cog = self.bot.get_cog('UserActions')
-            useractions_cog.rr_conflict_response(tmp_root['bind_tag'], tmp_root['rr_link'], tmp_root['emoji_list'])
+
+            if str(reaction) == emoji.emojize(':o:', use_aliases=True):
+                useractions_cog.rr_conflict_response(tmp_root['rr_link'], tmp_root['emoji_list'])
+            else:
+                useractions_cog.rr_conflict_response(None, None)
 
             self.rr_confirmations.pop(payload.message_id)
 
@@ -142,7 +146,10 @@ class BotEvents(commands.Cog):
 
             message = await channel.fetch_message(payload.message_id)
             await message.clear_reactions()
-            await message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
+            if str(reaction) == emoji.emojize(':o:', use_aliases=True):
+                await message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
+            else:
+                await message.add_reaction(emoji.emojize(':stop_sign:', use_aliases=True))
         elif handle_reactionrole:
             await self.assign_roles(payload.user_id, payload.message_id, payload.channel_id)
 

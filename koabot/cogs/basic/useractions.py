@@ -208,9 +208,11 @@ class UserActions(commands.Cog):
             self.rr_temporary_list.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
-    def rr_conflict_response(self, bind_tag, rr_link, emoji_list):
+    def rr_conflict_response(self, rr_link, emoji_list):
+        if not emoji_list:
+            return
+
         rr_link['reactions'] = emoji_list
-        # self.rr_temporary_list[bind_tag]['rr_links']['reactions'] = emoji_list
 
 def setup(bot: commands.Bot):
     """Initiate cog"""

@@ -57,15 +57,16 @@ class BotEvents(commands.Cog):
     def add_rr_watch(self, message_id, links):
         self.rr_assignments[message_id] = links
 
-    async def assign_roles(self, emoji_sent: str, user_id: int, message_id: int, channel_id: int):
+    async def assign_roles(self, emoji_sent: str, user, message_id: int, channel_id: int):
         """Updates the roles of the given user
         Parameters:
-            user_id::int
+            user::discord.Member|int
             message_id::int
             channel_id::int
         """
         channel = self.bot.get_channel(channel_id)
         message = await channel.fetch_message(message_id)
+        user_id = user if isinstance(user, int) else user.id
 
         emojis_in_message = [str(em) for em in message.reactions if not isinstance(em, str)]
         emojis_in_message += [em for em in message.reactions if isinstance(em, str)]
@@ -79,6 +80,7 @@ class BotEvents(commands.Cog):
 
         emojis_in_use = emojis_in_links.intersection(emojis_in_message)
         user_that_reacted = {}
+        user_that_reacted['reactions'] = []
 
         for reaction in message.reactions:
             if not isinstance(reaction.emoji, str):
@@ -93,31 +95,40 @@ class BotEvents(commands.Cog):
                 if u.id != user_id:
                     continue
 
-                if not user_that_reacted:
-                    user_that_reacted['discord_user'] = u
-                    user_that_reacted['reactions'] = []
-
                 user_that_reacted['reactions'].append(em)
-
-        # if the user has no more reactions on the target message
-        if not user_that_reacted:
-            return
 
         # match with links
         for link in self.rr_assignments[message_id]:
             link_fully_matches = link['reactions'].issubset(user_that_reacted['reactions'])
 
-            if not link_fully_matches or emoji_sent not in link['reactions']:
+            if emoji_sent not in link['reactions']:
                 continue
 
-            user_mention = user_that_reacted['discord_user'].mention
+            role_removal = False
+            if not link_fully_matches:
+                user_that_reacted['reactions'].append(emoji_sent)
+                role_removal = link['reactions'].issubset(user_that_reacted['reactions'])
 
-            if len(link['roles']) > 1:
-                roles = ', '.join(r.mention for r in link['roles'])
-                await channel.send(f'Congrats, {user_mention}. You get the {roles} roles!')
+                if not role_removal:
+                    continue
+
+            if isinstance(user, int):
+                user = channel.guild.get_member(user_id)
+
+            if role_removal:
+                if len(link['roles']) > 1:
+                    roles = ', '.join(r.mention for r in link['roles'])
+                    await channel.send(f'{user.mention}, say goodbye to {roles}...')
+                else:
+                    role = link['roles'][0].mention
+                    await channel.send(f'{user.mention}, say goodbye to {role}...')
             else:
-                role = link['roles'][0].mention
-                await channel.send(f'Congrats, {user_mention}. You get the {role} role!')
+                if len(link['roles']) > 1:
+                    roles = ', '.join(r.mention for r in link['roles'])
+                    await channel.send(f'Congrats, {user.mention}. You get the {roles} roles!')
+                else:
+                    role = link['roles'][0].mention
+                    await channel.send(f'Congrats, {user.mention}. You get the {role} role!')
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -155,7 +166,10 @@ class BotEvents(commands.Cog):
             else:
                 await message.add_reaction(emoji.emojize(':stop_sign:', use_aliases=True))
         elif handle_reactionrole:
-            await self.assign_roles(str(payload.emoji), payload.user_id, payload.message_id, payload.channel_id)
+            if payload.member:
+                await self.assign_roles(str(payload.emoji), payload.member, payload.message_id, payload.channel_id)
+            else:
+                await self.assign_roles(str(payload.emoji), payload.user_id, payload.message_id, payload.channel_id)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):

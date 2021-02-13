@@ -79,8 +79,7 @@ class BotEvents(commands.Cog):
             emojis_in_links.update(link['reactions'])
 
         emojis_in_use = emojis_in_links.intersection(emojis_in_message)
-        user_that_reacted = {}
-        user_that_reacted['reactions'] = []
+        reactions_by_currentuser = []
 
         for reaction in message.reactions:
             if not isinstance(reaction.emoji, str):
@@ -95,19 +94,19 @@ class BotEvents(commands.Cog):
                 if u.id != user_id:
                     continue
 
-                user_that_reacted['reactions'].append(em)
+                reactions_by_currentuser.append(em)
 
         # match with links
         for link in self.rr_assignments[message_id]:
-            link_fully_matches = link['reactions'].issubset(user_that_reacted['reactions'])
+            link_fully_matches = link['reactions'].issubset(reactions_by_currentuser)
 
             if emoji_sent not in link['reactions']:
                 continue
 
             role_removal = False
             if not link_fully_matches:
-                user_that_reacted['reactions'].append(emoji_sent)
-                role_removal = link['reactions'].issubset(user_that_reacted['reactions'])
+                reactions_by_currentuser.append(emoji_sent)
+                role_removal = link['reactions'].issubset(reactions_by_currentuser)
 
                 if not role_removal:
                     continue

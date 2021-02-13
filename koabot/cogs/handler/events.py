@@ -113,10 +113,10 @@ class BotEvents(commands.Cog):
             user_mention = user_that_reacted['discord_user'].mention
 
             if len(link['roles']) > 1:
-                roles = ', '.join(str(r) for r in link['roles'])
+                roles = ', '.join(r.mention for r in link['roles'])
                 await channel.send(f'Congrats, {user_mention}. You get the {roles} roles!')
             else:
-                role = link['roles'][0]
+                role = link['roles'][0].mention
                 await channel.send(f'Congrats, {user_mention}. You get the {role} role!')
 
     @commands.Cog.listener()

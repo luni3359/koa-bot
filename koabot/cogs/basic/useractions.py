@@ -93,7 +93,7 @@ class UserActions(commands.Cog):
             return
 
         emoji_list = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) + re.findall(emoji.get_emoji_regexp(), ctx.message.content))
-        roles_list = [rl.id for rl in ctx.message.role_mentions]
+        roles_list = ctx.message.role_mentions
 
         exit_reason = None
         if not emoji_list and not roles_list:
@@ -141,7 +141,7 @@ class UserActions(commands.Cog):
 
         if link_to_overwrite:
             em_joined = ' AND '.join(emoji_list)
-            rl_joined = ' AND '.join([str(rl) for rl in link_to_overwrite['roles']])
+            rl_joined = ' AND '.join([rl.mention for rl in link_to_overwrite['roles']])
             maru = emoji.emojize(':o:', use_aliases=True)
             batu = emoji.emojize(':x:', use_aliases=True)
             tmp_msg = await ctx.send(f'This binding already exists. Would you like to change it to the following?\n\nReact to {em_joined} to get {rl_joined}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.')

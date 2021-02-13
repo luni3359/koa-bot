@@ -99,6 +99,10 @@ class BotEvents(commands.Cog):
 
                 user_that_reacted['reactions'].append(em)
 
+        # if the user has no more reactions on the target message
+        if not user_that_reacted:
+            return
+
         # match with links
         for link in self.rr_assignments[message_id]:
             link_fully_matches = link['reactions'].issubset(user_that_reacted['reactions'])

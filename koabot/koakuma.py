@@ -22,6 +22,10 @@ bot = commands.Bot(command_prefix='!', description='', intents=intents)
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 BOT_DIRNAME = 'koa-bot'
 
+# Make data dir if it doesn't exist
+DATA_DIR = appdirs.user_data_dir(BOT_DIRNAME)
+os.makedirs(DATA_DIR, exist_ok=True)
+
 # Make config dir if it doesn't exist
 CONFIG_DIR = appdirs.user_config_dir(BOT_DIRNAME)
 os.makedirs(CONFIG_DIR, exist_ok=True)

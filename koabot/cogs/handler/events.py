@@ -115,6 +115,8 @@ class BotEvents(commands.Cog):
                 user = channel.guild.get_member(user_id)
 
             if role_removal:
+                await user.remove_roles(*link['roles'], reason='Requested by the own user by reacting')
+
                 if len(link['roles']) > 1:
                     roles = ', '.join(r.mention for r in link['roles'])
                     await channel.send(f'{user.mention}, say goodbye to {roles}...')
@@ -122,6 +124,8 @@ class BotEvents(commands.Cog):
                     role = link['roles'][0].mention
                     await channel.send(f'{user.mention}, say goodbye to {role}...')
             else:
+                await user.add_roles(*link['roles'], reason='Requested by the own user by reacting')
+
                 if len(link['roles']) > 1:
                     roles = ', '.join(r.mention for r in link['roles'])
                     await channel.send(f'Congrats, {user.mention}. You get the {roles} roles!')

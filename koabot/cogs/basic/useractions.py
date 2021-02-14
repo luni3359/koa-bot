@@ -1,9 +1,13 @@
 """Get user information"""
+import os
 import re
+from pathlib import Path
 
+import commentjson
 import discord
 import emoji
 from discord.ext import commands
+from koabot.koakuma import DATA_DIR
 from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 
 
@@ -190,6 +194,20 @@ class UserActions(commands.Cog):
             await ctx.send('You can\'t save without making any bindings. Please use the command `!rr bind` to add at least one reaction roles binding.')
             return
 
+        print('Saving bind...')
+        file_name = 'binds.json'
+        file_path = os.path.join(DATA_DIR, file_name)
+
+        # create file if it doesn't exist
+        if not os.path.isfile(file_path):
+            with open(file_path, 'w') as json_file:
+                json_file.write('{}')
+
+        with open(file_path, 'r+') as json_file:
+            j_data = commentjson.load(json_file)
+            j_data[tmp_root['bind_message']] = tmp_root['rr_links']
+            json_file.write(commentjson.dumps(j_data))
+
         events_cog = self.bot.get_cog('BotEvents')
         events_cog.add_rr_watch(tmp_root['bind_message'], tmp_root['rr_links'])
 
@@ -213,6 +231,7 @@ class UserActions(commands.Cog):
             return
 
         rr_link['reactions'] = emoji_list
+
 
 def setup(bot: commands.Bot):
     """Initiate cog"""

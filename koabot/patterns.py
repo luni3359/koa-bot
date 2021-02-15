@@ -33,6 +33,6 @@ SPECIAL_UNIT_PATTERN_TUPLE = ('footinches', re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+
 
 DICE_PATTERN = r'(\d*)\ ?d(\d+)(?:\ ?([+-]\d+))?'
 
-CHANNEL_URL_PATTERN = re.compile(r'https:\/\/(?:ptb\.)discord(?:app)?\.com\/channels(?:\/\d{18}){3}')
+CHANNEL_URL_PATTERN = re.compile(r'https:\/\/(?:ptb\.)?discord(?:app)?\.com\/channels(?:\/\d{18}){3}')
 
 DISCORD_EMOJI_PATTERN = re.compile(r'(<:[\w_]{1,32}:\d{18}>)')

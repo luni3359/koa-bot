@@ -59,10 +59,10 @@ class BotStatus(commands.Cog):
             cpu_temp = float(cpu_temp)
 
             print(f'CPU Temp: {cpu_temp:0.1f} °C')
-            await ctx.send(f'I\'m at {cpu_temp:0.1f} °C.')
+            await ctx.send(f"I'm at {cpu_temp:0.1f} °C.")
         except NameError:
             print('Unable to report temperature.')
-            await ctx.send('I can\'t get the temperature...')
+            await ctx.send("I can't get the temperature...")
 
     @commands.command(name='last')
     async def talk_status(self, ctx):
@@ -77,7 +77,7 @@ class BotStatus(commands.Cog):
         (hours, remainder) = divmod(int(delta_uptime.total_seconds()), 3600)
         (minutes, seconds) = divmod(remainder, 60)
         (days, hours) = divmod(hours, 24)
-        await ctx.send(f'I\'ve been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.')
+        await ctx.send(f"I've been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.")
 
     @commands.command()
     async def version(self, ctx):

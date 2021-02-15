@@ -39,6 +39,7 @@ By default some restrictions will apply based on the safety setting your text ch
     + Currently it's based on sending too many messages in channels based around media.
 + Easily move between channels by linking them together.
     + Referencing a text channel makes two links appear which lead to each other.
++ Let users get roles based on reactions
 
 ### Miscellaneous
 + View your avatar, or your friend's by pinging them.

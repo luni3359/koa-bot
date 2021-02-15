@@ -22,13 +22,13 @@ bot = commands.Bot(command_prefix='!', description='', intents=intents)
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 BOT_DIRNAME = 'koa-bot'
 
-# Make config dir if it doesn't exist
+DATA_DIR = appdirs.user_data_dir(BOT_DIRNAME)
 CONFIG_DIR = appdirs.user_config_dir(BOT_DIRNAME)
-os.makedirs(CONFIG_DIR, exist_ok=True)
-
-# Make cache dir if it doesn't exist
 CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
-os.makedirs(CACHE_DIR, exist_ok=True)
+
+# Make dirs if they're missing
+for k_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
+    os.makedirs(k_dir, exist_ok=True)
 
 
 def list_contains(lst, items_to_be_matched):

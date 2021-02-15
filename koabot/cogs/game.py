@@ -28,7 +28,7 @@ class Game(commands.Cog):
                 f"・ **{random.randint(2,5)}d{random.randint(3,6)} {random.choice(['-','+'])}{random.randint(1,5)}**",
                 f"・ **{random.randint(2,5)}d{random.randint(3,6)} {random.randint(2,5)}d{random.randint(3,6)} {random.choice(['-','+'])}{random.randint(1,5)} {random.randint(2,5)}d{random.randint(3,6)} {random.choice(['-','+'])}{random.randint(1,5)}**",
             ]
-            apology = "Sorry, I can\'t do that... Please try with any of the following examples:\n"
+            apology = "Sorry, I can't do that... Please try with any of the following examples:\n"
 
             random.shuffle(roll_suggestions)
 

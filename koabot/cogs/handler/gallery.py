@@ -55,7 +55,7 @@ class Gallery(commands.Cog):
         end_regex = kwargs.get('end_regex', False)
 
         if not guide:
-            raise ValueError('The \'guide\' keyword argument is not defined.')
+            raise ValueError("The 'guide' keyword argument is not defined.")
 
         id_start = guide['post']['id_start']
         id_end = guide['post']['id_end']

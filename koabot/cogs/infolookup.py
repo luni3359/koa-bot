@@ -31,7 +31,7 @@ class InfoLookup(commands.Cog):
         try:
             page_title = page_results[0]
         except IndexError as e:
-            bot_msg = 'I can\'t find anything relevant. Sorry...'
+            bot_msg = "I can't find anything relevant. Sorry..."
             await ctx.send(bot_msg)
             return
 
@@ -67,7 +67,7 @@ class InfoLookup(commands.Cog):
 
             await ctx.send(bot_msg)
         except mediawiki.exceptions.PageError:
-            bot_msg = 'Oh, I can\'t find anything like that... how about these?\n'
+            bot_msg = "Oh, I can't find anything like that... how about these?\n"
             suggestions = self.wikipedia.search(search_term, results=3)
 
             for suggestion in suggestions:

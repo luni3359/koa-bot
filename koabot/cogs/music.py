@@ -62,7 +62,7 @@ class Music(commands.Cog):
                 await ctx.send(f'Connected to **"{author_voicestate.channel.name}"** (your voice channel)!')
             else:
                 if not ctx.guild.voice_channels:
-                    await ctx.send('There\'s no voice channels in this server...')
+                    await ctx.send("There's no voice channels in this server...")
                     return
 
                 for voice_channel in ctx.guild.voice_channels:

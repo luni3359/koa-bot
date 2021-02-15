@@ -71,9 +71,9 @@ class UserActions(commands.Cog):
         try:
             message = await target_channel.fetch_message(message_id)
         except discord.NotFound:
-            await ctx.send('Hmm... That message link is correct, but it doesn\'t seem to work. Did you get the wrong url, or was it removed?')
+            await ctx.send("Hmm... That message link is correct, but it doesn't seem to work. Did you get the wrong url, or was it removed?")
         except discord.Forbidden:
-            await ctx.send('I don\'t have permissions to interact with that message...')
+            await ctx.send("I don't have permissions to interact with that message...")
         except discord.HTTPException:
             await ctx.send('Network issues. Please try again in a few moments.')
 
@@ -85,14 +85,14 @@ class UserActions(commands.Cog):
         server_id = url_matches.group(0).split('/')[-3]
         bind_tag = f'{author_id}/{server_id}'
         if bind_tag in self.rr_temporary_list:
-            await ctx.send('You\'re already in the process of assigning roles and emojis to this message!')
+            await ctx.send("You're already in the process of assigning roles and emojis to this message!")
             return
 
         self.rr_temporary_list[bind_tag] = {}
         self.rr_temporary_list[bind_tag]['bind_message'] = message_id
         self.rr_temporary_list[bind_tag]['rr_links'] = []
 
-        await ctx.send('Now you can use `!rr bind` to send your reactions with roles. At the end of the command ping your roles (preferably in a hidden channel) along with any number of emojis and they will seamlessly bind each other when they\'re reacted to. As long as your messages contain only emojis and roles, I will accept them.\n\nIf you\'re not satisfied with a change you made, please use `!rr undo last` to undo the latest input I accepted, or `!rr undo all` to start from scratch.\n\nOnce you\'re done, please run the command `!rr save`. If you don\'t want to proceed, call `!rr cancel` to quit.')
+        await ctx.send("Now you can use `!rr bind` to send your reactions with roles. At the end of the command ping your roles (preferably in a hidden channel) along with any number of emojis and they will seamlessly bind each other when they're reacted to. As long as your messages contain only emojis and roles, I will accept them.\n\nIf you're not satisfied with a change you made, please use `!rr undo last` to undo the latest input I accepted, or `!rr undo all` to start from scratch.\n\nOnce you're done, please run the command `!rr save`. If you don't want to proceed, call `!rr cancel` to quit.")
 
     @reaction_roles.command()
     async def bind(self, ctx):
@@ -100,7 +100,7 @@ class UserActions(commands.Cog):
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send('You\'re not currently assigning any bindings!')
+            await ctx.send("You're not currently assigning any bindings!")
             return
 
         emoji_list = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) + re.findall(emoji.get_emoji_regexp(), ctx.message.content))
@@ -145,7 +145,7 @@ class UserActions(commands.Cog):
                 # reactions are also identical
                 if not link_to_overwrite:
                     await ctx.message.add_reaction(emoji.emojize(':interrobang:', use_aliases=True))
-                    await ctx.send('You\'ve already made this binding before!')
+                    await ctx.send("You've already made this binding before!")
                     return
 
                 break
@@ -178,7 +178,7 @@ class UserActions(commands.Cog):
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send('You\'re not currently assigning any bindings!')
+            await ctx.send("You're not currently assigning any bindings!")
             return
 
         if call_type == 'last':
@@ -192,13 +192,13 @@ class UserActions(commands.Cog):
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send('You\'re not currently assigning any bindings!')
+            await ctx.send("You're not currently assigning any bindings!")
             return
 
         tmp_root = self.rr_temporary_list[bind_tag]
 
         if not tmp_root['rr_links']:
-            await ctx.send('You can\'t save without making any bindings. Please use the command `!rr bind` to add at least one reaction roles binding.')
+            await ctx.send("You can't save without making any bindings. Please use the command `!rr bind` to add at least one reaction roles binding.")
             return
 
         print('Saving bind...')
@@ -235,7 +235,7 @@ class UserActions(commands.Cog):
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send('You\'re not currently assigning any bindings!')
+            await ctx.send("You're not currently assigning any bindings!")
         else:
             self.rr_temporary_list.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))

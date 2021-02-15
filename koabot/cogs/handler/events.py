@@ -135,22 +135,25 @@ class BotEvents(commands.Cog):
 
             if role_removal:
                 await user.remove_roles(*link['roles'], reason='Requested by the own user by reacting')
-
-                # if len(link['roles']) > 1:
-                #     roles = ', '.join(r.mention for r in link['roles'])
-                #     await channel.send(f'{user.mention}, say goodbye to {roles}...')
-                # else:
-                #     role = link['roles'][0].mention
-                #     await channel.send(f'{user.mention}, say goodbye to {role}...')
+                quote = f'{user.mention}, say goodbye to XX...'
             else:
                 await user.add_roles(*link['roles'], reason='Requested by the own user by reacting')
+                quote = f'Congrats, {user.mention}. You get the XX YY!'
 
-                # if len(link['roles']) > 1:
-                #     roles = ', '.join(r.mention for r in link['roles'])
-                #     await channel.send(f'Congrats, {user.mention}. You get the {roles} roles!')
-                # else:
-                #     role = link['roles'][0].mention
-                #     await channel.send(f'Congrats, {user.mention}. You get the {role} role!')
+            if len(link['roles']) > 1:
+                roles = ', '.join(f"**@{r.name}**" for r in link['roles'])
+            else:
+                roles = link['roles'][0].name
+                roles = f"**@{roles}**"
+
+            quote = quote.replace('XX', roles)
+            quote = quote.replace('YY', 'roles' if len(link['roles']) > 1 else 'role')
+
+            try:
+                print(quote)
+                await user.send(quote)
+            except discord.Forbidden:
+                print(f"I couldn't notify {user.name} about {roles}...")
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):

@@ -162,6 +162,16 @@ class BotEvents(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        if payload.user_id == self.bot.user.id:
+            return
+
+        guild = self.bot.get_guild(payload.guild_id)
+        user = guild.get_member(payload.user_id)
+
+        # might get false positives in the future... if the user isn't cached
+        if user is None or user.bot:
+            return
+
         handle_confirmation = str(payload.message_id) in self.rr_confirmations
         handle_reactionrole = str(payload.message_id) in self.rr_assignments
 

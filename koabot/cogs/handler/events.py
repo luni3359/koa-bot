@@ -58,17 +58,21 @@ class BotEvents(commands.Cog):
             with open(file_path, 'r') as json_file:
                 j_data = json.load(json_file)
 
-                for i, v in j_data.items():
-                    self.add_rr_watch(int(i), v)
+                for message_id, v in j_data.items():
+                    self.add_rr_watch(message_id, v['channel_id'], v['links'])
 
-    def add_rr_confirmation(self, message_id, bind_tag, rr_link, emoji_list):
+    def add_rr_confirmation(self, message_id: str, bind_tag: str, single_link: list, emoji_list: list):
         self.rr_confirmations[message_id] = {}
         self.rr_confirmations[message_id]['bind_tag'] = bind_tag
         self.rr_confirmations[message_id]['emoji_list'] = emoji_list
-        self.rr_confirmations[message_id]['rr_link'] = rr_link
+        self.rr_confirmations[message_id]['link'] = single_link
 
-    def add_rr_watch(self, message_id, links):
-        self.rr_assignments[message_id] = links
+    def add_rr_watch(self, message_id: str, channel_id: str, links: list):
+        tmp_obj = {}
+        tmp_obj['channel_id'] = channel_id
+        tmp_obj['links'] = links
+
+        self.rr_assignments[message_id] = tmp_obj
 
     async def assign_roles(self, emoji_sent: str, user, message_id: int, channel_id: int):
         """Updates the roles of the given user
@@ -89,7 +93,7 @@ class BotEvents(commands.Cog):
             message_reactions.add(em)
 
         bound_reactions = set()
-        for link in self.rr_assignments[message_id]:
+        for link in self.rr_assignments[str(message_id)]['links']:
             bound_reactions.update(link['reactions'])
 
         reactions_in_use = bound_reactions.intersection(message_reactions)
@@ -111,7 +115,7 @@ class BotEvents(commands.Cog):
                 reactions_by_currentuser.append(em)
 
         # match with links
-        for link in self.rr_assignments[message_id]:
+        for link in self.rr_assignments[str(message_id)]['links']:
             if not isinstance(link['reactions'], set):
                 link['reactions'] = set(link['reactions'])
 
@@ -158,8 +162,8 @@ class BotEvents(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        handle_confirmation = payload.message_id in self.rr_confirmations
-        handle_reactionrole = payload.message_id in self.rr_assignments
+        handle_confirmation = str(payload.message_id) in self.rr_confirmations
+        handle_reactionrole = str(payload.message_id) in self.rr_assignments
 
         if handle_confirmation:
             tmp_root = self.rr_confirmations[payload.message_id]
@@ -177,7 +181,7 @@ class BotEvents(commands.Cog):
             useractions_cog = self.bot.get_cog('UserActions')
 
             if str(reaction) == emoji.emojize(':o:', use_aliases=True):
-                useractions_cog.rr_conflict_response(tmp_root['rr_link'], tmp_root['emoji_list'])
+                useractions_cog.rr_conflict_response(tmp_root['link'], tmp_root['emoji_list'])
             else:
                 useractions_cog.rr_conflict_response(None, None)
 
@@ -199,7 +203,7 @@ class BotEvents(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
-        handle_reactionrole = payload.message_id in self.rr_assignments
+        handle_reactionrole = str(payload.message_id) in self.rr_assignments
 
         if handle_reactionrole:
             await self.assign_roles(str(payload.emoji), payload.user_id, payload.message_id, payload.channel_id)

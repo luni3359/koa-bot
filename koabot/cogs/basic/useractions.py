@@ -2,7 +2,6 @@
 import json
 import os
 import re
-from pathlib import Path
 
 import discord
 import emoji
@@ -59,17 +58,17 @@ class UserActions(commands.Cog):
             await ctx.send('Please send a valid message link to bind to. Right-click the message you want to use, and click "Copy Message Link". It should look something like this: \n`https://discord.com/channels/123456789123456789/123456789123456789/123456789123456789`')
             return
 
-        message_id = int(url_matches.group(0).split('/')[-1])
+        message_id = url_matches.group(0).split('/')[-1]
         message = None
 
-        channel_id = int(url_matches.group(0).split('/')[-2])
+        channel_id = url_matches.group(0).split('/')[-2]
         if channel_id != ctx.channel.id:
-            target_channel = self.bot.get_channel(channel_id)
+            target_channel = self.bot.get_channel(int(channel_id))
         else:
             target_channel = ctx.channel
 
         try:
-            message = await target_channel.fetch_message(message_id)
+            message = await target_channel.fetch_message(int(message_id))
         except discord.NotFound:
             await ctx.send("Hmm... That message link is correct, but it doesn't seem to work. Did you get the wrong url, or was it removed?")
         except discord.Forbidden:
@@ -90,7 +89,8 @@ class UserActions(commands.Cog):
 
         self.rr_temporary_list[bind_tag] = {}
         self.rr_temporary_list[bind_tag]['bind_message'] = message_id
-        self.rr_temporary_list[bind_tag]['rr_links'] = []
+        self.rr_temporary_list[bind_tag]['bind_channel'] = channel_id
+        self.rr_temporary_list[bind_tag]['links'] = []
 
         await ctx.send("Now you can use `!rr bind` to send your reactions with roles. At the end of the command ping your roles (preferably in a hidden channel) along with any number of emojis and they will seamlessly bind each other when they're reacted to. As long as your messages contain only emojis and roles, I will accept them.\n\nIf you're not satisfied with a change you made, please use `!rr undo last` to undo the latest input I accepted, or `!rr undo all` to start from scratch.\n\nOnce you're done, please run the command `!rr save`. If you don't want to proceed, call `!rr cancel` to quit.")
 
@@ -122,7 +122,7 @@ class UserActions(commands.Cog):
 
         # prevent duplicate role bindings from being created
         link_to_overwrite = None
-        for link in self.rr_temporary_list[bind_tag]['rr_links']:
+        for link in self.rr_temporary_list[bind_tag]['links']:
             if len(roles_list) != len(link['roles']):
                 continue
 
@@ -168,7 +168,7 @@ class UserActions(commands.Cog):
         bind_object['reactions'] = emoji_list
         bind_object['roles'] = roles_list
 
-        self.rr_temporary_list[bind_tag]['rr_links'].append(bind_object)
+        self.rr_temporary_list[bind_tag]['links'].append(bind_object)
 
         await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
@@ -182,9 +182,9 @@ class UserActions(commands.Cog):
             return
 
         if call_type == 'last':
-            self.rr_temporary_list[bind_tag]['rr_links'].pop()
+            self.rr_temporary_list[bind_tag]['links'].pop()
         elif call_type == 'all':
-            self.rr_temporary_list[bind_tag]['rr_links'] = []
+            self.rr_temporary_list[bind_tag]['links'] = []
 
     @reaction_roles.command()
     async def save(self, ctx):
@@ -197,7 +197,7 @@ class UserActions(commands.Cog):
 
         tmp_root = self.rr_temporary_list[bind_tag]
 
-        if not tmp_root['rr_links']:
+        if not tmp_root['links']:
             await ctx.send("You can't save without making any bindings. Please use the command `!rr bind` to add at least one reaction roles binding.")
             return
 
@@ -206,7 +206,7 @@ class UserActions(commands.Cog):
         file_path = os.path.join(DATA_DIR, file_name)
 
         events_cog = self.bot.get_cog('BotEvents')
-        events_cog.add_rr_watch(tmp_root['bind_message'], tmp_root['rr_links'])
+        events_cog.add_rr_watch(tmp_root['bind_message'], tmp_root['bind_channel'], tmp_root['links'])
 
         # create file if it doesn't exist
         if not os.path.isfile(file_path):
@@ -214,10 +214,14 @@ class UserActions(commands.Cog):
                 json_file.write('{}')
 
         with open(file_path, 'r+') as json_file:
-            j_data = json.load(json_file)
-            j_data[tmp_root['bind_message']] = tmp_root['rr_links']
+            tmp_obj = {}
+            tmp_obj['channel_id'] = tmp_root['bind_channel']
+            tmp_obj['links'] = tmp_root['links']
 
-            for link in j_data[tmp_root['bind_message']]:
+            j_data = json.load(json_file)
+            j_data[tmp_root['bind_message']] = tmp_obj
+
+            for link in j_data[tmp_root['bind_message']]['links']:
                 link['reactions'] = list(link['reactions'])
                 link['roles'] = [r.id for r in link['roles']]
 

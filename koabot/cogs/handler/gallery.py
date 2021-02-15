@@ -7,14 +7,13 @@ from pathlib import Path
 
 import discord
 import imagehash
+import koabot.koakuma as koakuma
+import koabot.utils as utils
 import pixivpy_async
 import tweepy
 from discord.ext import commands
-from PIL import Image
-
-import koabot.koakuma as koakuma
-import koabot.utils as utils
 from koabot.koakuma import CACHE_DIR
+from PIL import Image
 
 
 class Gallery(commands.Cog):
@@ -250,6 +249,7 @@ class Gallery(commands.Cog):
         try:
             tweet = self.twitter_api.get_status(post_id, tweet_mode='extended')
         except tweepy.error.TweepError as e:
+            # Error codes: https://developer.twitter.com/en/support/twitter-api/error-troubleshooting
             response = ast.literal_eval(e.reason)
 
             if isinstance(response, list):

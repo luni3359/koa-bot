@@ -208,6 +208,15 @@ class UserActions(commands.Cog):
         events_cog = self.bot.get_cog('BotEvents')
         events_cog.add_rr_watch(tmp_root['bind_message'], tmp_root['bind_channel'], tmp_root['links'])
 
+        target_message = await self.bot.get_channel(int(tmp_root['bind_channel'])).fetch_message(int(tmp_root['bind_message']))
+
+        for link in tmp_root['links']:
+            # can't map async
+            # map(await message.add_reaction, link['reactions'])
+
+            for reaction in link['reactions']:
+                await target_message.add_reaction(reaction)
+
         # create file if it doesn't exist
         if not os.path.isfile(file_path):
             with open(file_path, 'w') as json_file:

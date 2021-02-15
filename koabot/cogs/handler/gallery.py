@@ -1,4 +1,5 @@
 """Handles the use of imageboard galleries"""
+import ast
 import os
 import random
 import shutil
@@ -246,7 +247,21 @@ class Gallery(commands.Cog):
         if not post_id:
             return
 
-        tweet = self.twitter_api.get_status(post_id, tweet_mode='extended')
+        try:
+            tweet = self.twitter_api.get_status(post_id, tweet_mode='extended')
+        except tweepy.error.TweepError as e:
+            response = ast.literal_eval(e.reason)
+
+            if isinstance(response, list):
+                response = response[0]
+                code = response['code']
+                message = response['message']
+                print(f'Failure on Tweet #{post_id}: E{code}: {message}')
+            else:
+                print(f'Failure on Tweet #{post_id}')
+
+            print(e)
+            return
 
         if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
             print('Preview gallery not applicable.')
@@ -269,7 +284,7 @@ class Gallery(commands.Cog):
 
             embed = discord.Embed()
             embed.set_image(url=picture)
-            embed.colour = discord.Colour.from_rgb(29, 161, 242) # Twitter color
+            embed.colour = discord.Colour.from_rgb(29, 161, 242)  # Twitter color
 
             # If it's the first picture to show, add author, body, and counters
             if total_gallery_pics + 1 == len(gallery_pics):

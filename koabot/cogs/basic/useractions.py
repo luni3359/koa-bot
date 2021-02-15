@@ -1,9 +1,9 @@
 """Get user information"""
+import json
 import os
 import re
 from pathlib import Path
 
-import commentjson
 import discord
 import emoji
 from discord.ext import commands
@@ -198,18 +198,25 @@ class UserActions(commands.Cog):
         file_name = 'binds.json'
         file_path = os.path.join(DATA_DIR, file_name)
 
+        events_cog = self.bot.get_cog('BotEvents')
+        events_cog.add_rr_watch(tmp_root['bind_message'], tmp_root['rr_links'])
+
         # create file if it doesn't exist
         if not os.path.isfile(file_path):
             with open(file_path, 'w') as json_file:
                 json_file.write('{}')
 
         with open(file_path, 'r+') as json_file:
-            j_data = commentjson.load(json_file)
+            j_data = json.load(json_file)
             j_data[tmp_root['bind_message']] = tmp_root['rr_links']
-            json_file.write(commentjson.dumps(j_data))
 
-        events_cog = self.bot.get_cog('BotEvents')
-        events_cog.add_rr_watch(tmp_root['bind_message'], tmp_root['rr_links'])
+            for link in j_data[tmp_root['bind_message']]:
+                link['reactions'] = list(link['reactions'])
+                link['roles'] = [r.id for r in link['roles']]
+
+            json_file.seek(0)
+            json_file.write(json.dumps(j_data))
+            json_file.truncate()
 
         self.rr_temporary_list.pop(bind_tag)
 

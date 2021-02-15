@@ -1,4 +1,6 @@
 """Bot events"""
+import json
+import os
 import random
 import re
 from datetime import datetime
@@ -7,6 +9,7 @@ import discord
 import emoji
 import tldextract
 from discord.ext import commands
+from koabot.koakuma import DATA_DIR
 from koabot.patterns import URL_PATTERN
 from mergedeep import merge
 
@@ -24,6 +27,7 @@ class BotEvents(commands.Cog):
         self.rr_confirmations = {}
         self.rr_assignments = {}
 
+        # guides stuff
         self.valid_urls = []
         for group, contents in self.bot.match_groups.items():
             for match in contents:
@@ -47,6 +51,15 @@ class BotEvents(commands.Cog):
 
                 combined_guide = merge({}, target_guide, source_guide)
                 self.bot.guides[guide_type][guide_name] = combined_guide
+
+        # load reaction role binds
+        file_path = os.path.join(DATA_DIR, 'binds.json')
+        if os.path.isfile(file_path):
+            with open(file_path, 'r') as json_file:
+                j_data = json.load(json_file)
+
+                for i, v in j_data.items():
+                    self.add_rr_watch(int(i), v)
 
     def add_rr_confirmation(self, message_id, bind_tag, rr_link, emoji_list):
         self.rr_confirmations[message_id] = {}
@@ -98,6 +111,9 @@ class BotEvents(commands.Cog):
 
         # match with links
         for link in self.rr_assignments[message_id]:
+            if not isinstance(link['reactions'], set):
+                link['reactions'] = set(link['reactions'])
+
             link_fully_matches = link['reactions'].issubset(reactions_by_currentuser)
 
             if emoji_sent not in link['reactions']:
@@ -113,6 +129,9 @@ class BotEvents(commands.Cog):
 
             if isinstance(user, int):
                 user = channel.guild.get_member(user_id)
+
+            if not isinstance(link['roles'][0], discord.Role):
+                link['roles'] = list(map(channel.guild.get_role, link['roles']))
 
             if role_removal:
                 await user.remove_roles(*link['roles'], reason='Requested by the own user by reacting')

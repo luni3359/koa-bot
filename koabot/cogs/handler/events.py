@@ -81,17 +81,18 @@ class BotEvents(commands.Cog):
         message = await channel.fetch_message(message_id)
         user_id = user if isinstance(user, int) else user.id
 
-        emojis_in_message = [str(em) for em in message.reactions if not isinstance(em, str)]
-        emojis_in_message += [em for em in message.reactions if isinstance(em, str)]
-        emojis_in_message = set(emojis_in_message)
+        message_reactions = set()
+        for em in message.reactions:
+            if not isinstance(em, str):
+                em = str(em)
 
-        emojis_in_links = set()
+            message_reactions.add(em)
 
+        bound_reactions = set()
         for link in self.rr_assignments[message_id]:
-            # get only reactions with bound emojis
-            emojis_in_links.update(link['reactions'])
+            bound_reactions.update(link['reactions'])
 
-        emojis_in_use = emojis_in_links.intersection(emojis_in_message)
+        reactions_in_use = bound_reactions.intersection(message_reactions)
         reactions_by_currentuser = []
 
         for reaction in message.reactions:
@@ -100,7 +101,7 @@ class BotEvents(commands.Cog):
             else:
                 em = reaction.emoji
 
-            if em not in emojis_in_use:
+            if em not in reactions_in_use:
                 continue
 
             for u in await reaction.users().flatten():

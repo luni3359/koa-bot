@@ -11,6 +11,12 @@ from koabot.koakuma import DATA_DIR
 from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 
 
+def is_guild_owner():
+    def predicate(ctx):
+        return ctx.guild is not None and ctx.guild.owner_id == ctx.author.id
+    return commands.check(predicate)
+
+
 class UserActions(commands.Cog):
     """UserActions class"""
 
@@ -39,6 +45,7 @@ class UserActions(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.group(aliases=['reactionroles', 'reactionrole', 'rr'])
+    @commands.check_any(commands.is_owner(), is_guild_owner())
     async def reaction_roles(self, ctx):
         """Grant users roles upon reacting to a message"""
         if ctx.invoked_subcommand is None:

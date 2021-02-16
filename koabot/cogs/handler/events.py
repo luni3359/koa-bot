@@ -74,16 +74,16 @@ class BotEvents(commands.Cog):
 
         self.rr_assignments[message_id] = tmp_obj
 
-    async def assign_roles(self, emoji_sent: str, user, message_id: int, channel_id: int):
+    async def assign_roles(self, emoji_sent: str, user: discord.Member, message_id: int, channel_id: int):
         """Updates the roles of the given user
         Parameters:
-            user::discord.Member|int
+            user::discord.Member
             message_id::int
             channel_id::int
         """
         channel = self.bot.get_channel(channel_id)
         message = await channel.fetch_message(message_id)
-        user_id = user if isinstance(user, int) else user.id
+        user_id = user.id
 
         message_reactions = set()
         for em in message.reactions:
@@ -132,9 +132,6 @@ class BotEvents(commands.Cog):
                 if not role_removal:
                     continue
 
-            if isinstance(user, int):
-                user = channel.guild.get_member(user_id)
-
             if not isinstance(link['roles'][0], discord.Role):
                 link['roles'] = list(map(channel.guild.get_role, link['roles']))
 
@@ -166,7 +163,11 @@ class BotEvents(commands.Cog):
             return
 
         guild = self.bot.get_guild(payload.guild_id)
-        user = guild.get_member(payload.user_id)
+
+        if payload.member:
+            user = payload.member
+        else:
+            user = guild.get_member(payload.user_id)
 
         # might get false positives in the future... if the user isn't cached
         if user is None or user.bot:
@@ -206,17 +207,24 @@ class BotEvents(commands.Cog):
             else:
                 await message.add_reaction(emoji.emojize(':stop_sign:', use_aliases=True))
         elif handle_reactionrole:
-            if payload.member:
-                await self.assign_roles(str(payload.emoji), payload.member, payload.message_id, payload.channel_id)
-            else:
-                await self.assign_roles(str(payload.emoji), payload.user_id, payload.message_id, payload.channel_id)
+            await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+        if payload.user_id == self.bot.user.id:
+            return
+
+        guild = self.bot.get_guild(payload.guild_id)
+        user = guild.get_member(payload.user_id)
+
+        # might get false positives in the future... if the user isn't cached
+        if user is None or user.bot:
+            return
+
         handle_reactionrole = str(payload.message_id) in self.rr_assignments
 
         if handle_reactionrole:
-            await self.assign_roles(str(payload.emoji), payload.user_id, payload.message_id, payload.channel_id)
+            await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):

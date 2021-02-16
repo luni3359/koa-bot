@@ -3,6 +3,7 @@ import json
 import os
 import random
 import re
+import timeit
 from datetime import datetime
 
 import discord
@@ -26,6 +27,7 @@ class BotEvents(commands.Cog):
         self.bot.last_channel_warned = False
         self.rr_confirmations = {}
         self.rr_assignments = {}
+        self.rr_cooldown = {}
 
         # guides stuff
         self.valid_urls = []
@@ -61,13 +63,57 @@ class BotEvents(commands.Cog):
                 for message_id, v in j_data.items():
                     self.add_rr_watch(message_id, v['channel_id'], v['links'])
 
+    async def manage_rr_cooldown(self, user: discord.User):
+        """Prevents users from overloading role requests"""
+        SPAM_LIMIT = 12
+        current_time = timeit.default_timer()
+        user_id = str(user.id)
+
+        if user_id not in self.rr_cooldown:
+            tmp_obj = {}
+            tmp_obj['cooldown_start'] = current_time
+            tmp_obj['change_count'] = 0
+            self.rr_cooldown[user_id] = tmp_obj
+
+        tmp_root = self.rr_cooldown[user_id]
+        time_diff = current_time - tmp_root['cooldown_start']
+
+        # if too many reactions were sent
+        if tmp_root['change_count'] > SPAM_LIMIT:
+            if time_diff < 60:
+                return True
+
+            tmp_root['cooldown_start'] = current_time
+            tmp_root['change_count'] = 0
+
+        # refresh cooldown if two minutes have passed
+        if time_diff > 120:
+            tmp_root['cooldown_start'] = current_time
+            tmp_root['change_count'] = 0
+        elif time_diff < 1:
+            tmp_root['change_count'] += 3
+        elif time_diff < 5:
+            tmp_root['change_count'] += 2
+        else:
+            tmp_root['change_count'] += 1
+
+        # send a warning and freeze
+        if tmp_root['change_count'] > SPAM_LIMIT:
+            tmp_root['cooldown_start'] = current_time
+            await user.send('Please wait a few moments and try again')
+            return True
+
+        return False
+
     def add_rr_confirmation(self, message_id: str, bind_tag: str, single_link: list, emoji_list: list):
+        """Creates an entry pending to be handled for reaction roles overwrite request"""
         self.rr_confirmations[message_id] = {}
         self.rr_confirmations[message_id]['bind_tag'] = bind_tag
         self.rr_confirmations[message_id]['emoji_list'] = emoji_list
         self.rr_confirmations[message_id]['link'] = single_link
 
     def add_rr_watch(self, message_id: str, channel_id: str, links: list):
+        """Starts keeping track of what messages have bound actions"""
         tmp_obj = {}
         tmp_obj['channel_id'] = channel_id
         tmp_obj['links'] = links
@@ -159,6 +205,7 @@ class BotEvents(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        """When a user adds a reaction to a message"""
         if payload.user_id == self.bot.user.id:
             return
 
@@ -207,10 +254,14 @@ class BotEvents(commands.Cog):
             else:
                 await message.add_reaction(emoji.emojize(':stop_sign:', use_aliases=True))
         elif handle_reactionrole:
+            if await self.manage_rr_cooldown(user):
+                return
+
             await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+        """When a user removes a reaction from a message"""
         if payload.user_id == self.bot.user.id:
             return
 
@@ -224,6 +275,9 @@ class BotEvents(commands.Cog):
         handle_reactionrole = str(payload.message_id) in self.rr_assignments
 
         if handle_reactionrole:
+            if await self.manage_rr_cooldown(user):
+                return
+
             await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
 
     @commands.Cog.listener()

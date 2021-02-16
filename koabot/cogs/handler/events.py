@@ -246,6 +246,10 @@ class BotEvents(commands.Cog):
         if msg.author.bot:
             return
 
+        if msg.guild is None:
+            print(f'{msg.author.name}#{msg.author.discriminator} ({msg.author.id}): {msg.content}')
+            return
+
         # Beta bot overrides me in the servers we share
         beta_bot_id = self.bot.koa['discord_user']['beta_id']
 

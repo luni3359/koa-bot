@@ -104,6 +104,10 @@ async def debug_check(ctx):
 
     beta_bot_id = bot.koa['discord_user']['beta_id']
 
+    # ignore everything in DMs
+    if ctx.guild is None:
+        return False
+
     # if the author is not a debug user
     if ctx.author.id not in bot.testing['debug_users']:
         return ctx.guild.me.id != beta_bot_id

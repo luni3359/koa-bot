@@ -6,6 +6,7 @@ import re
 import discord
 import emoji
 from discord.ext import commands
+
 from koabot.koakuma import DATA_DIR
 from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 

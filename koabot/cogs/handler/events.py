@@ -10,9 +10,10 @@ import discord
 import emoji
 import tldextract
 from discord.ext import commands
+from mergedeep import merge
+
 from koabot.koakuma import DATA_DIR
 from koabot.patterns import URL_PATTERN
-from mergedeep import merge
 
 
 class BotEvents(commands.Cog):

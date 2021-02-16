@@ -5,8 +5,8 @@ import re
 import typing
 import urllib
 
-import mediawiki
 import discord
+import mediawiki
 from discord.ext import commands
 
 import koabot.koakuma as koakuma

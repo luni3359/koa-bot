@@ -45,7 +45,10 @@ class Game(commands.Cog):
             bonus_points = match[2] and int(match[2]) or 0
 
             if match[0]:
-                quantity = int(match[0])
+                quantity = min(int(match[0]), 10000)
+
+                if quantity > 10000:
+                    message += '*'
 
             if quantity == 0 or pips == 0:
                 message += f"{num2words(quantity).capitalize()} {pips}-sided {quantity != 1 and 'dice' or 'die'}. Nothing to roll."

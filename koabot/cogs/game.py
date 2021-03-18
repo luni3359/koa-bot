@@ -94,7 +94,7 @@ class Game(commands.Cog):
 
         message += f'For a total of **{pip_sum}.**'
 
-        await ctx.send(message)
+        await ctx.send(message[0:2000])
 
 
 def setup(bot: commands.Bot):

@@ -69,7 +69,8 @@ class StreamService(commands.Cog):
         if not post_id:
             return
 
-        picarto_request = (await utils.net.http_request(f'https://api.picarto.tv/v1/channel/name/{post_id}', json=True)).json
+        channel_url = f'https://api.picarto.tv/api/v1/channel/name/{post_id}'
+        picarto_request = (await utils.net.http_request(channel_url, json=True)).json
 
         if not picarto_request:
             await channel.send(random.choice(self.bot.quotes['stream_preview_failed']))

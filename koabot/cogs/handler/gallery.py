@@ -97,30 +97,29 @@ class Gallery(commands.Cog):
             # content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
             # await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
-        # if board == 'e621':
-        #     has_children = post['relationships']['has_active_children']
-        #     parent_id = post['relationships']['parent_id']
-        #     c_search = f'parent:{post_id} order:id'
-        #     p_search = [
-        #         f'id:{parent_id}',
-        #         f'parent:{parent_id} order:id -id:{post_id}'
-        #     ]
-        # else:
-        #     has_children = post['has_children']
-        #     parent_id = post['parent_id']
-        #     c_search = f'parent:{post_id} order:id -id:{post_id}'
-        #     p_search = f'parent:{parent_id} order:id -id:{post_id}'
+        if board == 'e621':
+            has_children = post['relationships']['has_active_children']
+            parent_id = post['relationships']['parent_id']
+            c_search = f'parent:{post_id} order:id'
+            p_search = [
+                f'id:{parent_id}',
+                f'parent:{parent_id} order:id -id:{post_id}'
+            ]
+        else:
+            has_children = post['has_children']
+            parent_id = post['parent_id']
+            c_search = f'parent:{post_id} order:id -id:{post_id}'
+            p_search = f'parent:{parent_id} order:id -id:{post_id}'
 
-        # if has_children:
-        #     search = c_search
-        # elif parent_id:
-        #     search = p_search
-        # else:
-        
-        if first_post_missing_preview:
-            if post['rating'] == 's' or on_nsfw_channel:
-                await board_cog.send_posts(channel, post, board=board, guide=guide)
-        return
+        if has_children:
+            search = c_search
+        elif parent_id:
+            search = p_search
+        else:
+            if first_post_missing_preview:
+                if post['rating'] == 's' or on_nsfw_channel:
+                    await board_cog.send_posts(channel, post, board=board, guide=guide)
+            return
 
         if isinstance(search, str):
             search = [search]

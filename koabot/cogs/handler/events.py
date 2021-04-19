@@ -402,8 +402,8 @@ class BotEvents(commands.Cog):
                 # done with this url
                 break
 
-        # post gallery only if there's one to show
-        if len(gallery) == 1:
+        # post gallery only if there's one to show and it was asked for (by prepending '!')
+        if len(gallery) == 1 and msg.content[0] == '!':
             gallery = gallery[0]
             imageboard_cog = self.bot.get_cog('ImageBoard')
             await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'])

@@ -402,11 +402,18 @@ class BotEvents(commands.Cog):
                 # done with this url
                 break
 
-        # post gallery only if there's one to show and it was asked for (by prepending '!')
-        if len(gallery) == 1 and msg.content[0] == '!':
+        # post gallery only if there's one to show...
+        if len(gallery) == 1:
             gallery = gallery[0]
-            imageboard_cog = self.bot.get_cog('ImageBoard')
-            await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'])
+            # ...only if it was asked for by starting their message with '!', for booru galleries
+            if gallery['board'] in ['danbooru', 'e621', 'sankaku']:
+                if msg.content[0] == '!':
+                    imageboard_cog = self.bot.get_cog('ImageBoard')
+                    await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'])
+            # or if it's anything else
+            else:
+                imageboard_cog = self.bot.get_cog('ImageBoard')
+                await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'])
 
         # checking if a command has been issued
         command_issued = False

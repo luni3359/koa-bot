@@ -1,6 +1,7 @@
 """Fun games that are barely playable, yay!"""
 import random
 import re
+from heapq import nlargest, nsmallest
 
 from discord.ext import commands
 from num2words import num2words
@@ -43,6 +44,7 @@ class Game(commands.Cog):
             quantity = 1
             pips = match[1] and int(match[1]) or 0
             bonus_points = match[2] and int(match[2]) or 0
+            keep = match[3] or ''
 
             if match[0]:
                 quantity = int(match[0])
@@ -66,10 +68,27 @@ class Game(commands.Cog):
                 message += '\n'
                 continue
 
+            if keep:
+                if int(keep[2:]) != 0:
+                    keep_type = keep[1]
+                    keep_length = int(keep[2:])
+                    keep_list = []
+                else:
+                    keep = ''
+
             message += f"{num2words(quantity).capitalize()} {pips}-sided {quantity != 1 and 'dice' or 'die'} for a "
 
             for i in range(0, quantity):
                 die_roll = random.randint(1, pips)
+
+                if keep:
+                    keep_list.append(die_roll)
+
+                    if len(keep_list) >= keep_length:
+                        if keep_type == 'l':
+                            keep_list = nsmallest(keep_length, keep_list)
+                        elif keep_type == 'h':
+                            keep_list = nlargest(keep_length, keep_list)
 
                 if i == quantity - 1:
                     if quantity == 1:
@@ -85,13 +104,27 @@ class Game(commands.Cog):
                         else:
                             message += f' {bonus_points}'
 
+                    if keep:
+                        if keep_type == 'l':
+                            keep_type = 'lowest'
+                        elif keep_type == 'h':
+                            keep_type = 'highest'
+                        message += f'\nKeep the {keep_type} '
+        
+                        if keep_length > 1:
+                            message += f'{num2words(keep_length)}: ' + ', '.join(map(str, keep_list[0:keep_length-1])) + f' and a {keep_list[keep_length-1]}.'
+                        else:
+                            message += f'number: {keep_list[0]}.'
+                        pip_sum += sum(keep_list)
+
                     message += '\n'
                 elif i == quantity - 2:
                     message += f'{die_roll} '
                 else:
                     message += f'{die_roll}, '
 
-                pip_sum += die_roll
+                if not keep:
+                    pip_sum += die_roll
 
         message += f'For a total of **{pip_sum}.**'
 

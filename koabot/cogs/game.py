@@ -73,6 +73,11 @@ class Game(commands.Cog):
                     keep_type = keep[1]
                     keep_length = int(keep[2:])
                     keep_list = []
+                    overkeep = False
+
+                    if keep_length > quantity:
+                        keep_length = quantity
+                        overkeep = True
                 else:
                     keep = ''
 
@@ -112,7 +117,7 @@ class Game(commands.Cog):
                         message += f'\nKeep the {keep_type} '
         
                         if keep_length > 1:
-                            message += f'{num2words(keep_length)}: ' + ', '.join(map(str, keep_list[0:keep_length-1])) + f' and a {keep_list[keep_length-1]}.'
+                            message += f'{num2words(keep_length)}' + (overkeep and '*' or '') + ': ' + ', '.join(map(str, keep_list[0:keep_length-1])) + f' and a {keep_list[keep_length-1]}.'
                         else:
                             message += f'number: {keep_list[0]}.'
                         pip_sum += sum(keep_list)

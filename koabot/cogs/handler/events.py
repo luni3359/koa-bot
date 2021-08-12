@@ -328,21 +328,22 @@ class BotEvents(commands.Cog):
         channel = msg.channel
 
         # Reference channels together
-        for mentioned_channel in msg.channel_mentions:
-            if mentioned_channel == channel:
-                continue
+        if msg.content[0] == '!': # only if explicitly asked for
+            for mentioned_channel in msg.channel_mentions:
+                if mentioned_channel == channel:
+                    continue
 
-            embed_template = discord.Embed()
-            embed_template.set_author(name=msg.author.display_name, icon_url=msg.author.avatar_url)
-            embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon_url)
+                embed_template = discord.Embed()
+                embed_template.set_author(name=msg.author.display_name, icon_url=msg.author.avatar_url)
+                embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon_url)
 
-            target_embed = embed_template.copy()
-            target_embed.description = f'Mention by {msg.author.mention} from {channel.mention}\n\n[Click to go there]({msg.jump_url})'
-            target_channel_msg = await mentioned_channel.send(embed=target_embed)
+                target_embed = embed_template.copy()
+                target_embed.description = f'Mention by {msg.author.mention} from {channel.mention}\n\n[Click to go there]({msg.jump_url})'
+                target_channel_msg = await mentioned_channel.send(embed=target_embed)
 
-            origin_embed = embed_template.copy()
-            origin_embed.description = f'Mention by {msg.author.mention} to {mentioned_channel.mention}\n\n[Click to go there]({target_channel_msg.jump_url})'
-            await channel.send(embed=origin_embed)
+                origin_embed = embed_template.copy()
+                origin_embed.description = f'Mention by {msg.author.mention} to {mentioned_channel.mention}\n\n[Click to go there]({target_channel_msg.jump_url})'
+                await channel.send(embed=origin_embed)
 
         url_matches_found = []
         escaped_url = False

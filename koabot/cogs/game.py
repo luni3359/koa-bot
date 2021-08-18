@@ -13,7 +13,7 @@ class Game(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command()
+    @commands.command(aliases=['r'])
     async def roll(self, ctx, *dice):
         """Rolls one or many dice"""
 
@@ -43,7 +43,15 @@ class Game(commands.Cog):
         for match in dice_matches:
             quantity = 1
             pips = match[1] and int(match[1]) or 0
-            bonus_points = match[2] and int(match[2]) or 0
+            bonus_points = match[2]
+            if bonus_points:
+                bonus_points = str(bonus_points)
+                if bonus_points[1] == ' ':
+                    bonus_points = bonus_points[0] + bonus_points[2:]
+                bonus_points = int(bonus_points)
+            else:
+                bonus_points = 0
+
             keep = match[3] or ''
 
             if match[0]:

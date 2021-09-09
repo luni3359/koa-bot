@@ -12,6 +12,7 @@ import tldextract
 from discord.ext import commands
 from mergedeep import merge
 
+from koabot.cogs.imageboard import ImageBoard
 from koabot.koakuma import DATA_DIR
 from koabot.patterns import URL_PATTERN
 
@@ -406,14 +407,12 @@ class BotEvents(commands.Cog):
         # post gallery only if there's one to show...
         if len(gallery) == 1:
             gallery = gallery[0]
+            imageboard_cog: ImageBoard = self.bot.get_cog('ImageBoard')
             # ...only if it was asked for by starting their message with '!', for booru galleries
             if gallery['board'] in ['danbooru', 'e621', 'sankaku']:
-                if msg.content[0] == '!':
-                    imageboard_cog = self.bot.get_cog('ImageBoard')
-                    await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'])
+                await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'], only_missing_preview=msg.content[0] != '!')
             # or if it's anything else
             else:
-                imageboard_cog = self.bot.get_cog('ImageBoard')
                 await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'])
 
         # checking if a command has been issued

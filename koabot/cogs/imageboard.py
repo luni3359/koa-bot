@@ -2,6 +2,8 @@
 import discord
 from discord.ext import commands
 
+from koabot.cogs.handler.gallery import Gallery
+
 
 class ImageBoard(commands.Cog):
     """Streaming websites definitions"""
@@ -27,20 +29,20 @@ class ImageBoard(commands.Cog):
         board_cog = self.bot.get_cog('Board')
         await board_cog.search_board(ctx, tags, board='sankaku', guide=self.bot.guides['gallery']['sankaku-show'], hide_posts_remaining=True)
 
-    async def show_gallery(self, msg: discord.Message, url: str, board: str, guide: dict):
+    async def show_gallery(self, msg: discord.Message, url: str, board: str, guide: dict, only_missing_preview: bool = False):
         """Show a gallery"""
-        gallery_cog = self.bot.get_cog('Gallery')
+        gallery_cog: Gallery = self.bot.get_cog('Gallery')
 
         if board == 'danbooru':
-            await gallery_cog.display_static(msg.channel, msg, url, guide=guide)
+            await gallery_cog.display_static(msg.channel, msg, url, guide=guide, only_missing_preview=only_missing_preview)
         elif board == 'e621':
-            await gallery_cog.display_static(msg.channel, msg, url, board='e621', guide=guide, end_regex=True)
+            await gallery_cog.display_static(msg.channel, msg, url, board='e621', guide=guide, end_regex=True, only_missing_preview=only_missing_preview)
         elif board == 'twitter':
             await gallery_cog.get_twitter_gallery(msg, url)
         elif board == 'pixiv':
             await gallery_cog.get_pixiv_gallery(msg, url)
         elif board == 'sankaku':
-            await gallery_cog.display_static(msg.channel, msg, url, board='sankaku', guide=guide)
+            await gallery_cog.display_static(msg.channel, msg, url, board='sankaku', guide=guide, only_missing_preview=only_missing_preview)
         elif board == 'deviantart':
             await gallery_cog.get_deviantart_post(msg, url)
         elif board == 'imgur':

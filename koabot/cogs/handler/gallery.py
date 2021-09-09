@@ -14,6 +14,8 @@ from PIL import Image
 
 import koabot.koakuma as koakuma
 import koabot.utils as utils
+from koabot.cogs.botstatus import BotStatus
+from koabot.cogs.handler.board import Board
 from koabot.koakuma import CACHE_DIR
 
 
@@ -28,7 +30,7 @@ class Gallery(commands.Cog):
         self.pixiv_aapi = pixivpy_async.AppPixivAPI()
         self.pixiv_refresh_token = None
 
-    async def display_static(self, channel, msg, url, **kwargs):
+    async def display_static(self, channel: discord.TextChannel, msg: discord.Message, url: str, **kwargs):
         """Display posts from a gallery in separate unmodifiable embeds
         Arguments:
             channel::discord.TextChannel
@@ -49,11 +51,13 @@ class Gallery(commands.Cog):
                 The data which holds the board information
             end_regex::bool
                 Whether or not id_end is regex. Default is False
+            only_missing_preview::bool
         """
 
-        board = kwargs.get('board', 'danbooru')
-        guide = kwargs.get('guide', None)
-        end_regex = kwargs.get('end_regex', False)
+        board: str = kwargs.get('board', 'danbooru')
+        guide: dict = kwargs.get('guide', None)
+        end_regex: bool = kwargs.get('end_regex', False)
+        only_missing_preview: bool = kwargs.get('only_missing_preview', False)
 
         if not guide:
             raise ValueError("The 'guide' keyword argument is not defined.")
@@ -61,13 +65,12 @@ class Gallery(commands.Cog):
         id_start = guide['post']['id_start']
         id_end = guide['post']['id_end']
 
-        on_nsfw_channel = channel.is_nsfw()
         post_id = utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
         if not post_id:
             return
 
-        board_cog = self.bot.get_cog('Board')
+        board_cog: Board = self.bot.get_cog('Board')
 
         post = (await board_cog.search_query(board=board, guide=guide, post_id=post_id)).json
 
@@ -80,7 +83,7 @@ class Gallery(commands.Cog):
 
         post_id = post['id']
 
-        bot_cog = self.bot.get_cog('BotStatus')
+        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         on_nsfw_channel = channel.is_nsfw()
         first_post_missing_preview = utils.posts.post_is_missing_preview(post, board=board)
         posts = []
@@ -111,14 +114,18 @@ class Gallery(commands.Cog):
             c_search = f'parent:{post_id} order:id -id:{post_id}'
             p_search = f'parent:{parent_id} order:id -id:{post_id}'
 
+        if only_missing_preview:
+            if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
+                await board_cog.send_posts(channel, post, board=board, guide=guide)
+            return
+
         if has_children:
             search = c_search
         elif parent_id:
             search = p_search
         else:
-            if first_post_missing_preview:
-                if post['rating'] == 's' or on_nsfw_channel:
-                    await board_cog.send_posts(channel, post, board=board, guide=guide)
+            if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
+                await board_cog.send_posts(channel, post, board=board, guide=guide)
             return
 
         if isinstance(search, str):

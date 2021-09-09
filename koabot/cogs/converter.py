@@ -66,7 +66,7 @@ class Converter(commands.Cog):
         if not units:
             return
 
-        conversion_str = random.choice(self.bot.quotes['converting_units']) + '```'
+        conversion_str = '```'
 
         for unit_str, value, *extra_value in units:
             if unit_str == 'footinches':

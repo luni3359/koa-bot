@@ -490,7 +490,7 @@ class Gallery(commands.Cog):
 
         await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
 
-    async def get_deviantart_post(self, msg, url):
+    async def get_deviantart_post(self, msg: discord.Message, url: str):
         """Automatically fetch post from deviantart"""
 
         channel = msg.channel
@@ -528,6 +528,7 @@ class Gallery(commands.Cog):
 
         embed = discord.Embed()
         embed.title = api_result['deviation']['title']
+        embed.url = url
         embed.color = 0x06070d
         embed.set_author(
             name=api_result['deviation']['author']['username'],

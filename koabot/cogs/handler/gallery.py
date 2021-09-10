@@ -12,8 +12,9 @@ import tweepy
 from discord.ext import commands
 from PIL import Image
 
-import koabot.koakuma as koakuma
-import koabot.utils as utils
+import koabot.utils.net as net_utils
+import koabot.utils.posts as post_utils
+from koabot import koakuma
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
 from koabot.koakuma import CACHE_DIR
@@ -24,19 +25,18 @@ class Gallery(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
+        twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'],
+                                        bot.auth_keys['twitter']['consumer_secret'])
         twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
         self.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
         self.pixiv_aapi = pixivpy_async.AppPixivAPI()
         self.pixiv_refresh_token = None
 
-    async def display_static(self, channel: discord.TextChannel, msg: discord.Message, url: str, **kwargs):
+    async def display_static(self, channel: discord.TextChannel, url: str, **kwargs):
         """Display posts from a gallery in separate unmodifiable embeds
         Arguments:
             channel::discord.TextChannel
                 Channel the message is in
-            msg::discord.Message
-                Message sent by the author
             url::str
                 Url to get a gallery from
         Keywords:
@@ -44,7 +44,7 @@ class Gallery(commands.Cog):
                 Name of the board to handle. Default is 'danbooru'
             id_start::str
                 The point at which an url's id is stripped from
-            id_end::str
+            id_end::str or regex pattern (str)
                 The point at which an url's id is stripped to
                 The board to handle. Default is 'danbooru'
             guide::dict
@@ -65,7 +65,7 @@ class Gallery(commands.Cog):
         id_start = guide['post']['id_start']
         id_end = guide['post']['id_end']
 
-        post_id = utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
+        post_id = post_utils.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
         if not post_id:
             return
@@ -85,7 +85,7 @@ class Gallery(commands.Cog):
 
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         on_nsfw_channel = channel.is_nsfw()
-        first_post_missing_preview = utils.posts.post_is_missing_preview(post, board=board)
+        first_post_missing_preview = post_utils.post_is_missing_preview(post, board=board)
         posts = []
 
         if post['rating'] != 's' and not on_nsfw_channel:
@@ -164,7 +164,7 @@ class Gallery(commands.Cog):
                 for res_key in self.bot.assets[board]['post_quality']:
                     if res_key in test_post:
                         url_candidate = test_post[res_key]
-                        file_ext = utils.net.get_url_fileext(url_candidate)
+                        file_ext = net_utils.get_url_fileext(url_candidate)
                         if file_ext in ['png', 'jpg', 'webp']:
                             file_url = url_candidate
                             file_name = str(test_post['id']) + '.' + file_ext
@@ -187,7 +187,7 @@ class Gallery(commands.Cog):
 
                 if should_cache:
                     print(f"Caching post #{test_post['id']}...")
-                    image_bytes = await utils.net.fetch_image(file_url)
+                    image_bytes = await net_utils.fetch_image(file_url)
                     with open(os.path.join(file_cache_dir, file_name), 'wb') as image_file:
                         shutil.copyfileobj(image_bytes, image_file)
                 else:
@@ -207,7 +207,8 @@ class Gallery(commands.Cog):
                 for parsed_post in parsed_posts[1:]:
                     parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), **hash_param))
 
-                    hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - parsed_post['hash'][len(parsed_post['hash']) - 1]
+                    hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - \
+                        parsed_post['hash'][len(parsed_post['hash']) - 1]
                     parsed_post['score'].append(hash_diff)
 
             print(f'Scores for post #{post_id}')
@@ -250,7 +251,7 @@ class Gallery(commands.Cog):
         id_start = guide['post']['id_start']
         id_end = guide['post']['id_end']
 
-        post_id = utils.posts.get_post_id(url, id_start, id_end)
+        post_id = post_utils.get_post_id(url, id_start, id_end)
         if not post_id:
             return
 
@@ -317,7 +318,7 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = utils.posts.get_post_id(url, ['illust_id=', '/artworks/'], '&')
+        post_id = post_utils.get_post_id(url, ['illust_id=', '/artworks/'], '&')
         if not post_id:
             return
 
@@ -381,7 +382,7 @@ class Gallery(commands.Cog):
                 image_bytes = None
                 if not os.path.exists(image_path):
                     print('Saving to cache...')
-                    image_bytes = await utils.net.fetch_image(url, headers=koakuma.bot.assets['pixiv']['headers'])
+                    image_bytes = await net_utils.fetch_image(url, headers=koakuma.bot.assets['pixiv']['headers'])
 
                     with open(os.path.join(file_cache_dir, filename), 'wb') as image_file:
                         shutil.copyfileobj(image_bytes, image_file)
@@ -445,7 +446,7 @@ class Gallery(commands.Cog):
         """
 
         img_url = post.image_urls.medium
-        image_filename = utils.net.get_url_filename(img_url)
+        image_filename = net_utils.get_url_filename(img_url)
 
         embed = discord.Embed()
         embed.set_author(
@@ -459,12 +460,12 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = utils.posts.get_post_id(url, '/show/', '?')
+        post_id = post_utils.get_post_id(url, '/show/', '?')
         if not post_id:
             return
 
         search_url = f"{self.bot.assets['sankaku']['id_search_url']}{post_id}"
-        api_result = (await utils.net.http_request(search_url, json=True)).json
+        api_result = (await net_utils.http_request(search_url, json=True)).json
 
         if not api_result or 'code' in api_result:
             print(f"Sankaku error\nCode #{api_result['code']}")
@@ -478,8 +479,8 @@ class Gallery(commands.Cog):
         approved_ext = ['png', 'jpg', 'webp', 'gif']
 
         img_url = api_result['preview_url']
-        image_filename = utils.net.get_url_filename(img_url)
-        image = await utils.net.fetch_image(img_url)
+        image_filename = net_utils.get_url_filename(img_url)
+        image = await net_utils.fetch_image(img_url)
 
         embed = discord.Embed()
         embed.set_image(url=f"attachment://{image_filename}")
@@ -494,13 +495,13 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        post_id = utils.posts.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
+        post_id = post_utils.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
         if not post_id:
             return
 
         search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
 
-        api_result = (await utils.net.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
+        api_result = (await net_utils.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
 
         if not api_result['deviation']['isMature']:
             return
@@ -538,12 +539,12 @@ class Gallery(commands.Cog):
 
         channel = msg.channel
 
-        album_id = utils.posts.get_post_id(url, ['/a/', '/gallery/'], '?')
+        album_id = post_utils.get_post_id(url, ['/a/', '/gallery/'], '?')
         if not album_id:
             return
 
         search_url = self.bot.assets['imgur']['album_url'].format(album_id)
-        api_result = (await utils.net.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)).json
+        api_result = (await net_utils.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)).json
 
         if not api_result or api_result['status'] != 200:
             return

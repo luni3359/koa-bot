@@ -5,17 +5,18 @@ from datetime import datetime
 
 import discord
 
-import koabot.utils as utils
-import koabot.utils.net
+import koabot.utils.net as net_utils
 from koabot import koakuma
+from koabot.cogs.handler.board import Board
+from koabot.cogs.streamservice import StreamService
 
 
-async def check_live_streamers():
+async def check_live_streamers() -> None:
     """Checks every so often for streamers that have gone online"""
 
     await koakuma.bot.wait_until_ready()
 
-    streamservice_cog = koakuma.bot.get_cog('StreamService')
+    streamservice_cog: StreamService = koakuma.bot.get_cog('StreamService')
     online_streamers = []
 
     while not koakuma.bot.is_closed():
@@ -33,13 +34,13 @@ async def check_live_streamers():
             if streamer['platform'] == 'twitch':
                 twitch_search += f"user_id={streamer['user_id']}&"
 
-        twitch_query = await utils.net.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
+        twitch_query = await net_utils.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
         # Token is invalid/expired, acquire a new token
         if twitch_query.status == 401:
             await streamservice_cog.fetch_twitch_access_token(force=True)
 
-            twitch_query = await utils.net.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
+            twitch_query = await net_utils.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
         for streamer in twitch_query.json['data']:
             already_online = False
@@ -59,7 +60,8 @@ async def check_live_streamers():
                     natural_name = 'casual_name' in config_streamers and config_streamers['casual_name'] or streamer['user_name']
                     break
 
-            online_streamers.append({'platform': 'twitch', 'streamer': streamer, 'name': natural_name, 'preserve': True, 'announced': False})
+            online_streamers.append({'platform': 'twitch', 'streamer': streamer,
+                                    'name': natural_name, 'preserve': True, 'announced': False})
 
         stream_announcements = []
         for streamer in online_streamers:
@@ -78,11 +80,12 @@ async def check_live_streamers():
             thumbnail_url = streamer['streamer']['thumbnail_url']
             thumbnail_url = thumbnail_url.replace('{width}', '600')
             thumbnail_url = thumbnail_url.replace('{height}', '350')
-            thumbnail_filename = utils.net.get_url_filename(thumbnail_url)
-            image = await utils.net.fetch_image(thumbnail_url)
+            thumbnail_filename = net_utils.get_url_filename(thumbnail_url)
+            image = await net_utils.fetch_image(thumbnail_url)
             embed.set_image(url=f'attachment://{thumbnail_filename}')
 
-            stream_announcements.append({'message': f"{streamer['name']} is now live!", 'embed': embed, 'image': image, 'filename': thumbnail_filename})
+            stream_announcements.append(
+                {'message': f"{streamer['name']} is now live!", 'embed': embed, 'image': image, 'filename': thumbnail_filename})
 
         for channel in koakuma.bot.tasks['streamer_activity']['channels_to_announce_on']:
             for batch in stream_announcements:
@@ -96,7 +99,7 @@ async def check_live_streamers():
         await asyncio.sleep(60 * 5)
 
 
-async def change_presence_periodically():
+async def change_presence_periodically() -> None:
     """Changes presence at X time, once per day"""
 
     await koakuma.bot.wait_until_ready()
@@ -115,12 +118,12 @@ async def change_presence_periodically():
         await asyncio.sleep(60 * 30)
 
 
-async def lookup_pending_posts():
+async def lookup_pending_posts() -> None:
     """Every 5 minutes search for danbooru posts"""
 
     await koakuma.bot.wait_until_ready()
 
-    board_cog = koakuma.bot.get_cog('Board')
+    board_cog: Board = koakuma.bot.get_cog('Board')
     pending_posts = []
     channel_categories = {}
 

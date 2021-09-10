@@ -12,7 +12,7 @@ from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 
 
 def is_guild_owner():
-    def predicate(ctx):
+    def predicate(ctx: commands.Context):
         return ctx.guild is not None and ctx.guild.owner_id == ctx.author.id
     return commands.check(predicate)
 
@@ -25,7 +25,7 @@ class UserActions(commands.Cog):
         self.rr_temporary_list = {}
 
     @commands.command(aliases=['ava'])
-    async def avatar(self, ctx):
+    async def avatar(self, ctx: commands.Context):
         """Display the avatar of an user"""
 
         if ctx.message.mentions:
@@ -46,15 +46,15 @@ class UserActions(commands.Cog):
 
     @commands.group(aliases=['reactionroles', 'reactionrole', 'rr'])
     @commands.check_any(commands.is_owner(), is_guild_owner())
-    async def reaction_roles(self, ctx):
+    async def reaction_roles(self, ctx: commands.Context):
         """Grant users roles upon reacting to a message"""
         if ctx.invoked_subcommand is None:
             await ctx.send('Invalid command!')
 
     @reaction_roles.command()
-    async def assign(self, ctx, url: str):
+    async def assign(self, ctx: commands.Context, url: str):
         url_matches = CHANNEL_URL_PATTERN.match(url)
-
+        
         if not url_matches:
             await ctx.send('Please send a valid message link to bind to. Right-click the message you want to use, and click "Copy Message Link". It should look something like this: \n`https://discord.com/channels/123456789123456789/123456789123456789/123456789123456789`')
             return
@@ -96,7 +96,7 @@ class UserActions(commands.Cog):
         await ctx.send("Now you can use `!rr bind` to send your reactions with roles. At the end of the command ping your roles (preferably in a hidden channel) along with any number of emojis and they will seamlessly bind each other when they're reacted to. As long as your messages contain only emojis and roles, I will accept them.\n\nIf you're not satisfied with a change you made, please use `!rr undo last` to undo the latest input I accepted, or `!rr undo all` to start from scratch.\n\nOnce you're done, please run the command `!rr save`. If you don't want to proceed, call `!rr cancel` to quit.")
 
     @reaction_roles.command()
-    async def bind(self, ctx):
+    async def bind(self, ctx: commands.Context):
         """Add a new binding to the current message in use"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
@@ -104,7 +104,8 @@ class UserActions(commands.Cog):
             await ctx.send("You're not currently assigning any bindings!")
             return
 
-        emoji_list = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) + re.findall(emoji.get_emoji_regexp(), ctx.message.content))
+        emoji_list = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) +
+                         re.findall(emoji.get_emoji_regexp(), ctx.message.content))
         roles_list = ctx.message.role_mentions
 
         exit_reason = None
@@ -174,7 +175,7 @@ class UserActions(commands.Cog):
         await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
     @reaction_roles.command()
-    async def undo(self, ctx, call_type: str):
+    async def undo(self, ctx: commands.Context, call_type: str):
         """Cancel the last issued reaction roles entry"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
@@ -188,7 +189,7 @@ class UserActions(commands.Cog):
             self.rr_temporary_list[bind_tag]['links'] = []
 
     @reaction_roles.command()
-    async def save(self, ctx):
+    async def save(self, ctx: commands.Context):
         """Complete the role-emoji registration"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
@@ -244,7 +245,7 @@ class UserActions(commands.Cog):
         await ctx.send('Registration complete!')
 
     @reaction_roles.command(aliases=['quit', 'exit', 'stop'])
-    async def cancel(self, ctx):
+    async def cancel(self, ctx: commands.Context):
         """Quit the reaction roles binding process"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 

@@ -1,15 +1,13 @@
 """Handles the management of imageboards"""
 import re
-import typing
 
 import aiohttp
 import commentjson
 import discord
 from discord.ext import commands
 
-import koabot.utils as utils
-import koabot.utils.net
-import koabot.utils.posts
+import koabot.utils.net as net_utils
+import koabot.utils.posts as post_utils
 
 
 class Board(commands.Cog):
@@ -17,10 +15,12 @@ class Board(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.danbooru_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['danbooru']['username'], password=self.bot.auth_keys['danbooru']['key'])
-        self.e621_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['e621']['username'], password=self.bot.auth_keys['e621']['key'])
+        self.danbooru_auth = aiohttp.BasicAuth(
+            login=self.bot.auth_keys['danbooru']['username'], password=self.bot.auth_keys['danbooru']['key'])
+        self.e621_auth = aiohttp.BasicAuth(
+            login=self.bot.auth_keys['e621']['username'], password=self.bot.auth_keys['e621']['key'])
 
-    async def search_board(self, ctx, tags: typing.List, board='danbooru', **kwargs):
+    async def search_board(self, ctx: commands.Context, tags, board: str = 'danbooru', **kwargs):
         """Search on image boards!
         Arguments:
             ctx
@@ -113,21 +113,21 @@ class Board(commands.Cog):
         if board == 'danbooru':
             if post_id:
                 url = guide['api']['id_search_url'].format(post_id)
-                return await utils.net.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
+                return await net_utils.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
             elif tags:
                 if include_nsfw:
                     url = 'https://danbooru.donmai.us'
                 else:
                     url = 'https://safebooru.donmai.us'
 
-                return await utils.net.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
+                return await net_utils.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
         elif board == 'e621':
             # e621 requires to know the User-Agent
             headers = guide['api']['headers']
 
             if post_id:
                 url = guide['api']['id_search_url'].format(post_id)
-                return await utils.net.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
+                return await net_utils.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
             elif tags:
                 if include_nsfw:
                     url = 'https://e621.net'
@@ -135,19 +135,19 @@ class Board(commands.Cog):
                     url = 'https://e926.net'
 
                 headers['Content-Type'] = 'application/json'
-                return await utils.net.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
+                return await net_utils.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
         elif board == 'sankaku':
             if post_id:
                 url = guide['api']['id_search_url'].format(post_id)
-                return await utils.net.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
+                return await net_utils.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
             elif tags:
                 search_query = '+'.join(tags.split(' '))
                 url = guide['api']['tag_search_url'].format(search_query)
-                return await utils.net.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
+                return await net_utils.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
         else:
             raise ValueError(f'Board "{board}" can\'t be handled by the post searcher.')
 
-    async def send_posts(self, ctx, posts, **kwargs):
+    async def send_posts(self, ctx: commands.Context, posts, **kwargs):
         """Handle sending posts retrieved from image boards
         Arguments:
             ctx
@@ -175,7 +175,7 @@ class Board(commands.Cog):
         max_posts = kwargs.get('max_posts', 4)
         hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
 
-        if not isinstance(posts, typing.List):
+        if not isinstance(posts, list):
             posts = [posts]
 
         total_posts = len(posts)
@@ -221,7 +221,7 @@ class Board(commands.Cog):
                 await ctx.send(f'<{embed.url}>', embed=embed)
             else:
                 if board == 'danbooru':
-                    if utils.posts.post_is_missing_preview(post, board=board) or last_post:
+                    if post_utils.post_is_missing_preview(post, board=board) or last_post:
                         await ctx.send(f'<{embed.url}>', embed=embed)
                     else:
                         await ctx.send(embed.url)
@@ -252,9 +252,9 @@ class Board(commands.Cog):
         post_id = post['id']
 
         if board == 'danbooru':
-            post_char = re.sub(r' \(.*?\)', '', utils.posts.combine_tags(post['tag_string_character']))
-            post_copy = utils.posts.combine_tags(post['tag_string_copyright'], maximum=1)
-            post_artist = utils.posts.combine_tags(post['tag_string_artist'])
+            post_char = re.sub(r' \(.*?\)', '', post_utils.combine_tags(post['tag_string_character']))
+            post_copy = post_utils.combine_tags(post['tag_string_copyright'], maximum=1)
+            post_artist = post_utils.combine_tags(post['tag_string_artist'])
             embed_post_title = ''
 
             if post_char:
@@ -278,7 +278,7 @@ class Board(commands.Cog):
 
             embed.title = embed_post_title
         elif board == 'e621':
-            embed.title = f"#{post_id}: {utils.posts.combine_tags(post['tags']['artist'])} - e621"
+            embed.title = f"#{post_id}: {post_utils.combine_tags(post['tags']['artist'])} - e621"
         elif board == 'sankaku':
             embed.title = f"Post {post_id}"
         else:
@@ -298,7 +298,7 @@ class Board(commands.Cog):
                 else:
                     url_candidate = post[res_key]
 
-                if utils.net.get_url_fileext(url_candidate) in ['png', 'jpg', 'webp', 'gif']:
+                if net_utils.get_url_fileext(url_candidate) in ['png', 'jpg', 'webp', 'gif']:
                     fileurl = url_candidate
                     break
 

@@ -6,10 +6,9 @@ import re
 import discord
 from discord.ext import commands
 
-import koabot.utils as utils
-import koabot.utils.net
-import koabot.utils.posts
-from koabot.koakuma import CACHE_DIR
+import koabot.utils.net as net_utils
+import koabot.utils.posts as post_utils
+from koabot import koakuma
 
 
 class StreamService(commands.Cog):
@@ -17,8 +16,8 @@ class StreamService(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self._twitch_access_token = None
-        self._twitch_headers = None
+        self._twitch_access_token: str = None
+        self._twitch_headers: str = None
 
     @commands.command(name='twitch')
     async def search_twitch(self, ctx, *args):
@@ -45,14 +44,14 @@ class StreamService(commands.Cog):
                     # searching an username
                     search_type = 'user_login'
 
-                response = await utils.net.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
+                response = await net_utils.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
                 streams = response.json
 
                 for stream in streams['data'][:3]:
                     await ctx.send(f"https://twitch.tv/{stream['user_name']}")
 
             else:
-                response = await utils.net.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
+                response = await net_utils.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
                 streams = response.json
 
                 for stream in streams['data'][:5]:
@@ -60,17 +59,17 @@ class StreamService(commands.Cog):
 
                 await ctx.send(embed=embed)
 
-    async def get_picarto_stream_preview(self, msg, url: str):
+    async def get_picarto_stream_preview(self, msg: discord.Message, url: str):
         """Automatically fetch a preview of the running stream"""
 
         channel = msg.channel
-        post_id = utils.posts.get_post_id(url, '.tv/', '?')
+        post_id = post_utils.get_post_id(url, '.tv/', '?')
 
         if not post_id:
             return
 
         channel_url = f'https://api.picarto.tv/api/v1/channel/name/{post_id}'
-        picarto_request = (await utils.net.http_request(channel_url, json=True)).json
+        picarto_request = (await net_utils.http_request(channel_url, json=True)).json
 
         if not picarto_request:
             await channel.send(random.choice(self.bot.quotes['stream_preview_failed']))
@@ -80,8 +79,8 @@ class StreamService(commands.Cog):
             await channel.send(random.choice(self.bot.quotes['stream_preview_offline']))
             return
 
-        image = await utils.net.fetch_image(picarto_request['thumbnails']['web'])
-        filename = utils.net.get_url_filename(picarto_request['thumbnails']['web'])
+        image = await net_utils.fetch_image(picarto_request['thumbnails']['web'])
+        filename = net_utils.get_url_filename(picarto_request['thumbnails']['web'])
 
         embed = discord.Embed()
         embed.set_author(
@@ -115,7 +114,7 @@ class StreamService(commands.Cog):
                 Ignore the cached key and fetch a new one from Twitch
         """
         token_filename = 'access_token'
-        twitch_cache_dir = os.path.join(CACHE_DIR, 'twitch')
+        twitch_cache_dir = os.path.join(koakuma.CACHE_DIR, 'twitch')
         token_path = os.path.join(twitch_cache_dir, token_filename)
 
         # if the file exists
@@ -129,7 +128,7 @@ class StreamService(commands.Cog):
                 'client_id': self.bot.auth_keys['twitch']['client_id'],
                 'client_secret':  self.bot.auth_keys['twitch']['client_secret'],
                 'grant_type': 'client_credentials'}
-            response = (await utils.net.http_request(url, post=True, data=data, json=True)).json
+            response = (await net_utils.http_request(url, post=True, data=data, json=True)).json
 
             os.makedirs(twitch_cache_dir, exist_ok=True)
 

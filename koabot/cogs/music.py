@@ -8,7 +8,6 @@ import discord
 import youtube_dl
 from discord.ext import commands
 
-import koabot.utils as utils
 from koabot.koakuma import SOURCE_DIR
 from koabot.patterns import URL_PATTERN
 
@@ -51,7 +50,7 @@ class Music(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def join(self, ctx):
+    async def join(self, ctx: commands.Context):
         """Joins a voice channel"""
         voice_client = ctx.voice_client
         author_voicestate = ctx.author.voice
@@ -78,7 +77,7 @@ class Music(commands.Cog):
                     await ctx.send(f'I\'m already in **"{author_voicestate.channel.name}"** (your voice channel)!')
 
     @commands.command()
-    async def leave(self, ctx):
+    async def leave(self, ctx: commands.Context):
         """Leaves a voice channel"""
         voice_client = ctx.voice_client
 
@@ -89,7 +88,7 @@ class Music(commands.Cog):
             await ctx.send('No voice channel to disconnect from...')
 
     @commands.command()
-    async def play(self, ctx, *search_or_url):
+    async def play(self, ctx: commands.Context, *search_or_url):
         """Plays a track (overrides current track)"""
         # TODO https://stackoverflow.com/a/62360149/7688278
         # Allow links to play from specified timestamps
@@ -107,7 +106,7 @@ class Music(commands.Cog):
         voice_client.play(stream, after=lambda e: print('Stream error.') if e else None)
 
     @commands.command()
-    async def stop(self, ctx):
+    async def stop(self, ctx: commands.Context):
         """Stops the current track"""
         voice_client = ctx.voice_client
 
@@ -115,11 +114,12 @@ class Music(commands.Cog):
             voice_client.stop()
 
     @commands.command()
-    async def echo(self, ctx):
+    async def echo(self, ctx: commands.Context):
         """Echoes sound"""
+        pass
 
     @commands.command()
-    async def test(self, ctx):
+    async def test(self, ctx: commands.Context):
         """Music test"""
 
         # join a voice channel

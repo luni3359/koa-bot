@@ -15,7 +15,7 @@ class Forums(commands.Cog):
         self.bot = bot
 
     @commands.command(name='4chan', aliases=['4c', '4ch'])
-    async def get_4chan_posts(self, ctx, user_board: str = 'u', thread_id: int = 0):
+    async def get_4chan_posts(self, ctx: commands.Context, user_board: str = 'u', thread_id: int = 0):
         """Get posts from a specific board, mostly those with pictures"""
 
         board = basc_py4chan.Board(user_board, https=True)

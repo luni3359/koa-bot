@@ -14,7 +14,7 @@ class Game(commands.Cog):
         self.bot = bot
 
     @commands.command(aliases=['r'])
-    async def roll(self, ctx, *dice):
+    async def roll(self, ctx: commands.Context, *dice):
         """Rolls one or many dice"""
 
         if len(dice) < 1:
@@ -123,9 +123,10 @@ class Game(commands.Cog):
                         elif keep_type == 'h':
                             keep_type = 'highest'
                         message += f'\nKeep the {keep_type} '
-        
+
                         if keep_length > 1:
-                            message += f'{num2words(keep_length)}' + (overkeep and '*' or '') + ': ' + ', '.join(map(str, keep_list[0:keep_length-1])) + f' and a {keep_list[keep_length-1]}.'
+                            message += f'{num2words(keep_length)}' + (overkeep and '*' or '') + ': ' + ', '.join(
+                                map(str, keep_list[0:keep_length-1])) + f' and a {keep_list[keep_length-1]}.'
                         else:
                             message += f'number: {keep_list[0]}.'
                         pip_sum += sum(keep_list)

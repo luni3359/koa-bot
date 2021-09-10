@@ -2,15 +2,15 @@
 import math
 import random
 import re
-import typing
 import urllib
 
 import discord
-import mediawiki
 from discord.ext import commands
+from mediawiki import MediaWiki
+from mediawiki import exceptions as MediaExceptions
 
-import koabot.koakuma as koakuma
-import koabot.utils as utils
+import koabot.utils.net as net_utils
+from koabot import koakuma
 
 
 class InfoLookup(commands.Cog):
@@ -18,7 +18,7 @@ class InfoLookup(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.wikipedia = mediawiki.MediaWiki()
+        self.wikipedia: MediaWiki = MediaWiki()
 
     @commands.command(name='wikipedia', aliases=['wk', 'wp'])
     async def search_wikipedia(self, ctx, *words):
@@ -50,23 +50,22 @@ class InfoLookup(commands.Cog):
                     summary = summary[:len(summary) - i - 1] + '…'
                     break
 
-            js = (await utils.net.http_request(f"https://en.wikipedia.org/api/rest_v1/page/summary/{page_title}", json=True)).json
+            js = (await net_utils.http_request(f"https://en.wikipedia.org/api/rest_v1/page/summary/{page_title}", json=True)).json
             if 'thumbnail' in js:
                 embed.set_image(url=js['thumbnail']['source'])
 
             embed.description = summary
-            embed.set_footer(
-                text=self.bot.guides['explanation']['wikipedia-default']['embed']['footer_text'],
-                icon_url=self.bot.guides['explanation']['wikipedia-default']['favicon']['size16'])
+            embed.set_footer(text=self.bot.guides['explanation']['wikipedia-default']['embed']['footer_text'],
+                             icon_url=self.bot.guides['explanation']['wikipedia-default']['favicon']['size16'])
             await ctx.send(embed=embed)
-        except mediawiki.exceptions.DisambiguationError as e:
+        except MediaExceptions.DisambiguationError as e:
             bot_msg = 'There are many definitions for that... do you see anything that matches?\n'
 
             for suggestion in e.options[0:3]:
                 bot_msg += f'* {suggestion}\n'
 
             await ctx.send(bot_msg)
-        except mediawiki.exceptions.PageError:
+        except MediaExceptions.PageError:
             bot_msg = "Oh, I can't find anything like that... how about these?\n"
             suggestions = self.wikipedia.search(search_term, results=3)
 
@@ -83,7 +82,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote_plus(words)
         user_search = self.bot.assets['jisho']['search_url'] + word_encoded
 
-        js = (await utils.net.http_request(user_search, json=True)).json
+        js = (await net_utils.http_request(user_search, json=True)).json
 
         if not js:
             await ctx.send('Error retrieving data from server.')
@@ -147,7 +146,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote_plus(words)
         user_search = self.bot.assets['urban_dictionary']['search_url'] + word_encoded
 
-        js = (await utils.net.http_request(user_search, json=True)).json
+        js = (await net_utils.http_request(user_search, json=True)).json
 
         if not js:
             await ctx.send('Error retrieving data from server.')
@@ -208,7 +207,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote(words)
         user_search = f"{self.bot.assets['merriam-webster']['search_url']}/{word_encoded}?key={self.bot.auth_keys['merriam-webster']['key']}"
 
-        js = (await utils.net.http_request(user_search, json=True)).json
+        js = (await net_utils.http_request(user_search, json=True)).json
 
         # Check if there are any results at all
         if not js:
@@ -263,7 +262,7 @@ class InfoLookup(commands.Cog):
                     for meaning in similar_meanings:
                         meaning_item = meaning[1]
 
-                        if isinstance(meaning_item, typing.List):
+                        if isinstance(meaning_item, list):
                             meaning_item = meaning_item[0]
 
                         meaning_position = 'sn' in meaning_item and meaning_item['sn'] or '1'
@@ -273,7 +272,7 @@ class InfoLookup(commands.Cog):
 
                         # Get definition
                         # What a mess
-                        if isinstance(meaning_item, typing.List):
+                        if isinstance(meaning_item, list):
                             if 'sense' in meaning_item[1]:
                                 definition = meaning_item[1]['sense']['dt'][0][1]
                             else:
@@ -294,7 +293,7 @@ class InfoLookup(commands.Cog):
                         else:
                             raise KeyError('Dictionary format could not be resolved.')
 
-                        if isinstance(definition, typing.List):
+                        if isinstance(definition, list):
                             definition = definition[0][0][1]
 
                         # Format bullet point
@@ -306,7 +305,8 @@ class InfoLookup(commands.Cog):
             # Add etymology
             if 'et' in category:
                 etymology = category['et']
-                embed.description = '%s\n**%s**\n%s\n\n' % (embed.description, 'etymology', formatDictionaryOddities(etymology[0][1], 'merriam'))
+                embed.description = '%s\n**%s**\n%s\n\n' % (embed.description,
+                                                            'etymology', formatDictionaryOddities(etymology[0][1], 'merriam'))
             else:
                 embed.description = f'{embed.description}\n\n'
 
@@ -350,7 +350,8 @@ def formatDictionaryOddities(txt: str, which: str):
         txt = re.sub(r'\{bc\}|\*', '', txt)
 
         while True:
-            matches = re.findall(r'({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', txt, re.IGNORECASE)
+            matches = re.findall(
+                r'({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', txt, re.IGNORECASE)
 
             if not matches:
                 txt = re.sub(r'\{\/?[a-z\ _\-]+\}', '', txt)
@@ -364,7 +365,8 @@ def formatDictionaryOddities(txt: str, which: str):
 
         matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
         for match in matches:
-            txt = txt.replace(match[0], f"[{match[1]}]({koakuma.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
+            txt = txt.replace(
+                match[0], f"[{match[1]}]({koakuma.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
 
         return txt
 

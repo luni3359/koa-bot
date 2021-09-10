@@ -2,6 +2,7 @@
 import ast
 import os
 import random
+import re
 import shutil
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from koabot import koakuma
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
 from koabot.koakuma import CACHE_DIR
+from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
 
 class Gallery(commands.Cog):
@@ -535,10 +537,11 @@ class Gallery(commands.Cog):
             url=f"https://www.deviantart.com/{api_result['deviation']['author']['username']}",
             icon_url=api_result['deviation']['author']['usericon'])
 
-        if len(api_result['deviation']['extended']['description']) > 200:
-            embed.description = api_result['deviation']['extended']['description'][:200] + '...'
-        else:
-            embed.description = api_result['deviation']['extended']['description']
+        embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
+                                   api_result['deviation']['extended']['description']).strip()
+
+        if len(embed.description) > 200:
+            embed.description = embed.description[:200] + '...'
 
         # TODO: Walrus operator opportunity
         if api_result['deviation']['stats']['favourites'] > 0:

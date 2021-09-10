@@ -238,14 +238,14 @@ class Gallery(commands.Cog):
 
             await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
-    async def get_twitter_gallery(self, msg, url, **kwargs):
+    async def get_twitter_gallery(self, msg: discord.Message, url: str, **kwargs):
         """Automatically fetch and post any image galleries from twitter
         Keywords:
             guide::dict
                 The data which holds the board information
         """
 
-        channel = msg.channel
+        channel: discord.TextChannel = msg.channel
         guide = kwargs.get('guide', self.bot.guides['gallery']['twitter-gallery'])
 
         id_start = guide['post']['id_start']
@@ -313,10 +313,10 @@ class Gallery(commands.Cog):
 
             await channel.send(embed=embed)
 
-    async def get_pixiv_gallery(self, msg, url):
+    async def get_pixiv_gallery(self, msg: discord.Message, url: str):
         """Automatically fetch and post any image galleries from pixiv"""
 
-        channel = msg.channel
+        channel: discord.TextChannel = msg.channel
 
         post_id = post_utils.get_post_id(url, ['illust_id=', '/artworks/'], '&')
         if not post_id:
@@ -455,10 +455,10 @@ class Gallery(commands.Cog):
         embed.set_image(url=f'attachment://{image_filename}')
         return embed, img_url, image_filename
 
-    async def get_sankaku_post(self, msg, url):
+    async def get_sankaku_post(self, msg: discord.Message, url: str):
         """Automatically fetch a bigger preview from Sankaku Complex"""
 
-        channel = msg.channel
+        channel: discord.TextChannel = msg.channel
 
         post_id = post_utils.get_post_id(url, '/show/', '?')
         if not post_id:
@@ -493,7 +493,7 @@ class Gallery(commands.Cog):
     async def get_deviantart_post(self, msg: discord.Message, url: str):
         """Automatically fetch post from deviantart"""
 
-        channel = msg.channel
+        channel: discord.TextChannel = msg.channel
 
         post_id = post_utils.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
         if not post_id:
@@ -554,10 +554,10 @@ class Gallery(commands.Cog):
 
         await channel.send(embed=embed)
 
-    async def get_imgur_gallery(self, msg, url):
+    async def get_imgur_gallery(self, msg: discord.Message, url: str):
         """Automatically fetch and post any image galleries from imgur"""
 
-        channel = msg.channel
+        channel: discord.TextChannel = msg.channel
 
         album_id = post_utils.get_post_id(url, ['/a/', '/gallery/'], '?')
         if not album_id:

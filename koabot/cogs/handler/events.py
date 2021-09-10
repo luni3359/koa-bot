@@ -326,7 +326,7 @@ class BotEvents(commands.Cog):
                     # do nothing
                     return
 
-        channel = msg.channel
+        channel: discord.TextChannel = msg.channel
 
         # Reference channels together
         if msg.content[0] == '!': # only if explicitly asked for

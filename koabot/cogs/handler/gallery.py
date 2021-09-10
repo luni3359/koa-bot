@@ -503,13 +503,17 @@ class Gallery(commands.Cog):
 
         api_result = (await net_utils.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
 
-        if not api_result['deviation']['isMature']:
-            return
+        # more than half of the time previews aren't shown anyway
+        # if not api_result['deviation']['isMature']:
+        #     return
 
         if 'token' in api_result['deviation']['media']:
             token = api_result['deviation']['media']['token'][0]
         else:
             print('No token!!!!')
+
+        # can show preview; suppressing user embed
+        await msg.edit(suppress=True)
 
         baseUri = api_result['deviation']['media']['baseUri']
         prettyName = api_result['deviation']['media']['prettyName']
@@ -523,10 +527,25 @@ class Gallery(commands.Cog):
         print(image_url)
 
         embed = discord.Embed()
+        embed.title = api_result['deviation']['title']
+        embed.color = 0x06070d
         embed.set_author(
             name=api_result['deviation']['author']['username'],
             url=f"https://www.deviantart.com/{api_result['deviation']['author']['username']}",
             icon_url=api_result['deviation']['author']['usericon'])
+
+        if len(api_result['deviation']['extended']['description']) > 200:
+            embed.description = api_result['deviation']['extended']['description'][:200] + '...'
+        else:
+            embed.description = api_result['deviation']['extended']['description']
+
+        # TODO: Walrus operator opportunity
+        if api_result['deviation']['stats']['favourites'] > 0:
+            embed.add_field(name='Favorites', value="{:,}".format(api_result['deviation']['stats']['favourites']))
+
+        if api_result['deviation']['extended']['stats']['views'] > 0:
+            embed.add_field(name='Views', value="{:,}".format(api_result['deviation']['extended']['stats']['views']))
+
         embed.set_image(url=image_url)
         embed.set_footer(
             text=self.bot.assets['deviantart']['name'],

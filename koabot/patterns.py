@@ -31,7 +31,7 @@ UNIT_PATTERN_TUPLE = [
 
 SPECIAL_UNIT_PATTERN_TUPLE = ('footinches', re.compile(r'(\.\d+|\d[,\d]*(?:\.\d+)?)\'(\.\d+|\d[,\d]*(?:\.\d+)?)"?'))
 
-DICE_PATTERN = r'(\d*)\ ?d(\d+)(?:\ ?([+-]\ ?\d+))?(?:\ ?(k[hl]\d+))?'
+DICE_PATTERN = re.compile(r'(?:([+-])\ ?)?(?:(\d*)?d(\d+)(?:\ ?(k[hl]\d+))?|(\d+))')
 
 CHANNEL_URL_PATTERN = re.compile(r'https:\/\/(?:ptb\.)?discord(?:app)?\.com\/channels(?:\/\d{18}){3}')
 

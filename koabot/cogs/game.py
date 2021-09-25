@@ -1,4 +1,5 @@
 """Fun games that are barely playable, yay!"""
+import math
 import random
 import re
 from heapq import nlargest, nsmallest
@@ -9,92 +10,137 @@ from num2words import num2words
 from koabot.patterns import DICE_PATTERN
 
 
+class RollMatch:
+    def __init__(self, dice_match: re.Match):
+        self.sign: str = dice_match.group(1)
+        self.quantity: int = dice_match.group(2)
+        self.pips: int = dice_match.group(3)
+        self.keep = dice_match.group(4)
+        self.raw_points: int = dice_match.group(5)
+        self.limited_quantity = False
+
+        if not self.quantity:
+            self.quantity = 1
+        else:
+            self.quantity = int(self.quantity)
+            if self.quantity > 100:
+                self.limited_quantity = True
+
+            self.quantity = min(self.quantity, 100)
+
+        if not self.pips:
+            self.pips = 0
+        else:
+            self.pips = int(self.pips)
+
+        if not self.raw_points:
+            self.raw_points = 0
+
+        if not self.sign:
+            self.sign = '+'
+
+        if self.sign == '+':
+            self.raw_points = int(self.raw_points)
+        else:
+            self.raw_points = -int(self.raw_points)
+
+
 class Game(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command(aliases=['r'])
-    async def roll(self, ctx: commands.Context, *dice):
+    async def roll(self, ctx: commands.Context, *msg):
         """Rolls one or many dice"""
 
-        if len(dice) < 1:
-            await ctx.send('Please specify what you want to roll.')
-            return
+        if len(msg) < 1:
+            return await ctx.send("Please specify what you want to roll.")
 
-        dice_matches = re.findall(DICE_PATTERN, ' '.join(dice))
+        roll_string = ' '.join(msg)
 
-        if not dice_matches:
-            roll_suggestions = [
-                f"・ **d{random.randint(3,12)}**",
-                f"・ **{random.randint(2,5)}d{random.randint(3,6)} {random.choice(['-','+'])}{random.randint(1,5)}**",
-                f"・ **{random.randint(2,5)}d{random.randint(3,6)} {random.randint(2,5)}d{random.randint(3,6)} {random.choice(['-','+'])}{random.randint(1,5)} {random.randint(2,5)}d{random.randint(3,6)} {random.choice(['-','+'])}{random.randint(1,5)}**",
-            ]
-            apology = "Sorry, I can't do that... Please try with any of the following examples:\n"
-
-            random.shuffle(roll_suggestions)
-
-            await ctx.send(apology + '\n'.join(roll_suggestions))
-            return
-
-        dice_single_or_many = len(dice_matches) > 1 or (dice_matches[0][0] and int(dice_matches[0][0]) > 1)
-        message = f">>> {ctx.author.mention} rolled the {dice_single_or_many and 'dice' or 'die'}.\n"
-        pip_sum = 0
-
-        for match in dice_matches:
-            quantity = 1
-            pips = match[1] and int(match[1]) or 0
-            bonus_points = match[2]
-            if bonus_points:
-                bonus_points = str(bonus_points)
-                if bonus_points[1] == ' ':
-                    bonus_points = bonus_points[0] + bonus_points[2:]
-                bonus_points = int(bonus_points)
-            else:
-                bonus_points = 0
-
-            keep = match[3] or ''
-
-            if match[0]:
-                quantity = int(match[0])
-                if quantity > 10000:
-                    message += '\*'
-
-                quantity = min(quantity, 10000)
-
-            if quantity == 0 or pips == 0:
-                message += f"{num2words(quantity).capitalize()} {pips}-sided {quantity != 1 and 'dice' or 'die'}. Nothing to roll."
-                if bonus_points:
-                    pip_sum += bonus_points
-
-                    if bonus_points > 0:
-                        message += f' +{bonus_points}'
-                    else:
-                        message += f' {bonus_points}'
-                else:
-                    message += ' **0.**'
-
-                message += '\n'
+        matches_found = []
+        roll_count = 0
+        i = 0
+        while i < len(roll_string):
+            if roll_string[i] == ' ':
+                i += 1
                 continue
 
-            if keep:
-                if int(keep[2:]) != 0:
-                    keep_type = keep[1]
-                    keep_length = int(keep[2:])
+            pattern_match = DICE_PATTERN.match(roll_string, i)
+
+            if pattern_match:
+                match = RollMatch(pattern_match)
+
+                if match.pips:
+                    roll_count += match.quantity
+
+                matches_found.append(match)
+                i = pattern_match.end()
+                continue
+
+            return await ctx.send("Invalid syntax!")
+
+        # there should always be at least one roll - never do raw math
+        if roll_count == 0:
+            return await ctx.send("Please roll something!")
+
+        total_sum = 0
+        logic_string = ""
+        die_or_dice = roll_count > 1 and 'dice' or 'die'
+        message = f">>> {ctx.author.mention} rolled the {die_or_dice}.\n"
+
+        for i, match in enumerate(matches_found):
+            match: RollMatch = match
+
+            if match.pips == 0:
+                if match.raw_points > 0:
+                    message += "Add "
+                else:
+                    message += "Substract "
+
+                message += f"{abs(match.raw_points)} point{match.raw_points > 1 and 's' or ''}.\n"
+                if i == 0 and match.sign == '+':
+                    logic_string += f"__{match.raw_points}__ "
+                else:
+                    logic_string += f"{match.sign} __{match.raw_points}__ "
+
+                total_sum += match.raw_points
+                continue
+
+            if match.limited_quantity:
+                message += '\*'
+
+            if match.quantity == 0 or match.pips == 0:
+                message += f"{num2words(match.quantity).capitalize()} {match.pips}-sided {match.quantity != 1 and 'dice' or 'die'}. Nothing to roll.  **0.**\n"
+                continue
+
+            roll_list = []
+
+            if match.keep:
+                if int(match.keep[2:]) != 0:
+                    keep_type = match.keep[1]
+                    keep_length = int(match.keep[2:])
                     keep_list = []
                     overkeep = False
 
-                    if keep_length > quantity:
-                        keep_length = quantity
+                    if keep_length > match.quantity:
+                        keep_length = match.quantity
                         overkeep = True
                 else:
-                    keep = ''
+                    match.keep = ''
 
-            message += f"{num2words(quantity).capitalize()} {pips}-sided {quantity != 1 and 'dice' or 'die'} for a "
+            if match.sign == '+':
+                message += f"{num2words(match.quantity).capitalize()}"
+            else:
+                message += f"Minus {num2words(match.quantity)}"
 
-            for i in range(0, quantity):
-                die_roll = random.randint(1, pips)
+            message += f" {match.pips}-sided {match.quantity != 1 and 'dice' or 'die'} for a "
 
-                if keep:
+            for j in range(0, match.quantity):
+                die_roll = random.randint(1, match.pips)
+                roll_list.append(die_roll)
+
+                if match.keep:
                     keep_list.append(die_roll)
 
                     if len(keep_list) >= keep_length:
@@ -103,21 +149,13 @@ class Game(commands.Cog):
                         elif keep_type == 'h':
                             keep_list = nlargest(keep_length, keep_list)
 
-                if i == quantity - 1:
-                    if quantity == 1:
+                if j == match.quantity - 1:
+                    if match.quantity == 1:
                         message += f'{die_roll}.'
                     else:
                         message += f'and a {die_roll}.'
 
-                    if bonus_points:
-                        pip_sum += bonus_points
-
-                        if bonus_points > 0:
-                            message += f' +{bonus_points}'
-                        else:
-                            message += f' {bonus_points}'
-
-                    if keep:
+                    if match.keep:
                         if keep_type == 'l':
                             keep_type = 'lowest'
                         elif keep_type == 'h':
@@ -129,18 +167,35 @@ class Game(commands.Cog):
                                 map(str, keep_list[0:keep_length-1])) + f' and a {keep_list[keep_length-1]}.'
                         else:
                             message += f'number: {keep_list[0]}.'
-                        pip_sum += sum(keep_list)
+
+                        if i == 0 and match.sign == '+':
+                            logic_string += f"__{' + '.join(map(str, keep_list))}__ "
+                        else:
+                            logic_string += f"{match.sign} __{' + '.join(map(str, keep_list))}__ "
+
+                        if match.sign == '+':
+                            total_sum += sum(keep_list)
+                        else:
+                            total_sum -= sum(keep_list)
 
                     message += '\n'
-                elif i == quantity - 2:
+                elif j == match.quantity - 2:
                     message += f'{die_roll} '
                 else:
                     message += f'{die_roll}, '
 
-                if not keep:
-                    pip_sum += die_roll
+                if not match.keep:
+                    if i == 0 and match.sign == '+':
+                        logic_string += f"__{' + '.join(map(str, roll_list))}__ "
+                    else:
+                        logic_string += f"{match.sign} __{' + '.join(map(str, roll_list))}__ "
 
-        message += f'For a total of **{pip_sum}.**'
+                    if match.sign == '+':
+                        total_sum += die_roll
+                    else:
+                        total_sum -= die_roll
+
+        message += f'{logic_string}\nFor a total of **{total_sum}.**'
 
         await ctx.send(message[0:2000])
 

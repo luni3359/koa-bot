@@ -1,5 +1,4 @@
 """Fun games that are barely playable, yay!"""
-import math
 import random
 import re
 from heapq import nlargest, nsmallest
@@ -12,6 +11,7 @@ from koabot.patterns import DICE_PATTERN
 
 class RollMatch:
     def __init__(self, dice_match: re.Match):
+        self.type: str = None
         self.sign: str = dice_match.group(1)
         self.quantity: int = dice_match.group(2)
         self.pips: int = dice_match.group(3)
@@ -29,8 +29,10 @@ class RollMatch:
             self.quantity = min(self.quantity, 100)
 
         if not self.pips:
+            self.type = "points"
             self.pips = 0
         else:
+            self.type = "roll"
             self.pips = int(self.pips)
 
         if not self.raw_points:
@@ -71,8 +73,10 @@ class Game(commands.Cog):
             if pattern_match:
                 match = RollMatch(pattern_match)
 
-                if match.pips:
+                if match.pips and match.quantity > 0:
                     roll_count += match.quantity
+                elif match.type == "roll":
+                    roll_count += 1
 
                 matches_found.append(match)
                 i = pattern_match.end()
@@ -92,8 +96,8 @@ class Game(commands.Cog):
         for i, match in enumerate(matches_found):
             match: RollMatch = match
 
-            if match.pips == 0:
-                if match.raw_points > 0:
+            if match.type == "points":
+                if match.sign == '+':
                     message += "Add "
                 else:
                     message += "Subtract "
@@ -168,10 +172,13 @@ class Game(commands.Cog):
                         else:
                             message += f'number: {keep_list[0]}.'
 
-                        if i == 0 and match.sign == '+':
-                            logic_string += f"__{' + '.join(map(str, keep_list))}__ "
+                        if i != 0 or match.sign != '+':
+                            logic_string += f"{match.sign} "
+
+                        if len(keep_list) > 1 and len(matches_found) > 1:
+                            logic_string += f"__({' + '.join(map(str, keep_list))})__ "
                         else:
-                            logic_string += f"{match.sign} __{' + '.join(map(str, keep_list))}__ "
+                            logic_string += f"__{' + '.join(map(str, keep_list))}__ "
 
                         if match.sign == '+':
                             total_sum += sum(keep_list)
@@ -185,17 +192,24 @@ class Game(commands.Cog):
                     message += f'{die_roll}, '
 
                 if not match.keep:
-                    if i == 0 and match.sign == '+':
-                        logic_string += f"__{' + '.join(map(str, roll_list))}__ "
-                    else:
-                        logic_string += f"{match.sign} __{' + '.join(map(str, roll_list))}__ "
-
                     if match.sign == '+':
                         total_sum += die_roll
                     else:
                         total_sum -= die_roll
 
-        message += f'{logic_string}\nFor a total of **{total_sum}.**'
+            if not match.keep:
+                if i != 0 or match.sign != '+':
+                    logic_string += f"{match.sign} "
+
+                if len(roll_list) > 1 and len(matches_found) > 1:
+                    logic_string += f"__({' + '.join(map(str, roll_list))})__ "
+                else:
+                    logic_string += f"__{' + '.join(map(str, roll_list))}__ "
+
+        if logic_string:
+            message += f"{logic_string}\n"
+
+        message += f"For a total of **{total_sum}.**"
 
         await ctx.send(message[0:2000])
 

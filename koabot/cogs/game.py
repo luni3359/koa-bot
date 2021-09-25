@@ -96,7 +96,7 @@ class Game(commands.Cog):
                 if match.raw_points > 0:
                     message += "Add "
                 else:
-                    message += "Substract "
+                    message += "Subtract "
 
                 message += f"{abs(match.raw_points)} point{match.raw_points > 1 and 's' or ''}.\n"
                 if i == 0 and match.sign == '+':

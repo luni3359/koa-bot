@@ -502,21 +502,23 @@ class Gallery(commands.Cog):
             return
 
         search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
-
         api_result = (await net_utils.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
 
-        # more than half of the time previews aren't shown anyway
-        # if not api_result['deviation']['isMature']:
-        #     return
+        deviant_type = api_result['deviation']['type']
 
-        if 'token' in api_result['deviation']['media']:
-            token = api_result['deviation']['media']['token'][0]
+        if deviant_type == "image":
+            await msg.edit(suppress=True)
+            await self.send_deviantart_image(channel, url, api_result)
+        elif deviant_type == "literature":
+            await msg.edit(suppress=True)
+            await self.send_deviantart_literature(channel, url,  api_result)
         else:
-            print('No token!!!!')
+            print(f"Incapable of handling DeviantArt url (type: {deviant_type}):\n{url}")
 
-        # can show preview; suppressing user embed
-        await msg.edit(suppress=True)
+    async def send_deviantart_image(self, channel: discord.TextChannel, url: str, api_result):
+        """DeviantArt image embed sender"""
 
+        token = api_result['deviation']['media']['token'][0]
         baseUri = api_result['deviation']['media']['baseUri']
         prettyName = api_result['deviation']['media']['prettyName']
 
@@ -541,7 +543,7 @@ class Gallery(commands.Cog):
                                    api_result['deviation']['extended']['description']).strip()
 
         if len(embed.description) > 200:
-            embed.description = embed.description[:200] + '...'
+            embed.description = embed.description[:200] + "..."
 
         # TODO: Walrus operator opportunity
         if api_result['deviation']['stats']['favourites'] > 0:
@@ -551,6 +553,33 @@ class Gallery(commands.Cog):
             embed.add_field(name='Views', value="{:,}".format(api_result['deviation']['extended']['stats']['views']))
 
         embed.set_image(url=image_url)
+        embed.set_footer(
+            text=self.bot.assets['deviantart']['name'],
+            icon_url=self.bot.assets['deviantart']['favicon'])
+
+        await channel.send(embed=embed)
+
+    async def send_deviantart_literature(self, channel: discord.TextChannel, url: str, api_result):
+        """DeviantArt literature embed sender"""
+
+        embed = discord.Embed()
+        embed.title = api_result['deviation']['title']
+        embed.url = url
+        embed.color = 0x06070d
+        embed.set_author(
+            name=api_result['deviation']['author']['username'],
+            url=f"https://www.deviantart.com/{api_result['deviation']['author']['username']}",
+            icon_url=api_result['deviation']['author']['usericon'])
+
+        embed.description = api_result['deviation']['textContent']['excerpt'] + "..."
+
+        # TODO: Walrus operator opportunity
+        if api_result['deviation']['stats']['favourites'] > 0:
+            embed.add_field(name='Favorites', value="{:,}".format(api_result['deviation']['stats']['favourites']))
+
+        if api_result['deviation']['extended']['stats']['views'] > 0:
+            embed.add_field(name='Views', value="{:,}".format(api_result['deviation']['extended']['stats']['views']))
+
         embed.set_footer(
             text=self.bot.assets['deviantart']['name'],
             icon_url=self.bot.assets['deviantart']['favicon'])

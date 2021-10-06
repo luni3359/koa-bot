@@ -369,11 +369,23 @@ class Gallery(commands.Cog):
             else:
                 pictures = [illust]
 
-            total_to_preview = 5
+            total_to_preview = 1
             for i, picture in enumerate(pictures[:total_to_preview]):
                 print(f'Retrieving picture #{post_id}...')
 
-                (embed, url, filename) = await self.generate_pixiv_embed(picture, illust.user)
+                img_url = picture.image_urls.medium
+                filename = net_utils.get_url_filename(img_url)
+
+                embed = discord.Embed()
+                embed.set_image(url=f'attachment://{filename}')
+
+                if i == 0:
+                    embed.title = illust.title
+                    embed.url = url
+                    embed.description = illust.caption
+                    embed.set_author(
+                        name=illust.user.name,
+                        url=f'https://www.pixiv.net/member.php?id={illust.user.id}')
 
                 # create if pixiv cache directory if it doesn't exist
                 file_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'files')
@@ -384,7 +396,7 @@ class Gallery(commands.Cog):
                 image_bytes = None
                 if not os.path.exists(image_path):
                     print('Saving to cache...')
-                    image_bytes = await net_utils.fetch_image(url, headers=koakuma.bot.assets['pixiv']['headers'])
+                    image_bytes = await net_utils.fetch_image(img_url, headers=koakuma.bot.assets['pixiv']['headers'])
 
                     with open(os.path.join(file_cache_dir, filename), 'wb') as image_file:
                         shutil.copyfileobj(image_bytes, image_file)
@@ -401,14 +413,17 @@ class Gallery(commands.Cog):
                     embed.set_footer(
                         text=remaining_footer,
                         icon_url=self.bot.assets['pixiv']['favicon'])
+
                 if image_bytes:
-                    await channel.send(file=discord.File(fp=image_bytes, filename=filename), embed=embed)
+                    await msg.reply(file=discord.File(fp=image_bytes, filename=filename), embed=embed, mention_author=False)
                     image_bytes.close()
                 else:
                     print('Uploading from cache...')
-                    await channel.send(file=discord.File(fp=image_path, filename=filename), embed=embed)
+                    await msg.reply(file=discord.File(fp=image_path, filename=filename), embed=embed, mention_author=False)
 
         await temp_message.delete()
+        await msg.edit(suppress=True)
+
         print('DONE PIXIV!')
 
     async def reauthenticate_pixiv(self):
@@ -432,30 +447,6 @@ class Gallery(commands.Cog):
             os.makedirs(pixiv_cache_dir, exist_ok=True)
             with open(token_path, 'w') as token_file:
                 token_file.write(self.pixiv_aapi.refresh_token)
-
-    async def generate_pixiv_embed(self, post, user):
-        """Generate embeds for pixiv urls
-        Arguments:
-            post
-                The post object
-            user
-                The artist of the post
-        Returns:
-            embed::discord.Embed
-                Embed object
-            image_filename::str
-                Image filename, extension included
-        """
-
-        img_url = post.image_urls.medium
-        image_filename = net_utils.get_url_filename(img_url)
-
-        embed = discord.Embed()
-        embed.set_author(
-            name=user.name,
-            url=f'https://www.pixiv.net/member.php?id={user.id}')
-        embed.set_image(url=f'attachment://{image_filename}')
-        return embed, img_url, image_filename
 
     async def get_sankaku_post(self, msg: discord.Message, url: str):
         """Automatically fetch a bigger preview from Sankaku Complex"""

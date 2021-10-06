@@ -320,11 +320,12 @@ class Gallery(commands.Cog):
 
         channel: discord.TextChannel = msg.channel
 
-        post_id = post_utils.get_post_id(url, ['illust_id=', '/artworks/'], '&')
+        post_id = post_utils.get_post_id(url, ['illust_id=', '/artworks/'], r'[0-9]+', has_regex=True)
         if not post_id:
             return
 
-        print(f'Now starting to process pixiv link #{post_id}')
+        print(f"Now starting to process pixiv link #{post_id}")
+        url = f"https://www.pixiv.net/artworks/{post_id}"
 
         # Login
         await self.reauthenticate_pixiv()

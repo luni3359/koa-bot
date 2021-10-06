@@ -381,12 +381,14 @@ class Gallery(commands.Cog):
                 embed.set_image(url=f'attachment://{filename}')
 
                 if i == 0:
-                    embed.title = illust.title
+                    if illust.title != "無題":
+                        embed.title = illust.title
+
                     embed.url = url
                     embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', illust.caption).strip()
                     embed.set_author(
                         name=illust.user.name,
-                        url=f'https://www.pixiv.net/member.php?id={illust.user.id}')
+                        url=f'https://www.pixiv.net/users/{illust.user.id}')
 
                 # create if pixiv cache directory if it doesn't exist
                 file_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'files')

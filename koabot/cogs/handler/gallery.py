@@ -383,7 +383,7 @@ class Gallery(commands.Cog):
                 if i == 0:
                     embed.title = illust.title
                     embed.url = url
-                    embed.description = illust.caption
+                    embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', illust.caption).strip()
                     embed.set_author(
                         name=illust.user.name,
                         url=f'https://www.pixiv.net/member.php?id={illust.user.id}')

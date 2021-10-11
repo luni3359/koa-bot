@@ -20,13 +20,13 @@ class Board(commands.Cog):
         self.e621_auth = aiohttp.BasicAuth(
             login=self.bot.auth_keys['e621']['username'], password=self.bot.auth_keys['e621']['key'])
 
-    async def search_board(self, ctx: commands.Context, tags, board: str = 'danbooru', **kwargs):
+    async def search_board(self, ctx: commands.Context, tags: str, board: str = 'danbooru', **kwargs):
         """Search on image boards!
         Arguments:
             ctx
                 The context to interact with the discord API
-            tags::*args (list)
-                List of the tags sent by the user
+            tags::str
+                A string of the tags that have been sent by the user
             board::str
                 The board to manage. Default is 'danbooru'
         Keywords:
@@ -36,21 +36,20 @@ class Board(commands.Cog):
                 Omit the final remaining count on the final post. False by default.
         """
 
-        guide = kwargs.get('guide', None)
+        guide: dict = kwargs.get('guide', None)
         hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
 
         if len(tags) == 0:
             await ctx.send('Please make a search.')
             return
 
-        search = ' '.join(tags)
-        print(f'User searching for: {search}')
+        print(f'User searching for: {tags}')
 
         on_nsfw_channel = ctx.channel.is_nsfw()
 
         async with ctx.typing():
             try:
-                posts = (await self.search_query(board=board, guide=guide, tags=search, random=True, include_nsfw=on_nsfw_channel)).json
+                posts = (await self.search_query(board=board, guide=guide, tags=tags, random=True, include_nsfw=on_nsfw_channel)).json
             except AttributeError:
                 # query errored out
                 posts = None

@@ -21,10 +21,8 @@ class InfoLookup(commands.Cog):
         self.wikipedia: MediaWiki = MediaWiki()
 
     @commands.command(name='wikipedia', aliases=['wk', 'wp'])
-    async def search_wikipedia(self, ctx, *words):
+    async def search_wikipedia(self, ctx, *, search_term: str):
         """Search for articles in Wikipedia"""
-        search_term = ' '.join(words)
-
         page_results = self.wikipedia.search(search_term)
         page_title = []
 
@@ -75,11 +73,11 @@ class InfoLookup(commands.Cog):
             await ctx.send(bot_msg)
 
     @commands.command(name='jisho', aliases=['j'])
-    async def search_jisho(self, ctx, *word):
+    async def search_jisho(self, ctx, *, search_term: str):
         """Search a term in the japanese dictionary jisho"""
 
-        words = ' '.join(word).lower()
-        word_encoded = urllib.parse.quote_plus(words)
+        search_term = search_term.lower()
+        word_encoded = urllib.parse.quote_plus(search_term)
         user_search = self.bot.assets['jisho']['search_url'] + word_encoded
 
         js = (await net_utils.http_request(user_search, json=True)).json
@@ -94,8 +92,8 @@ class InfoLookup(commands.Cog):
             return
 
         embed = discord.Embed()
-        embed.title = words
-        embed.url = self.bot.assets['jisho']['dictionary_url'] + urllib.parse.quote(words)
+        embed.title = search_term
+        embed.url = self.bot.assets['jisho']['dictionary_url'] + urllib.parse.quote(search_term)
         embed.description = ''
 
         for word in js['data'][:4]:
@@ -139,12 +137,12 @@ class InfoLookup(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='urbandictionary', aliases=['wu', 'udictionary', 'ud'])
-    async def search_urbandictionary(self, ctx, *word):
+    async def search_urbandictionary(self, ctx, *, search_term: str):
         """Search a term in urbandictionary"""
 
-        words = ' '.join(word).lower()
-        word_encoded = urllib.parse.quote_plus(words)
-        user_search = self.bot.assets['urban_dictionary']['search_url'] + word_encoded
+        search_term = search_term.lower()
+        search_encoded = urllib.parse.quote_plus(search_term)
+        user_search = self.bot.assets['urban_dictionary']['search_url'] + search_encoded
 
         js = (await net_utils.http_request(user_search, json=True)).json
 
@@ -159,8 +157,8 @@ class InfoLookup(commands.Cog):
 
         definition_embeds = []
         embed = discord.Embed()
-        embed.title = words
-        embed.url = self.bot.assets['urban_dictionary']['dictionary_url'] + word_encoded
+        embed.title = search_term
+        embed.url = self.bot.assets['urban_dictionary']['dictionary_url'] + search_encoded
         embed.description = ''
         definition_embeds.append(embed)
         index_placeholder = '<<INDEX>>'
@@ -200,12 +198,12 @@ class InfoLookup(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command(name='dictionary', aliases=['d', 'word', 'w'])
-    async def search_english_word(self, ctx, *word):
+    async def search_english_word(self, ctx, *, search_term):
         """Search a term in merriam-webster's dictionary"""
 
-        words = ' '.join(word).lower()
-        word_encoded = urllib.parse.quote(words)
-        user_search = f"{self.bot.assets['merriam-webster']['search_url']}/{word_encoded}?key={self.bot.auth_keys['merriam-webster']['key']}"
+        search_term = search_term.lower()
+        search_encoded = urllib.parse.quote(search_term)
+        user_search = f"{self.bot.assets['merriam-webster']['search_url']}/{search_encoded}?key={self.bot.auth_keys['merriam-webster']['key']}"
 
         js = (await net_utils.http_request(user_search, json=True)).json
 
@@ -235,13 +233,13 @@ class InfoLookup(commands.Cog):
             tense_group = js[0]['cxs'][0]
             tense_name = tense_group['cxl'].replace(' of', '')
             suggested_tense_word = tense_group['cxtis'][0]['cxt']
-            await ctx.send(f'The word **"{words}"** is the *{tense_name}* of the verb **"{suggested_tense_word}"**. Here\'s its definition.')
-            await ctx.invoke(self.bot.get_command('word'), suggested_tense_word)
+            await ctx.send(f"The word **\"{search_term}\"** is the *{tense_name}* of the verb **\"{suggested_tense_word}\"**. Here's its definition.")
+            await ctx.invoke(self.bot.get_command('dictionary'), suggested_tense_word)
             return
 
         embed = discord.Embed()
-        embed.title = words
-        embed.url = f"{self.bot.assets['merriam-webster']['dictionary_url']}/{word_encoded}"
+        embed.title = search_term
+        embed.url = f"{self.bot.assets['merriam-webster']['dictionary_url']}/{search_encoded}"
         embed.description = ''
 
         for category in js[:2]:

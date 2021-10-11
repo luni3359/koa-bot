@@ -88,7 +88,7 @@ class Music(commands.Cog):
             await ctx.send('No voice channel to disconnect from...')
 
     @commands.command()
-    async def play(self, ctx: commands.Context, *search_or_url):
+    async def play(self, ctx: commands.Context, *, search_or_url: str):
         """Plays a track (overrides current track)"""
         # TODO https://stackoverflow.com/a/62360149/7688278
         # Allow links to play from specified timestamps
@@ -99,7 +99,6 @@ class Music(commands.Cog):
             url = random.choice(self.bot.testing['vc']['yt-suggestions'])
         else:
             # assuming it's always an url for now
-            search_or_url = ' '.join(search_or_url)
             url = re.findall(URL_PATTERN, search_or_url)[0]
 
         stream = await YTDLSource.from_url(url, loop=self.bot.loop)

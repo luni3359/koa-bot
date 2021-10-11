@@ -13,19 +13,19 @@ class ImageBoard(commands.Cog):
         self.bot = bot
 
     @commands.command(name='danbooru', aliases=['dan'])
-    async def search_danbooru(self, ctx, *tags):
+    async def search_danbooru(self, ctx, *, tags: str):
         """Search on danbooru!"""
         board_cog: Board = self.bot.get_cog('Board')
         await board_cog.search_board(ctx, tags, guide=self.bot.guides['gallery']['danbooru-default'])
 
     @commands.command(name='e621', aliases=['e6'])
-    async def search_e621(self, ctx, *tags):
+    async def search_e621(self, ctx, *, tags: str):
         """Search on e621!"""
         board_cog: Board = self.bot.get_cog('Board')
         await board_cog.search_board(ctx, tags, board='e621', guide=self.bot.guides['gallery']['e621-default'])
 
     @commands.command(name='sankaku')
-    async def search_sankaku(self, ctx, *tags):
+    async def search_sankaku(self, ctx, *, tags: str):
         """Search on sankaku!"""
         board_cog: Board = self.bot.get_cog('Board')
         await board_cog.search_board(ctx, tags, board='sankaku', guide=self.bot.guides['gallery']['sankaku-show'], hide_posts_remaining=True)

@@ -52,13 +52,10 @@ class Game(commands.Cog):
         self.bot = bot
 
     @commands.command(aliases=['r'])
-    async def roll(self, ctx: commands.Context, *msg):
+    async def roll(self, ctx: commands.Context, *, roll_string: str):
         """Rolls one or many dice"""
-
-        if len(msg) < 1:
+        if len(roll_string) < 1:
             return await ctx.send("Please specify what you want to roll.")
-
-        roll_string = ' '.join(msg)
 
         matches_found = []
         roll_count = 0

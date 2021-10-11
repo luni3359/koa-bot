@@ -38,7 +38,7 @@ By default some restrictions will apply based on the safety setting your text ch
 + Notifies users to move to a different channel upon breaking a condition.
     + Currently it's based on sending too many messages in channels based around media.
 + Easily move between channels by linking them together.
-    + Referencing a text channel makes two links appear which lead to each other.
+    + Starting a message with `!` will link the current channel to all channel mentions between each other.
 + Let users get roles based on reactions
 
 ### Miscellaneous

@@ -21,9 +21,13 @@ ffmpeg_opts = {
 ytdl = youtube_dl.YoutubeDL(ydl_opts)
 
 
-# https://stackoverflow.com/a/56709893/7688278
-# look into this https://gist.github.com/vbe0201/ade9b80f2d3b64643d854938d40a0a2d
 class YTDLSource(discord.PCMVolumeTransformer):
+    """Found on the internet
+
+    https://stackoverflow.com/a/56709893/7688278
+    look into this https://gist.github.com/vbe0201/ade9b80f2d3b64643d854938d40a0a2d
+    """
+
     def __init__(self, source, *, data, volume=0.5):
         super().__init__(source, volume)
 
@@ -34,6 +38,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def from_url(cls, url, *, loop=None):
+        """Retrieve audio stream from an url"""
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
 
@@ -46,6 +51,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 
 class Music(commands.Cog):
+    """Play music"""
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 

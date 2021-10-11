@@ -10,6 +10,7 @@ from koabot.patterns import DICE_PATTERN
 
 
 class RollMatch:
+    """Roll object helper"""
     def __init__(self, dice_match: re.Match):
         self.type: str = None
         self.sign: str = dice_match.group(1)
@@ -48,6 +49,7 @@ class RollMatch:
 
 
 class Game(commands.Cog):
+    """Commands to play with"""
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 

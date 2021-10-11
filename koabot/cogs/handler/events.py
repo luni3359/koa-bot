@@ -12,6 +12,7 @@ import tldextract
 from discord.ext import commands
 from mergedeep import merge
 
+from koabot.cogs.basic.useractions import UserActions
 from koabot.cogs.imageboard import ImageBoard
 from koabot.koakuma import DATA_DIR
 from koabot.patterns import URL_PATTERN
@@ -238,7 +239,7 @@ class BotEvents(commands.Cog):
             if str(reaction) not in valid_options:
                 return
 
-            useractions_cog = self.bot.get_cog('UserActions')
+            useractions_cog: UserActions = self.bot.get_cog('UserActions')
 
             if str(reaction) == emoji.emojize(':o:', use_aliases=True):
                 useractions_cog.rr_conflict_response(tmp_root['link'], tmp_root['emoji_list'])
@@ -329,7 +330,7 @@ class BotEvents(commands.Cog):
         channel: discord.TextChannel = msg.channel
 
         # Reference channels together
-        if msg.content[0] == '!': # only if explicitly asked for
+        if msg.content[0] == '!':  # only if explicitly asked for
             for mentioned_channel in msg.channel_mentions:
                 if mentioned_channel == channel:
                     continue
@@ -361,7 +362,8 @@ class BotEvents(commands.Cog):
             # if (url_match := URL_PATTERN.match(msg.content, i)):
             if url_match:
                 if not escaped_url or url_match.end() >= len(msg.content) or url_match.end() < len(msg.content) and msg.content[url_match.end()] != '>':
-                    url_matches_found.append({'full_url': url_match.group(), 'fqdn': tldextract.extract(url_match.group()).fqdn})
+                    url_matches_found.append({'full_url': url_match.group(
+                    ), 'fqdn': tldextract.extract(url_match.group()).fqdn})
 
                 i = url_match.end()
                 continue

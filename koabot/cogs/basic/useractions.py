@@ -12,6 +12,7 @@ from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 
 
 def is_guild_owner():
+    """Demo custom check that checks whether or the caller is the owner"""
     def predicate(ctx: commands.Context):
         return ctx.guild is not None and ctx.guild.owner_id == ctx.author.id
     return commands.check(predicate)
@@ -26,7 +27,7 @@ class UserActions(commands.Cog):
 
     @commands.command(aliases=['ava'])
     async def avatar(self, ctx: commands.Context):
-        """Display the avatar of an user"""
+        """Display an user's avatar"""
 
         if ctx.message.mentions:
             for mention in ctx.message.mentions:
@@ -53,6 +54,7 @@ class UserActions(commands.Cog):
 
     @reaction_roles.command()
     async def assign(self, ctx: commands.Context, url: str):
+        """Initialize the emoji-message-role binding process"""
         url_matches = CHANNEL_URL_PATTERN.match(url)
 
         if not url_matches:
@@ -97,7 +99,7 @@ class UserActions(commands.Cog):
 
     @reaction_roles.command()
     async def bind(self, ctx: commands.Context):
-        """Add a new binding to the current message in use"""
+        """Add a new emoji-role binding to the message being currently assigned to"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
@@ -190,7 +192,7 @@ class UserActions(commands.Cog):
 
     @reaction_roles.command()
     async def save(self, ctx: commands.Context):
-        """Complete the role-emoji registration"""
+        """Complete the emoji-role registration"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
@@ -256,6 +258,7 @@ class UserActions(commands.Cog):
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
     def rr_conflict_response(self, rr_link, emoji_list):
+        """Complete or drop the request to assign chosen emoji to a reactionrole link"""
         if not emoji_list:
             return
 

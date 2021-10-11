@@ -99,11 +99,13 @@ class StreamService(commands.Cog):
 
     @property
     async def twitch_headers(self):
+        """The headers needed to make requests to Twitch"""
         self._twitch_headers = {'Client-ID': self.bot.auth_keys['twitch']['client_id'], 'Authorization': f'Bearer {await self.twitch_access_token}'}
         return self._twitch_headers
 
     @property
     async def twitch_access_token(self) -> str:
+        """The access token needed to become authorized to make requests to Twitch"""
         if self._twitch_access_token:
             return self._twitch_access_token
 

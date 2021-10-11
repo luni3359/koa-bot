@@ -36,8 +36,8 @@ class BotEvents(commands.Cog):
         for group, contents in self.bot.match_groups.items():
             for match in contents:
                 url_pattern = match['url']
-                url_pattern = url_pattern.replace('.', '\.')
-                url_pattern = url_pattern.replace('*', '(.*?)')
+                url_pattern = url_pattern.replace(r'.', r'\.')
+                url_pattern = url_pattern.replace(r'*', r'(.*?)')
                 self.valid_urls.append({'group': group, 'url': url_pattern, 'guide': match['guide']})
 
         for guide_type, v in self.bot.guides.items():

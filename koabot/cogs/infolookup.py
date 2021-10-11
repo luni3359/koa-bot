@@ -167,8 +167,8 @@ class InfoLookup(commands.Cog):
             definition = entry['definition']
             example = entry['example']
 
-            string_to_add = f"**{index_placeholder}. {formatDictionaryOddities(definition, 'urban')}**\n\n"
-            string_to_add += formatDictionaryOddities(example, 'urban') + '\n\n'
+            string_to_add = f"**{index_placeholder}. {strip_dictionary_oddities(definition, 'urban')}**\n\n"
+            string_to_add += strip_dictionary_oddities(example, 'urban') + '\n\n'
 
             if len(string_to_add) - len(index_placeholder) + 1 > 2048:
                 string_to_add = string_to_add[:2048]
@@ -298,13 +298,13 @@ class InfoLookup(commands.Cog):
                         similar_meaning_string += f'{meaning_position}: {definition}\n'
 
                 embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd']
-                                                        or 'definition', formatDictionaryOddities(similar_meaning_string, 'merriam'))
+                                                        or 'definition', strip_dictionary_oddities(similar_meaning_string, 'merriam'))
 
             # Add etymology
             if 'et' in category:
                 etymology = category['et']
                 embed.description = '%s\n**%s**\n%s\n\n' % (embed.description,
-                                                            'etymology', formatDictionaryOddities(etymology[0][1], 'merriam'))
+                                                            'etymology', strip_dictionary_oddities(etymology[0][1], 'merriam'))
             else:
                 embed.description = f'{embed.description}\n\n'
 
@@ -338,7 +338,7 @@ class InfoLookup(commands.Cog):
             await ctx.send(embed=embed)
 
 
-def formatDictionaryOddities(txt: str, which: str):
+def strip_dictionary_oddities(txt: str, which: str):
     """Trim weird markup from dictionary entries"""
 
     if which == 'merriam':

@@ -115,7 +115,6 @@ class Music(commands.Cog):
     @commands.command()
     async def echo(self, ctx: commands.Context):
         """Echoes sound"""
-        pass
 
     @commands.command()
     async def test(self, ctx: commands.Context):

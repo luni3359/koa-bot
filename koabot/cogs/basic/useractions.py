@@ -119,7 +119,7 @@ class UserActions(commands.Cog):
         if exit_reason:
             exit_emoji = emoji.emojize(':confetti_ball:')
             exit_emoji2 = emoji.emojize(':tada:')
-            await ctx.send(f'Please include at least {exit_reason} to bind to. How you arrange them does not matter.\n\nFor example:\n{exit_emoji} \@Party → Reacting with {exit_emoji} will assign the \@Party role.\n{exit_emoji2} \@Party \@Yay {exit_emoji} → Reacting with {exit_emoji} AND {exit_emoji2} will assign the \@Party and \@Yay roles.')
+            await ctx.send(f'Please include at least {exit_reason} to bind to. How you arrange them does not matter.\n\nFor example:\n{exit_emoji} @Party → Reacting with {exit_emoji} will assign the @Party role.\n{exit_emoji2} @Party @Yay {exit_emoji} → Reacting with {exit_emoji} AND {exit_emoji2} will assign the @Party and @Yay roles.')
             return
 
         # prevent duplicate role bindings from being created

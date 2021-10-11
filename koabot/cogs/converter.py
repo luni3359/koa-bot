@@ -15,8 +15,8 @@ class Converter(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.ureg = UnitRegistry()
-        self.ureg.default_format = '~P.3f'
-        self.Q_ = self.ureg.Quantity
+        self.ureg.default_format = "~P.3f"
+        self.quantity = self.ureg.Quantity
         self.currency = currency.CurrencyRates()
 
     @commands.command(name='convert', aliases=['conv', 'cv'])
@@ -79,7 +79,7 @@ class Converter(commands.Cog):
                 continue
 
             unit = self.ureg[unit_str]
-            value = self.Q_(value, unit)
+            value = self.quantity(value, unit)
 
             if unit.u in dir(self.ureg.sys.imperial) or unit in (self.ureg['fahrenheit'], self.ureg['gallon']):
                 if str(unit.dimensionality) == '[temperature]':

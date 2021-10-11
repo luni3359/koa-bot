@@ -133,10 +133,10 @@ class Gallery(commands.Cog):
             search = [search]
 
         for s in search:
-            results = (await board_cog.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)).json
+            results = await board_cog.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)
 
             # e621 fix for broken API
-            if 'posts' in results:
+            if 'posts' in results.json:
                 results = results['posts']
 
             posts.extend(results)
@@ -473,15 +473,15 @@ class Gallery(commands.Cog):
         """DeviantArt image embed sender"""
 
         token = api_result['deviation']['media']['token'][0]
-        baseUri = api_result['deviation']['media']['baseUri']
-        prettyName = api_result['deviation']['media']['prettyName']
+        base_uri = api_result['deviation']['media']['baseUri']
+        pretty_name = api_result['deviation']['media']['prettyName']
 
         for media_type in api_result['deviation']['media']['types']:
             if media_type['t'] == 'preview':
-                preview_url = media_type['c'].replace('<prettyName>', prettyName)
+                preview_url = media_type['c'].replace('<prettyName>', pretty_name)
                 break
 
-        image_url = f'{baseUri}/{preview_url}?token={token}'
+        image_url = f'{base_uri}/{preview_url}?token={token}'
         print(image_url)
 
         embed = discord.Embed()

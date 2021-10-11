@@ -2,6 +2,7 @@ __pycache__
 .env
 .vscode
 .python-version
+poetry.lock
 
 # Legacy files
 *.webm

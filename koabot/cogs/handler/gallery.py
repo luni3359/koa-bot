@@ -446,41 +446,6 @@ class Gallery(commands.Cog):
             with open(token_path, 'w', encoding="UTF-8") as token_file:
                 token_file.write(self.pixiv_aapi.refresh_token)
 
-    async def get_sankaku_post(self, msg: discord.Message, url: str):
-        """Automatically fetch a bigger preview from Sankaku Complex"""
-
-        channel: discord.TextChannel = msg.channel
-
-        post_id = post_utils.get_post_id(url, '/show/', '?')
-        if not post_id:
-            return
-
-        search_url = f"{self.bot.assets['sankaku']['id_search_url']}{post_id}"
-        api_result = (await net_utils.http_request(search_url, json=True)).json
-
-        if not api_result or 'code' in api_result:
-            print(f"Sankaku error\nCode #{api_result['code']}")
-            return
-
-        valid_urls_keys = [
-            'sample_url',   # medium quality / large sample
-            'file_url',     # highest quality / file (png, zip, webm)
-            'preview_url'   # lowest quality / thumbnail
-        ]
-        approved_ext = ['png', 'jpg', 'webp', 'gif']
-
-        img_url = api_result['preview_url']
-        image_filename = net_utils.get_url_filename(img_url)
-        image = await net_utils.fetch_image(img_url)
-
-        embed = discord.Embed()
-        embed.set_image(url=f"attachment://{image_filename}")
-        embed.set_footer(
-            text=self.bot.assets['sankaku']['name'],
-            icon_url=self.bot.assets['sankaku']['favicon'])
-
-        await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
-
     async def get_deviantart_post(self, msg: discord.Message, url: str):
         """Automatically fetch post from deviantart"""
 

@@ -1,7 +1,5 @@
 """Koakuma bot"""
-import glob
 import os
-import shutil
 import sqlite3
 import timeit
 from datetime import datetime

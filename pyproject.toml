@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "koa-bot"
-version = "0.10.0"
+version = "0.10.1"
 description = ""
 authors = []
 readme = "README.md"
@@ -26,6 +26,7 @@ pytz = "^2021.3"
 tldextract = "^3.1.2"
 tweepy = "^4.1.0"
 youtube_dl = "^2021.6.6"
+single-source = "^0.2.0"
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.5.7"

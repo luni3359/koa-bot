@@ -5,6 +5,7 @@ import shutil
 import sqlite3
 import timeit
 from datetime import datetime
+from pathlib import Path
 
 import appdirs
 import commentjson
@@ -20,6 +21,7 @@ intents.presences = True
 bot = commands.Bot(command_prefix='!', description='', intents=intents)
 
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
+PROJECT_DIR = Path(SOURCE_DIR).parent
 BOT_DIRNAME = 'koa-bot'
 
 DATA_DIR = appdirs.user_data_dir(BOT_DIRNAME)

@@ -8,6 +8,9 @@ from typing import Union
 
 import discord
 from discord.ext import commands
+from single_source import get_version
+
+from koabot.koakuma import BOT_DIRNAME, PROJECT_DIR
 
 
 class BotStatus(commands.Cog):
@@ -84,9 +87,8 @@ class BotStatus(commands.Cog):
     @commands.command()
     async def version(self, ctx: commands.Context):
         """Show bot's version"""
-        terminal_command = "git describe --always".split(' ')
-        commit = subprocess.check_output(terminal_command).strip()
-        await ctx.send(f"On commit `{commit.decode('UTF-8')}`.")
+        version = get_version(BOT_DIRNAME, PROJECT_DIR)
+        await ctx.send(f"On version `{version}`.")
 
     async def typing_a_message(self, ctx: commands.Context, **kwargs):
         """Make Koakuma seem alive with a 'is typing' delay

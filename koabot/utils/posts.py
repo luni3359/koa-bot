@@ -11,6 +11,8 @@ def get_post_id(url: str, words_to_match: Union[str, list], trim_to: str, has_re
         url::str
         words_to_match::str or list
         trim_to::str or regex pattern (str)
+
+    Keywords:
         has_regex::bool
     """
 

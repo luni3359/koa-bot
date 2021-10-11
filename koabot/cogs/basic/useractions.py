@@ -54,7 +54,7 @@ class UserActions(commands.Cog):
     @reaction_roles.command()
     async def assign(self, ctx: commands.Context, url: str):
         url_matches = CHANNEL_URL_PATTERN.match(url)
-        
+
         if not url_matches:
             await ctx.send('Please send a valid message link to bind to. Right-click the message you want to use, and click "Copy Message Link". It should look something like this: \n`https://discord.com/channels/123456789123456789/123456789123456789/123456789123456789`')
             return
@@ -221,10 +221,10 @@ class UserActions(commands.Cog):
 
         # create file if it doesn't exist
         if not os.path.isfile(file_path):
-            with open(file_path, 'w') as json_file:
+            with open(file_path, 'w', encoding="UTF-8") as json_file:
                 json_file.write('{}')
 
-        with open(file_path, 'r+') as json_file:
+        with open(file_path, 'r+', encoding="UTF-8") as json_file:
             tmp_obj = {}
             tmp_obj['channel_id'] = tmp_root['bind_channel']
             tmp_obj['links'] = tmp_root['links']

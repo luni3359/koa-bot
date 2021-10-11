@@ -84,8 +84,9 @@ class BotStatus(commands.Cog):
     @commands.command()
     async def version(self, ctx: commands.Context):
         """Show bot's version"""
-        commit = subprocess.check_output(['git', 'describe', '--always']).strip()
-        await ctx.send(f"On commit ``{commit.decode('utf-8')}``.")
+        terminal_command = "git describe --always".split(' ')
+        commit = subprocess.check_output(terminal_command).strip()
+        await ctx.send(f"On commit `{commit.decode('UTF-8')}`.")
 
     async def typing_a_message(self, ctx: commands.Context, **kwargs):
         """Make Koakuma seem alive with a 'is typing' delay
@@ -112,9 +113,7 @@ class BotStatus(commands.Cog):
 
         async with ctx.typing():
             if rnd_duration:
-                time_to_wait = random.randint(rnd_duration[0], rnd_duration[1])
-                if time_to_wait < min_duration:
-                    time_to_wait = min_duration
+                time_to_wait = max(min_duration, random.randint(rnd_duration[0], rnd_duration[1]))
                 await asyncio.sleep(time_to_wait)
             else:
                 await asyncio.sleep(min_duration)

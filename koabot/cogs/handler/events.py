@@ -59,7 +59,7 @@ class BotEvents(commands.Cog):
         # load reaction role binds
         file_path = os.path.join(DATA_DIR, 'binds.json')
         if os.path.isfile(file_path):
-            with open(file_path, 'r') as json_file:
+            with open(file_path, 'r', encoding="UTF-8") as json_file:
                 j_data = json.load(json_file)
 
                 for message_id, v in j_data.items():

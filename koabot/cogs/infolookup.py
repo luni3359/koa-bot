@@ -30,7 +30,7 @@ class InfoLookup(commands.Cog):
 
         try:
             page_title = page_results[0]
-        except IndexError as e:
+        except IndexError:
             bot_msg = "I can't find anything relevant. Sorry..."
             await ctx.send(bot_msg)
             return

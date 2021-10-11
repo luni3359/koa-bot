@@ -1,5 +1,4 @@
 """Handles the use of imageboard galleries"""
-import ast
 import os
 import random
 import re
@@ -199,10 +198,10 @@ class Gallery(commands.Cog):
 
             ground_truth = parsed_posts[0]
             for hash_func in [imagehash.phash, imagehash.dhash, imagehash.average_hash, imagehash.colorhash]:
-                if hash_func == imagehash.colorhash:
-                    hash_param = {'binbits': 6}
-                else:
+                if hash_func != imagehash.colorhash:
                     hash_param = {'hash_size': 16}
+                else:
+                    hash_param = {'binbits': 6}
 
                 ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), **hash_param))
 
@@ -259,17 +258,13 @@ class Gallery(commands.Cog):
 
         try:
             tweet = self.twitter_api.get_status(post_id, tweet_mode='extended')
-        except tweepy.error.TweepError as e:
+        except tweepy.HTTPException as e:
             # Error codes: https://developer.twitter.com/en/support/twitter-api/error-troubleshooting
-            response = ast.literal_eval(e.reason)
-
-            if isinstance(response, list):
-                response = response[0]
-                code = response['code']
-                message = response['message']
-                print(f'Failure on Tweet #{post_id}: E{code}: {message}')
+            if e.response is not None:
+                code = e.response.status
+                print(f"Failure on Tweet #{post_id}: [E{code}]")
             else:
-                print(f'Failure on Tweet #{post_id}')
+                print(f"Failure on Tweet #{post_id}")
 
             print(e)
             return
@@ -440,7 +435,7 @@ class Gallery(commands.Cog):
         token_path = os.path.join(pixiv_cache_dir, token_filename)
 
         if os.path.exists(token_path):
-            with open(token_path) as token_file:
+            with open(token_path, encoding="UTF-8") as token_file:
                 token = token_file.readline()
                 self.pixiv_refresh_token = token
                 await self.pixiv_aapi.login(refresh_token=token)
@@ -448,7 +443,7 @@ class Gallery(commands.Cog):
             await self.pixiv_aapi.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
             self.pixiv_refresh_token = self.pixiv_aapi.refresh_token
             os.makedirs(pixiv_cache_dir, exist_ok=True)
-            with open(token_path, 'w') as token_file:
+            with open(token_path, 'w', encoding="UTF-8") as token_file:
                 token_file.write(self.pixiv_aapi.refresh_token)
 
     async def get_sankaku_post(self, msg: discord.Message, url: str):

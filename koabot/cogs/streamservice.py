@@ -121,7 +121,7 @@ class StreamService(commands.Cog):
 
         # if the file exists
         if os.path.exists(token_path) and not force:
-            with open(token_path) as token_file:
+            with open(token_path, encoding="UTF-8") as token_file:
                 self._twitch_access_token = token_file.readline()
 
         if not self._twitch_access_token or force:
@@ -134,7 +134,7 @@ class StreamService(commands.Cog):
 
             os.makedirs(twitch_cache_dir, exist_ok=True)
 
-            with open(token_path, 'w') as token_file:
+            with open(token_path, 'w', encoding="UTF-8") as token_file:
                 self._twitch_access_token = response['access_token']
                 token_file.write(self._twitch_access_token)
 

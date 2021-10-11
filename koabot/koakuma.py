@@ -149,7 +149,7 @@ def start(debugging=False):
 
     for filename in data_filenames:
         try:
-            with open(os.path.join(CONFIG_DIR, filename)) as json_file:
+            with open(os.path.join(CONFIG_DIR, filename), encoding="UTF-8") as json_file:
                 bot_data.update(commentjson.load(json_file))
         except FileNotFoundError as e:
             print(e)
@@ -163,7 +163,7 @@ def start(debugging=False):
         bot.sqlite_conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbBeta.sqlite3'))
 
         # Generate tables in database
-        with open('db/database.sql') as f:
+        with open('db/database.sql', encoding="UTF-8") as f:
             sql_script = f.read()
 
         c = bot.sqlite_conn.cursor()

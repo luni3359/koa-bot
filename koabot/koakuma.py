@@ -42,35 +42,6 @@ def list_contains(lst: list, items_to_be_matched: list) -> bool:
     return False
 
 
-def transition_old_config() -> None:
-    """Transition any existing config folders to $XDG_CONFIG_HOME/BOT_DIRNAME"""
-    old_config = os.path.join(SOURCE_DIR, 'config')
-
-    if os.path.exists(old_config) and os.path.isdir(old_config):
-        if len(os.listdir(old_config)) == 0:
-            os.rmdir(old_config)
-            print('Obsolete config folder deleted.')
-        else:
-            old_config_contents = glob.glob('{}/*'.format(old_config))
-            for file_path in old_config_contents:
-                filename = os.path.basename(file_path)
-
-                if os.path.exists(os.path.join(CONFIG_DIR, filename)):
-                    if os.path.samefile(file_path, os.path.join(CONFIG_DIR, filename)):
-                        print('Files are the same!')
-                        continue
-
-                    os.remove(os.path.join(CONFIG_DIR, filename))
-
-                print(f'Moving {filename} to {CONFIG_DIR}...')
-                shutil.move(file_path, CONFIG_DIR)
-
-            os.rmdir(old_config)
-            print(f'The contents of config have been moved to {CONFIG_DIR}.')
-    else:
-        print('No config files were moved.')
-
-
 def run_periodic_tasks() -> None:
     """Bot routines"""
     bot.loop.create_task(koabot.tasks.check_live_streamers())
@@ -128,26 +99,21 @@ async def debug_check(ctx: commands.Context):
 
 
 def start(debugging=False):
-    """Start bot"""
-    print('Initiating configuration...')
-
-    # Move old config automatically to ~/.config/koa-bot
-    transition_old_config()
-
+    """Starts the bot"""
+    print(f"Starting {BOT_DIRNAME}...")
     bot.launch_time = datetime.utcnow()
     bot_data = {}
 
-    if debugging:
-        print('In debug mode.')
-        config_file = 'beta.jsonc'
-    else:
-        config_file = 'config.jsonc'
-
     data_filenames = [
-        config_file,
         'auth.jsonc',
         'quotes.jsonc'
     ]
+
+    if debugging:
+        print('In debug mode.')
+        data_filenames.insert(0, 'beta.jsonc')
+    else:
+        data_filenames.insert(0, 'config.jsonc')
 
     for filename in data_filenames:
         try:

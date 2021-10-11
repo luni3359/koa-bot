@@ -103,7 +103,7 @@ def load_all_extensions(path: str) -> None:
 
 
 @bot.check
-async def debug_check(ctx):
+async def debug_check(ctx: commands.Context):
     """Disable live instance for specific users if a beta instance is running"""
 
     beta_bot_id = bot.koa['discord_user']['beta_id']

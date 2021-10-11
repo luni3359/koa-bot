@@ -17,10 +17,10 @@ class StreamService(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._twitch_access_token: str = None
-        self._twitch_headers: str = None
+        self._twitch_headers = None
 
     @commands.command(name='twitch')
-    async def search_twitch(self, ctx, *args):
+    async def search_twitch(self, ctx: commands.Context, *args):
         """Search on Twitch"""
         if len(args) < 1:
             print('well it worked...')
@@ -35,6 +35,7 @@ class StreamService(commands.Cog):
                 text=self.bot.assets['twitch']['name'],
                 icon_url=self.bot.assets['twitch']['favicon'])
 
+            # !twitch get <NAME> or !twich get <ID>
             if len(args) == 2:
                 item = args[1]
                 if re.findall(r'(^[0-9]+$)', item):
@@ -48,8 +49,9 @@ class StreamService(commands.Cog):
                 streams = response.json
 
                 for stream in streams['data'][:3]:
-                    await ctx.send(f"https://twitch.tv/{stream['user_name']}")
+                    await ctx.send(f"{stream['user_login']} ({stream['user_id']})\nhttps://twitch.tv/{stream['user_name']}")
 
+            # fetch list from twitch
             else:
                 response = await net_utils.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
                 streams = response.json
@@ -62,7 +64,7 @@ class StreamService(commands.Cog):
     async def get_picarto_stream_preview(self, msg: discord.Message, url: str):
         """Automatically fetch a preview of the running stream"""
 
-        channel = msg.channel
+        channel: discord.TextChannel = msg.channel
         post_id = post_utils.get_post_id(url, '.tv/', '?')
 
         if not post_id:
@@ -101,7 +103,7 @@ class StreamService(commands.Cog):
         return self._twitch_headers
 
     @property
-    async def twitch_access_token(self):
+    async def twitch_access_token(self) -> str:
         if self._twitch_access_token:
             return self._twitch_access_token
 

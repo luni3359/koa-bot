@@ -11,7 +11,7 @@ class NetResponse():
 
     def __init__(self, response: aiohttp.ClientResponse, **kwargs):
         self.client_response = response
-        self.status = self.client_response.status
+        self.status: int = self.client_response.status
         self.response_body = kwargs.get('response_body', None)
 
         if kwargs.get('json'):
@@ -38,10 +38,10 @@ async def http_request(url: str, **kwargs):
         post::bool
             whether or not the request is a POST request
     """
-    auth = kwargs.get('auth')
+    auth: aiohttp.BasicAuth = kwargs.get('auth')
     headers = kwargs.get('headers')
     data = kwargs.get('data')
-    post = kwargs.get('post')
+    post: bool = kwargs.get('post')
 
     async with aiohttp.ClientSession(auth=auth) as session:
         if post:
@@ -63,8 +63,8 @@ async def handle_request(response: aiohttp.ClientResponse, **kwargs) -> NetRespo
         err_msg::str
             message to display on failure
     """
-    json = kwargs.get('json')
-    err_msg = kwargs.get('err_msg')
+    json: bool = kwargs.get('json')
+    err_msg: str = kwargs.get('err_msg')
 
     if response.status != 200:
         # Timeout error

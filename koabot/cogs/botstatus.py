@@ -4,7 +4,9 @@ import random
 import re
 import subprocess
 from datetime import datetime
+from typing import Union
 
+import discord
 from discord.ext import commands
 
 
@@ -100,10 +102,10 @@ class BotStatus(commands.Cog):
                 The amount of time that will be waited regardless of rnd_duration.
         """
 
-        content = kwargs.get('content')
-        embed = kwargs.get('embed')
-        rnd_duration = kwargs.get('rnd_duration')
-        min_duration = kwargs.get('min_duration', 0)
+        content: str = kwargs.get('content')
+        embed: discord.Embed = kwargs.get('embed')
+        rnd_duration: Union[list, int] = kwargs.get('rnd_duration')
+        min_duration: int = kwargs.get('min_duration', 0)
 
         if isinstance(rnd_duration, int):
             rnd_duration = [0, rnd_duration]

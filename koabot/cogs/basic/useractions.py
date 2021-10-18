@@ -266,7 +266,21 @@ class UserActions(commands.Cog):
             return
 
         rr_link['reactions'] = emoji_list
+        
+    @commands.command(name="reload", hidden=True)
+    @commands.is_owner()
+    async def _reload(self, ctx: commands.Context, *, module: str):
+        """Reloads a module"""
+        if module == "all":
+            pass
 
+        try:
+            self.bot.unload_extension(module)
+            self.bot.load_extension(module)
+        except Exception as e:
+            await ctx.send(f"{type(e).__name__}: {e}")
+        else:
+            await ctx.send(f"Successfully reloaded '{module}'.")
 
 def setup(bot: commands.Bot):
     """Initiate cog"""

@@ -266,7 +266,10 @@ class InfoLookup(commands.Cog):
                         if isinstance(meaning_item, list):
                             meaning_item = meaning_item[0]
 
-                        meaning_position = meaning_item.get('sn', "1")
+                        if isinstance(meaning_item, dict):
+                            meaning_position = meaning_item.get('sn', "1")
+                        else:
+                            meaning_position = "1"
 
                         if not meaning_position[0].isdigit():
                             meaning_position = '\u3000' + meaning_position
@@ -312,6 +315,7 @@ class InfoLookup(commands.Cog):
 
         # Embed descriptions longer than 2048 characters error out.
         if len(embed.description) > 2048:
+            print("Definition over 2048 characters")
             embeds_to_send = math.ceil(len(embed.description) / 2048) - 1
             embeds_sent = 0
 

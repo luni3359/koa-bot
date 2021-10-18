@@ -12,7 +12,7 @@ import tldextract
 from discord.ext import commands
 from mergedeep import merge
 
-from koabot.cogs.basic.useractions import UserActions
+from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.imageboard import ImageBoard
 from koabot.koakuma import DATA_DIR
 from koabot.patterns import URL_PATTERN
@@ -239,7 +239,7 @@ class BotEvents(commands.Cog):
             if str(reaction) not in valid_options:
                 return
 
-            useractions_cog: UserActions = self.bot.get_cog('UserActions')
+            useractions_cog = self.bot.get_cog('UserActions')
 
             if str(reaction) == emoji.emojize(':o:', use_aliases=True):
                 useractions_cog.rr_conflict_response(tmp_root['link'], tmp_root['emoji_list'])
@@ -299,26 +299,29 @@ class BotEvents(commands.Cog):
     async def on_message(self, msg: discord.Message):
         """Searches messages for urls and certain keywords"""
 
+        author: discord.abc.User = msg.author
+        content: str = msg.content
+
         # Prevent bot from spamming itself
-        if msg.author.bot:
+        if author.bot:
             return
 
         if msg.guild is None:
-            print(f'{msg.author.name}#{msg.author.discriminator} ({msg.author.id}): {msg.content}')
+            print(f'{author.name}#{author.discriminator} ({author.id}): {content}')
             return
 
         # Beta bot overrides me in the servers we share
         beta_bot_id = self.bot.koa['discord_user']['beta_id']
 
         # if it's a normal user
-        if msg.author.id not in self.bot.testing['debug_users']:
+        if author.id not in self.bot.testing['debug_users']:
             # ...and i'm the debug instance
             if msg.guild.me.id == beta_bot_id:
                 # do nothing
                 return
         # if it's a debug user
         else:
-            beta_bot = msg.guild.get_member(beta_bot_id)
+            beta_bot: discord.Member = msg.guild.get_member(beta_bot_id)
 
             # ...and the debug instance is online
             if beta_bot and beta_bot.status == discord.Status.online:
@@ -330,38 +333,38 @@ class BotEvents(commands.Cog):
         channel: discord.TextChannel = msg.channel
 
         # Reference channels together
-        if msg.content[0] == '!':  # only if explicitly asked for
+        if len(content) and content[0] == '!':  # only if explicitly asked for
             for mentioned_channel in msg.channel_mentions:
                 if mentioned_channel == channel:
                     continue
 
                 embed_template = discord.Embed()
-                embed_template.set_author(name=msg.author.display_name, icon_url=msg.author.avatar_url)
+                embed_template.set_author(name=author.display_name, icon_url=author.avatar_url)
                 embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon_url)
 
                 target_embed = embed_template.copy()
-                target_embed.description = f'Mention by {msg.author.mention} from {channel.mention}\n\n[Click to go there]({msg.jump_url})'
+                target_embed.description = f'Mention by {author.mention} from {channel.mention}\n\n[Click to go there]({msg.jump_url})'
                 target_channel_msg = await mentioned_channel.send(embed=target_embed)
 
                 origin_embed = embed_template.copy()
-                origin_embed.description = f'Mention by {msg.author.mention} to {mentioned_channel.mention}\n\n[Click to go there]({target_channel_msg.jump_url})'
+                origin_embed.description = f'Mention by {author.mention} to {mentioned_channel.mention}\n\n[Click to go there]({target_channel_msg.jump_url})'
                 await channel.send(embed=origin_embed)
 
         url_matches_found = []
         escaped_url = False
         i = 0
-        while i < len(msg.content):
+        while i < len(content):
             # check for urls, ignoring those with escaped embeds
-            if msg.content[i] == '<':
+            if content[i] == '<':
                 escaped_url = True
                 i += 1
                 continue
 
-            url_match = URL_PATTERN.match(msg.content, i)
+            url_match = URL_PATTERN.match(content, i)
             # TODO Soon... in Python 3.8
-            # if (url_match := URL_PATTERN.match(msg.content, i)):
+            # if (url_match := URL_PATTERN.match(content, i)):
             if url_match:
-                if not escaped_url or url_match.end() >= len(msg.content) or url_match.end() < len(msg.content) and msg.content[url_match.end()] != '>':
+                if not escaped_url or url_match.end() >= len(content) or url_match.end() < len(content) and content[url_match.end()] != '>':
                     url_matches_found.append({'full_url': url_match.group(
                     ), 'fqdn': tldextract.extract(url_match.group()).fqdn})
 
@@ -400,7 +403,7 @@ class BotEvents(commands.Cog):
                         streams_cog = self.bot.get_cog('StreamService')
                         picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url)
 
-                        if picarto_preview_shown and msg.content[0] == '!':
+                        if picarto_preview_shown and content[0] == '!':
                             await msg.delete()
 
                 # done with this url
@@ -408,19 +411,23 @@ class BotEvents(commands.Cog):
 
         # post gallery only if there's one to show...
         if len(gallery) == 1:
-            gallery = gallery[0]
             imageboard_cog: ImageBoard = self.bot.get_cog('ImageBoard')
+
+            gallery = gallery[0]
+            gallery_board = gallery['board']
+            requested_by_user = content[0] != '!'
+
             # ...only if it was asked for by starting their message with '!', for booru galleries
-            if gallery['board'] in ['danbooru', 'e621', 'sankaku']:
-                await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'], only_missing_preview=msg.content[0] != '!')
+            if gallery_board in ['danbooru', 'e621', 'sankaku']:
+                await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery_board, guide=gallery['guide'], only_missing_preview=requested_by_user)
             # or if it's anything else
             else:
-                await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery['board'], guide=gallery['guide'])
+                await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery_board, guide=gallery['guide'])
 
         # checking if a command has been issued
         command_issued = False
-        if msg.content[0] == '!':
-            command_name_regex = re.search(r'^!([a-zA-Z0-9]+)', msg.content)
+        if len(content) and content[0] == '!':
+            command_name_regex = re.search(r'^!([a-zA-Z0-9]+)', content)
             if command_name_regex:
                 cmd = self.bot.get_command(command_name_regex.group(1))
                 command_issued = bool(cmd)
@@ -434,7 +441,7 @@ class BotEvents(commands.Cog):
         if str(channel.id) in self.bot.rules['quiet_channels']:
             if not self.bot.last_channel_warned and self.bot.last_channel_message_count >= self.bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
                 self.bot.last_channel_warned = True
-                bot_cog = self.bot.get_cog('BotStatus')
+                bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
                 await bot_cog.typing_a_message(channel, content=random.choice(self.bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
 

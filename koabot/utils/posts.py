@@ -81,7 +81,7 @@ def post_is_missing_preview(post, **kwargs) -> bool:
 
     if board == 'e621':
         return koakuma.list_contains(post['tags']['general'], koakuma.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
-    elif board == 'sankaku':
+    if board == 'sankaku':
         return True
 
     return koakuma.list_contains(post['tag_string_general'].split(), koakuma.bot.rules['no_preview_tags'][board]) or post['is_banned']

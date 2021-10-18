@@ -57,7 +57,7 @@ async def check_live_streamers() -> None:
 
             for config_streamers in koakuma.bot.tasks['streamer_activity']['streamers']:
                 if streamer['user_id'] == str(config_streamers['user_id']):
-                    natural_name = 'casual_name' in config_streamers and config_streamers['casual_name'] or streamer['user_name']
+                    natural_name = config_streamers.get('casual_name', streamer['user_name'])
                     break
 
             online_streamers.append({'platform': 'twitch', 'streamer': streamer,

@@ -15,10 +15,10 @@ class Board(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.danbooru_auth = aiohttp.BasicAuth(
-            login=self.bot.auth_keys['danbooru']['username'], password=self.bot.auth_keys['danbooru']['key'])
-        self.e621_auth = aiohttp.BasicAuth(
-            login=self.bot.auth_keys['e621']['username'], password=self.bot.auth_keys['e621']['key'])
+        self.danbooru_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['danbooru']['username'],
+                                               password=self.bot.auth_keys['danbooru']['key'])
+        self.e621_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['e621']['username'],
+                                           password=self.bot.auth_keys['e621']['key'])
 
     async def search_board(self, ctx: commands.Context, tags: str, board: str = 'danbooru', **kwargs):
         """Search on image boards!

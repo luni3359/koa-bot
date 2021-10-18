@@ -60,12 +60,12 @@ class Converter(commands.Cog):
 
         await ctx.send(f'```{amount} {currency_type1} → {converted_amount:0.2f} {currency_type2}```')
 
-    async def convert_units(self, ctx: commands.Context, units):
-        """Convert units found to their opposite (SI <-> imp)"""
-
-        if not units:
-            return
-
+    async def convert_units(self, ctx: commands.Context, units: list):
+        """Convert units found to their opposite (SI <-> imp)
+        Arguments:
+            units::list
+                List of units of measurement that have been parsed by unit_convert
+        """
         conversion_str = '```'
 
         for unit_str, value, *extra_value in units:

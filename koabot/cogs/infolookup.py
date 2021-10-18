@@ -97,14 +97,17 @@ class InfoLookup(commands.Cog):
         embed.description = ''
 
         for word in js['data'][:4]:
-            kanji = 'word' in word['japanese'][0] and word['japanese'][0]['word'] or 'reading' in word['japanese'][0] and word['japanese'][0]['reading']
-            primary_reading = 'reading' in word['japanese'][0] and word['japanese'][0]['reading'] or None
-            jlpt_level = ', '.join(word['jlpt'])
-            definitions = '; '.join(word['senses'][0]['english_definitions'])
-            what_it_is = '; '.join(word['senses'][0]['parts_of_speech'])
-            tags = '; '.join(word['senses'][0]['tags'])
+            japanese_info = word['japanese'][0]
+            senses_info = word['senses'][0]
 
-            definition_clarification = 'info' in word['senses'][0] and ', '.join(word['senses'][0]['info']) or None
+            kanji = japanese_info.get('word', japanese_info.get('reading'))
+            primary_reading = japanese_info.get('reading', None)
+            jlpt_level = ', '.join(word['jlpt'])
+            definitions = '; '.join(senses_info['english_definitions'])
+            what_it_is = '; '.join(senses_info['parts_of_speech'])
+            tags = '; '.join(senses_info['tags'])
+
+            definition_clarification = 'info' in senses_info and ', '.join(senses_info['info']) or None
 
             embed.description += f'►{kanji}'
 
@@ -263,7 +266,7 @@ class InfoLookup(commands.Cog):
                         if isinstance(meaning_item, list):
                             meaning_item = meaning_item[0]
 
-                        meaning_position = 'sn' in meaning_item and meaning_item['sn'] or '1'
+                        meaning_position = meaning_item.get('sn', "1")
 
                         if not meaning_position[0].isdigit():
                             meaning_position = '\u3000' + meaning_position
@@ -297,16 +300,15 @@ class InfoLookup(commands.Cog):
                         # Format bullet point
                         similar_meaning_string += f'{meaning_position}: {definition}\n'
 
-                embed.description = '%s\n**%s**\n%s' % (embed.description, 'vd' in subcategory and subcategory['vd']
-                                                        or 'definition', strip_dictionary_oddities(similar_meaning_string, 'merriam'))
+                subcategory_text = subcategory.get('vd', "definition")
+                embed.description = f"{embed.description}\n**{subcategory_text}**\n{strip_dictionary_oddities(similar_meaning_string, 'merriam')}"
 
             # Add etymology
             if 'et' in category:
                 etymology = category['et']
-                embed.description = '%s\n**%s**\n%s\n\n' % (embed.description,
-                                                            'etymology', strip_dictionary_oddities(etymology[0][1], 'merriam'))
+                embed.description = f"{embed.description}\n**etymology**\n{strip_dictionary_oddities(etymology[0][1], 'merriam')}\n\n"
             else:
-                embed.description = f'{embed.description}\n\n'
+                embed.description = f"{embed.description}\n\n"
 
         # Embed descriptions longer than 2048 characters error out.
         if len(embed.description) > 2048:
@@ -357,7 +359,7 @@ def strip_dictionary_oddities(txt: str, which: str):
                 return txt
 
             for match in matches:
-                txt = txt.replace(match[0], '*%s*' % match[1].upper())
+                txt = txt.replace(match[0], f"*{match[1].upper()}*")
     elif which == 'urban':
         txt = txt.replace('*', '\*')
 

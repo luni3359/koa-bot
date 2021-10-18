@@ -1,12 +1,14 @@
 """Get user information"""
 import json
 import os
+import random
 import re
 
 import discord
 import emoji
 from discord.ext import commands
 
+from koabot.cogs.handler.events import BotEvents
 from koabot.koakuma import DATA_DIR
 from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 
@@ -58,7 +60,7 @@ class UserActions(commands.Cog):
         url_matches = CHANNEL_URL_PATTERN.match(url)
 
         if not url_matches:
-            await ctx.send('Please send a valid message link to bind to. Right-click the message you want to use, and click "Copy Message Link". It should look something like this: \n`https://discord.com/channels/123456789123456789/123456789123456789/123456789123456789`')
+            await ctx.send(random.choice(self.bot.quotes['rr_assign_missing_or_invalid_message_url']))
             return
 
         message_id = url_matches.group(0).split('/')[-1]
@@ -73,7 +75,7 @@ class UserActions(commands.Cog):
         try:
             message = await target_channel.fetch_message(int(message_id))
         except discord.NotFound:
-            await ctx.send("Hmm... That message link is correct, but it doesn't seem to work. Did you get the wrong url, or was it removed?")
+            await ctx.send(random.choice(self.bot.quotes['rr_assign_message_url_not_found']))
         except discord.Forbidden:
             await ctx.send("I don't have permissions to interact with that message...")
         except discord.HTTPException:
@@ -87,15 +89,14 @@ class UserActions(commands.Cog):
         server_id = url_matches.group(0).split('/')[-3]
         bind_tag = f'{author_id}/{server_id}'
         if bind_tag in self.rr_temporary_list:
-            await ctx.send("You're already in the process of assigning roles and emojis to this message!")
-            return
+            return await ctx.send(random.choice(self.bot.quotes['rr_assign_already_assigning']))
 
         self.rr_temporary_list[bind_tag] = {}
         self.rr_temporary_list[bind_tag]['bind_message'] = message_id
         self.rr_temporary_list[bind_tag]['bind_channel'] = channel_id
         self.rr_temporary_list[bind_tag]['links'] = []
 
-        await ctx.send("Now you can use `!rr bind` to send your reactions with roles. At the end of the command ping your roles (preferably in a hidden channel) along with any number of emojis and they will seamlessly bind each other when they're reacted to. As long as your messages contain only emojis and roles, I will accept them.\n\nIf you're not satisfied with a change you made, please use `!rr undo last` to undo the latest input I accepted, or `!rr undo all` to start from scratch.\n\nOnce you're done, please run the command `!rr save`. If you don't want to proceed, call `!rr cancel` to quit.")
+        await ctx.send(random.choice(self.bot.quotes['rr_assign_process_complete']))
 
     @reaction_roles.command()
     async def bind(self, ctx: commands.Context):
@@ -103,8 +104,7 @@ class UserActions(commands.Cog):
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send("You're not currently assigning any bindings!")
-            return
+            return await ctx.send(random.choice(self.bot.quotes['rr_message_target_missing']))
 
         emoji_list = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) +
                          re.findall(emoji.get_emoji_regexp(), ctx.message.content))
@@ -119,10 +119,9 @@ class UserActions(commands.Cog):
             exit_reason = 'one role'
 
         if exit_reason:
-            exit_emoji = emoji.emojize(':confetti_ball:')
-            exit_emoji2 = emoji.emojize(':tada:')
-            await ctx.send(f'Please include at least {exit_reason} to bind to. How you arrange them does not matter.\n\nFor example:\n{exit_emoji} @Party → Reacting with {exit_emoji} will assign the @Party role.\n{exit_emoji2} @Party @Yay {exit_emoji} → Reacting with {exit_emoji} AND {exit_emoji2} will assign the @Party and @Yay roles.')
-            return
+            kusudama = emoji.emojize(':confetti_ball:')
+            party_popper = emoji.emojize(':tada:')
+            return await ctx.send(f'Please include at least {exit_reason} to bind to. How you arrange them does not matter.\n\nFor example:\n{kusudama} @Party → Reacting with {kusudama} will assign the @Party role.\n{party_popper} @Party @Yay {kusudama} → Reacting with {kusudama} AND {party_popper} will assign the @Party and @Yay roles.')
 
         # prevent duplicate role bindings from being created
         link_to_overwrite = None
@@ -159,9 +158,9 @@ class UserActions(commands.Cog):
             rl_joined = ' AND '.join([rl.mention for rl in link_to_overwrite['roles']])
             maru = emoji.emojize(':o:', use_aliases=True)
             batu = emoji.emojize(':x:', use_aliases=True)
-            tmp_msg = await ctx.send(f'This binding already exists. Would you like to change it to the following?\n\nReact to {em_joined} to get {rl_joined}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.')
+            tmp_msg: discord.Message = await ctx.send(f'This binding already exists. Would you like to change it to the following?\n\nReact to {em_joined} to get {rl_joined}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.')
 
-            events_cog = self.bot.get_cog('BotEvents')
+            events_cog: BotEvents = self.bot.get_cog('BotEvents')
             events_cog.add_rr_confirmation(tmp_msg.id, bind_tag, link_to_overwrite, emoji_list)
 
             await tmp_msg.add_reaction(maru)
@@ -182,7 +181,7 @@ class UserActions(commands.Cog):
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send("You're not currently assigning any bindings!")
+            await ctx.send(random.choice(self.bot.quotes['rr_message_target_missing']))
             return
 
         if call_type == 'last':
@@ -196,31 +195,34 @@ class UserActions(commands.Cog):
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send("You're not currently assigning any bindings!")
-            return
+            return await ctx.send(random.choice(self.bot.quotes['rr_message_target_missing']))
 
-        tmp_root = self.rr_temporary_list[bind_tag]
+        tmp_root: dict = self.rr_temporary_list[bind_tag]
 
         if not tmp_root['links']:
-            await ctx.send("You can't save without making any bindings. Please use the command `!rr bind` to add at least one reaction roles binding.")
-            return
+            return await ctx.send(random.choice(self.bot.quotes['rr_save_cannot_save_empty']))
 
         print('Saving bind...')
+        bind_channel = tmp_root['bind_channel']
+        bind_message = tmp_root['bind_message']
+        links = tmp_root['links']
+
         file_name = 'binds.json'
         file_path = os.path.join(DATA_DIR, file_name)
 
-        events_cog = self.bot.get_cog('BotEvents')
-        events_cog.add_rr_watch(tmp_root['bind_message'], tmp_root['bind_channel'], tmp_root['links'])
+        events_cog: BotEvents = self.bot.get_cog('BotEvents')
+        events_cog.add_rr_watch(bind_message, bind_channel, links)
 
-        target_message = await self.bot.get_channel(int(tmp_root['bind_channel'])).fetch_message(int(tmp_root['bind_message']))
+        target_message: discord.Message = await self.bot.get_channel(int(bind_channel)).fetch_message(int(bind_message))
 
-        for link in tmp_root['links']:
+        for link in links:
             # can't map async
             # map(await message.add_reaction, link['reactions'])
 
             for reaction in link['reactions']:
                 await target_message.add_reaction(reaction)
 
+        # TODO: Possible optimization: don't open the file twice if possible
         # create file if it doesn't exist
         if not os.path.isfile(file_path):
             with open(file_path, 'w', encoding="UTF-8") as json_file:
@@ -228,13 +230,13 @@ class UserActions(commands.Cog):
 
         with open(file_path, 'r+', encoding="UTF-8") as json_file:
             tmp_obj = {}
-            tmp_obj['channel_id'] = tmp_root['bind_channel']
-            tmp_obj['links'] = tmp_root['links']
+            tmp_obj['channel_id'] = bind_channel
+            tmp_obj['links'] = links
 
             j_data = json.load(json_file)
-            j_data[tmp_root['bind_message']] = tmp_obj
+            j_data[bind_message] = tmp_obj
 
-            for link in j_data[tmp_root['bind_message']]['links']:
+            for link in j_data[bind_message]['links']:
                 link['reactions'] = list(link['reactions'])
                 link['roles'] = [r.id for r in link['roles']]
 
@@ -252,12 +254,13 @@ class UserActions(commands.Cog):
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send("You're not currently assigning any bindings!")
+            await ctx.send(random.choice(self.bot.quotes['rr_message_target_missing']))
         else:
             self.rr_temporary_list.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
-    def rr_conflict_response(self, rr_link, emoji_list):
+    @staticmethod
+    def rr_conflict_response(rr_link, emoji_list):
         """Complete or drop the request to assign chosen emoji to a reactionrole link"""
         if not emoji_list:
             return

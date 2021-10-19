@@ -1,20 +1,16 @@
 """Bot events"""
-import json
-import os
 import random
 import re
-import timeit
 from datetime import datetime
 
 import discord
-import emoji
 import tldextract
 from discord.ext import commands
 from mergedeep import merge
 
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.imageboard import ImageBoard
-from koabot.koakuma import DATA_DIR
+from koabot.cogs.reactionroles import ReactionRoles
 from koabot.patterns import URL_PATTERN
 
 
@@ -28,9 +24,6 @@ class BotEvents(commands.Cog):
         self.bot.last_channel = 0
         self.bot.last_channel_message_count = 0
         self.bot.last_channel_warned = False
-        self.rr_confirmations = {}
-        self.rr_assignments = {}
-        self.rr_cooldown = {}
 
         # guides stuff
         self.valid_urls = []
@@ -57,210 +50,25 @@ class BotEvents(commands.Cog):
                 combined_guide = merge({}, target_guide, source_guide)
                 self.bot.guides[guide_type][guide_name] = combined_guide
 
-        # load reaction role binds
-        file_path = os.path.join(DATA_DIR, 'binds.json')
-        if os.path.isfile(file_path):
-            with open(file_path, 'r', encoding="UTF-8") as json_file:
-                j_data = json.load(json_file)
-
-                for message_id, v in j_data.items():
-                    self.add_rr_watch(message_id, v['channel_id'], v['links'])
-
-    async def manage_rr_cooldown(self, user: discord.User):
-        """Prevents users from overloading role requests"""
-        SPAM_LIMIT = 12
-        current_time = timeit.default_timer()
-        user_id = str(user.id)
-
-        if user_id not in self.rr_cooldown:
-            tmp_obj = {}
-            tmp_obj['cooldown_start'] = current_time
-            tmp_obj['change_count'] = 0
-            self.rr_cooldown[user_id] = tmp_obj
-
-        tmp_root = self.rr_cooldown[user_id]
-        time_diff = current_time - tmp_root['cooldown_start']
-
-        # if too many reactions were sent
-        if tmp_root['change_count'] > SPAM_LIMIT:
-            if time_diff < 60:
-                return True
-
-            tmp_root['cooldown_start'] = current_time
-            tmp_root['change_count'] = 0
-
-        # refresh cooldown if two minutes have passed
-        if time_diff > 120:
-            tmp_root['cooldown_start'] = current_time
-            tmp_root['change_count'] = 0
-        elif time_diff < 1:
-            tmp_root['change_count'] += 3
-        elif time_diff < 5:
-            tmp_root['change_count'] += 2
-        else:
-            tmp_root['change_count'] += 1
-
-        # send a warning and freeze
-        if tmp_root['change_count'] > SPAM_LIMIT:
-            tmp_root['cooldown_start'] = current_time
-            await user.send('Please wait a few moments and try again')
-            return True
-
-        return False
-
-    def add_rr_confirmation(self, message_id: str, bind_tag: str, single_link: list, emoji_list: list):
-        """Creates an entry pending to be handled for reaction roles overwrite request"""
-        self.rr_confirmations[message_id] = {}
-        self.rr_confirmations[message_id]['bind_tag'] = bind_tag
-        self.rr_confirmations[message_id]['emoji_list'] = emoji_list
-        self.rr_confirmations[message_id]['link'] = single_link
-
-    def add_rr_watch(self, message_id: str, channel_id: str, links: list):
-        """Starts keeping track of what messages have bound actions"""
-        tmp_obj = {}
-        tmp_obj['channel_id'] = channel_id
-        tmp_obj['links'] = links
-
-        self.rr_assignments[message_id] = tmp_obj
-
-    async def assign_roles(self, emoji_sent: str, user: discord.Member, message_id: int, channel_id: int):
-        """Updates the roles of the given user
-        Parameters:
-            user::discord.Member
-            message_id::int
-            channel_id::int
-        """
-        channel = self.bot.get_channel(channel_id)
-        message = await channel.fetch_message(message_id)
-        user_id = user.id
-
-        message_reactions = set()
-        for em in message.reactions:
-            if not isinstance(em, str):
-                em = str(em)
-
-            message_reactions.add(em)
-
-        bound_reactions = set()
-        for link in self.rr_assignments[str(message_id)]['links']:
-            bound_reactions.update(link['reactions'])
-
-        reactions_in_use = bound_reactions.intersection(message_reactions)
-        reactions_by_currentuser = []
-
-        for reaction in message.reactions:
-            if not isinstance(reaction.emoji, str):
-                em = str(reaction.emoji)
-            else:
-                em = reaction.emoji
-
-            if em not in reactions_in_use:
-                continue
-
-            for u in await reaction.users().flatten():
-                if u.id != user_id:
-                    continue
-
-                reactions_by_currentuser.append(em)
-
-        # match with links
-        for link in self.rr_assignments[str(message_id)]['links']:
-            if not isinstance(link['reactions'], set):
-                link['reactions'] = set(link['reactions'])
-
-            link_fully_matches = link['reactions'].issubset(reactions_by_currentuser)
-
-            if emoji_sent not in link['reactions']:
-                continue
-
-            role_removal = False
-            if not link_fully_matches:
-                reactions_by_currentuser.append(emoji_sent)
-                role_removal = link['reactions'].issubset(reactions_by_currentuser)
-
-                if not role_removal:
-                    continue
-
-            if not isinstance(link['roles'][0], discord.Role):
-                link['roles'] = list(map(channel.guild.get_role, link['roles']))
-
-            if role_removal:
-                await user.remove_roles(*link['roles'], reason='Requested by the own user by reacting')
-                quote = f'{user.mention}, say goodbye to XX...'
-            else:
-                await user.add_roles(*link['roles'], reason='Requested by the own user by reacting')
-                quote = f'Congrats, {user.mention}. You get the XX YY!'
-
-            if len(link['roles']) > 1:
-                roles = ', '.join(f"**@{r.name}**" for r in link['roles'])
-            else:
-                roles = link['roles'][0].name
-                roles = f"**@{roles}**"
-
-            quote = quote.replace('XX', roles)
-            quote = quote.replace('YY', 'roles' if len(link['roles']) > 1 else 'role')
-
-            try:
-                print(quote)
-                await user.send(quote)
-            except discord.Forbidden:
-                print(f"I couldn't notify {user.name} about {roles}...")
-
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         """When a user adds a reaction to a message"""
         if payload.user_id == self.bot.user.id:
             return
 
-        guild = self.bot.get_guild(payload.guild_id)
+        guild: discord.Guild = self.bot.get_guild(payload.guild_id)
 
         if payload.member:
             user = payload.member
         else:
-            user = guild.get_member(payload.user_id)
+            user: discord.abc.User = guild.get_member(payload.user_id)
 
         # might get false positives in the future... if the user isn't cached
         if user is None or user.bot:
             return
 
-        handle_confirmation = str(payload.message_id) in self.rr_confirmations
-        handle_reactionrole = str(payload.message_id) in self.rr_assignments
-
-        if handle_confirmation:
-            tmp_root = self.rr_confirmations[payload.message_id]
-
-            if str(payload.user_id) != tmp_root['bind_tag'].split('/')[0]:
-                return
-
-            reaction = payload.emoji
-
-            valid_options = [emoji.emojize(':o:', use_aliases=True), emoji.emojize(':x:', use_aliases=True)]
-
-            if str(reaction) not in valid_options:
-                return
-
-            useractions_cog = self.bot.get_cog('UserActions')
-
-            if str(reaction) == emoji.emojize(':o:', use_aliases=True):
-                useractions_cog.rr_conflict_response(tmp_root['link'], tmp_root['emoji_list'])
-            else:
-                useractions_cog.rr_conflict_response(None, None)
-
-            self.rr_confirmations.pop(payload.message_id)
-
-            channel = self.bot.get_channel(payload.channel_id)
-
-            message = await channel.fetch_message(payload.message_id)
-            await message.clear_reactions()
-            if str(reaction) == emoji.emojize(':o:', use_aliases=True):
-                await message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
-            else:
-                await message.add_reaction(emoji.emojize(':stop_sign:', use_aliases=True))
-        elif handle_reactionrole:
-            if await self.manage_rr_cooldown(user):
-                return
-
-            await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
+        rr_cog: ReactionRoles = self.bot.get_cog("ReactionRoles")
+        await rr_cog.reaction_added(payload, user)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
@@ -275,13 +83,8 @@ class BotEvents(commands.Cog):
         if user is None or user.bot:
             return
 
-        handle_reactionrole = str(payload.message_id) in self.rr_assignments
-
-        if handle_reactionrole:
-            if await self.manage_rr_cooldown(user):
-                return
-
-            await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
+        rr_cog: ReactionRoles = self.bot.get_cog("ReactionRoles")
+        await rr_cog.reaction_removed(payload, user)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -365,8 +168,9 @@ class BotEvents(commands.Cog):
             # if (url_match := URL_PATTERN.match(content, i)):
             if url_match:
                 if not escaped_url or url_match.end() >= len(content) or url_match.end() < len(content) and content[url_match.end()] != '>':
-                    url_matches_found.append({'full_url': url_match.group(
-                    ), 'fqdn': tldextract.extract(url_match.group()).fqdn})
+                    url_matches_found.append(
+                        {'full_url': url_match.group(),
+                         'fqdn': tldextract.extract(url_match.group()).fqdn})
 
                 i = url_match.end()
                 continue

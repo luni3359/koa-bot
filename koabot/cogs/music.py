@@ -52,6 +52,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 class Music(commands.Cog):
     """Play music"""
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -94,7 +95,7 @@ class Music(commands.Cog):
             await ctx.send('No voice channel to disconnect from...')
 
     @commands.command()
-    async def play(self, ctx: commands.Context, *, search_or_url: str):
+    async def play(self, ctx: commands.Context, *, search_or_url: str = ""):
         """Plays a track (overrides current track)"""
         # TODO https://stackoverflow.com/a/62360149/7688278
         # Allow links to play from specified timestamps

@@ -38,14 +38,9 @@ class Board(commands.Cog):
 
         guide: dict = kwargs.get('guide', None)
         hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
-
-        if len(tags) == 0:
-            await ctx.send('Please make a search.')
-            return
+        on_nsfw_channel = ctx.channel.is_nsfw()
 
         print(f'User searching for: {tags}')
-
-        on_nsfw_channel = ctx.channel.is_nsfw()
 
         async with ctx.typing():
             try:

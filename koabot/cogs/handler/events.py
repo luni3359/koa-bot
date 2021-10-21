@@ -1,6 +1,8 @@
 """Bot events"""
 import random
 import re
+import sys
+import traceback
 from datetime import datetime
 
 import discord
@@ -85,6 +87,49 @@ class BotEvents(commands.Cog):
 
         rr_cog: ReactionRoles = self.bot.get_cog("ReactionRoles")
         await rr_cog.reaction_removed(payload, user)
+
+    # TODO: General error handler: https://gist.github.com/EvieePy/7822af90858ef65012ea500bcecf1612
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx: commands.Context, error: commands.CommandError):
+        """The event triggered when an error is raised while invoking a command.
+        Parameters
+        ------------
+        ctx: commands.Context
+            The context used for command invocation.
+        error: commands.CommandError
+            The Exception raised.
+        """
+        if hasattr(ctx.command, 'on_error'):
+            return
+
+        # TODO: Walrus opportunity
+        cog = ctx.cog
+        if cog:
+            if cog._get_overridden_method(cog.cog_command_error) is not None:
+                return
+
+        ignored = (commands.CommandNotFound, )
+        error = getattr(error, 'original', error)
+
+        if isinstance(error, ignored):
+            return
+
+        if isinstance(error, commands.DisabledCommand):
+            await ctx.send(f'{ctx.command} has been disabled.')
+
+        elif isinstance(error, commands.NoPrivateMessage):
+            try:
+                await ctx.author.send(f'{ctx.command} can not be used in Private Messages.')
+            except discord.HTTPException:
+                pass
+
+        elif isinstance(error, commands.BadArgument):
+            if ctx.command.qualified_name == 'tag list':
+                await ctx.send('I could not find that member. Please try again.')
+
+        else:
+            print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
+            traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):

@@ -21,7 +21,7 @@ class InfoLookup(commands.Cog):
         self.wikipedia: MediaWiki = MediaWiki()
 
     @commands.command(name='wikipedia', aliases=['wk', 'wp'])
-    async def search_wikipedia(self, ctx, *, search_term: str):
+    async def search_wikipedia(self, ctx: commands.Context, *, search_term: str):
         """Search for articles in Wikipedia"""
         page_results = self.wikipedia.search(search_term)
         page_title = []
@@ -73,7 +73,7 @@ class InfoLookup(commands.Cog):
             await ctx.send(bot_msg)
 
     @commands.command(name='jisho', aliases=['j'])
-    async def search_jisho(self, ctx, *, search_term: str):
+    async def search_jisho(self, ctx: commands.Context, *, search_term: str):
         """Search a term in the japanese dictionary jisho"""
 
         search_term = search_term.lower()
@@ -140,7 +140,7 @@ class InfoLookup(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='urbandictionary', aliases=['wu', 'udictionary', 'ud'])
-    async def search_urbandictionary(self, ctx, *, search_term: str):
+    async def search_urbandictionary(self, ctx: commands.Context, *, search_term: str):
         """Search a term in urbandictionary"""
 
         search_term = search_term.lower()
@@ -201,7 +201,7 @@ class InfoLookup(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command(name='dictionary', aliases=['d', 'word', 'w'])
-    async def search_english_word(self, ctx, *, search_term):
+    async def search_english_word(self, ctx: commands.Context, *, search_term: str):
         """Search a term in merriam-webster's dictionary"""
 
         search_term = search_term.lower()
@@ -342,6 +342,10 @@ class InfoLookup(commands.Cog):
                 text=self.bot.assets['merriam-webster']['name'],
                 icon_url=self.bot.assets['merriam-webster']['favicon'])
             await ctx.send(embed=embed)
+
+    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
+        if isinstance(error, commands.MissingRequiredArgument):
+            return await ctx.send(random.choice(self.bot.quotes['dictionary_blank_search']))
 
 
 def strip_dictionary_oddities(txt: str, which: str):

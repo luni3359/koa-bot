@@ -1,4 +1,6 @@
 """Search and gallery operations for art websites"""
+import random
+
 import discord
 from discord.ext import commands
 
@@ -50,6 +52,10 @@ class ImageBoard(commands.Cog):
             await gallery_cog.get_imgur_gallery(msg, url)
         else:
             raise ValueError(f'Board "{board}" has no gallery entry.')
+
+    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
+        if isinstance(error, commands.MissingRequiredArgument):
+            return await ctx.send(random.choice(self.bot.quotes['board_blank_search']))
 
 
 def setup(bot: commands.Bot):

@@ -11,6 +11,7 @@ from koabot.patterns import DICE_PATTERN
 
 class RollMatch:
     """Roll object helper"""
+
     def __init__(self, dice_match: re.Match):
         self.type: str = None
         self.sign: str = dice_match.group(1)
@@ -50,15 +51,13 @@ class RollMatch:
 
 class Game(commands.Cog):
     """Commands to play with"""
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command(aliases=['r'])
     async def roll(self, ctx: commands.Context, *, roll_string: str):
         """Rolls one or many dice"""
-        if len(roll_string) < 1:
-            return await ctx.send("Please specify what you want to roll.")
-
         matches_found = []
         roll_count = 0
         i = 0
@@ -211,6 +210,11 @@ class Game(commands.Cog):
         message += f"For a total of **{total_sum}.**"
 
         await ctx.send(message[0:2000])
+
+    @roll.error
+    async def roll_error(self, ctx: commands.Context, exception: commands.CommandError):
+        if isinstance(exception, commands.MissingRequiredArgument):
+            return await ctx.send("Please specify what you want to roll.")
 
 
 def setup(bot: commands.Bot):

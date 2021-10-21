@@ -14,7 +14,7 @@ class TimeZone(commands.Cog):
         self.bot = bot
 
     @commands.command(aliases=['t'])
-    async def time(self, ctx: commands.Context, *, region_or_country):
+    async def time(self, ctx: commands.Context, *, region_or_country: str = ""):
         """Provide time zones"""
 
         if not region_or_country:

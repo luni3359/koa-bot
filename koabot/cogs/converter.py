@@ -20,7 +20,7 @@ class Converter(commands.Cog):
         self.currency = currency.CurrencyRates()
 
     @commands.command(name='convert', aliases=['conv', 'cv'])
-    async def unit_convert(self, ctx: commands.Context, *, units):
+    async def unit_convert(self, ctx: commands.Context, *, units: str = ""):
         """Convert units"""
 
         unit_matches = []

@@ -65,6 +65,7 @@ For example, at first Twitter previews used to show only one image regardless of
 1. Install python 3.7.3 (current version on Raspberry Pi OS).
     + If you have problems switching versions try using ``pyenv``.
 2. Install the dependencies from ``requirements.txt``.
+> Note: You might need to install additional dependencies either via pip or through your package manager to make use of ImageHash.
 3. You're done!
 
 ## How to run

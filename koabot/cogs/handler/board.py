@@ -139,7 +139,7 @@ class Board(commands.Cog):
                 url = guide['api']['tag_search_url'].format(search_query)
                 return await net_utils.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
         else:
-            raise ValueError(f'Board "{board}" can\'t be handled by the post searcher.')
+            raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
 
     async def send_posts(self, ctx: commands.Context, posts, **kwargs):
         """Handle sending posts retrieved from image boards

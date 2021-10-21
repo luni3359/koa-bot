@@ -351,7 +351,7 @@ class Gallery(commands.Cog):
 
         #     content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
 
-        #     bot_cog = self.bot.get_cog('BotStatus')
+        #     bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
         #     await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
         #     return

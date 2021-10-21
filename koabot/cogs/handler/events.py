@@ -13,6 +13,7 @@ from mergedeep import merge
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.imageboard import ImageBoard
 from koabot.cogs.reactionroles import ReactionRoles
+from koabot.cogs.streamservice import StreamService
 from koabot.patterns import URL_PATTERN
 
 
@@ -128,7 +129,7 @@ class BotEvents(commands.Cog):
                 await ctx.send('I could not find that member. Please try again.')
 
         else:
-            print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
+            print(f"Ignoring exception in command {ctx.command}:", file=sys.stderr)
             traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
     @commands.Cog.listener()
@@ -249,7 +250,7 @@ class BotEvents(commands.Cog):
                     if guide_type == 'gallery':
                         gallery.append({'url': full_url, 'board': group, 'guide': guide_content})
                     elif guide_type == 'stream' and group == 'picarto':
-                        streams_cog = self.bot.get_cog('StreamService')
+                        streams_cog: StreamService = self.bot.get_cog('StreamService')
                         picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url)
 
                         if picarto_preview_shown and content[0] == '!':

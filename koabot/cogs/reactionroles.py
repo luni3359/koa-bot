@@ -29,6 +29,7 @@ class ReactionRoles(commands.Cog):
         self.rr_confirmations = {}
         self.rr_assignments = {}
         self.rr_cooldown = {}
+        self.spam_limit = 12
 
         # load reaction role binds
         file_path = os.path.join(DATA_DIR, 'binds.json')
@@ -387,9 +388,8 @@ class ReactionRoles(commands.Cog):
 
         rr_link['reactions'] = emoji_list
 
-    async def manage_rr_cooldown(self, user: discord.User):
+    async def manage_rr_cooldown(self, user: discord.User) -> bool:
         """Prevents users from overloading role requests"""
-        SPAM_LIMIT = 12
         current_time = timeit.default_timer()
         user_id = str(user.id)
 
@@ -403,7 +403,7 @@ class ReactionRoles(commands.Cog):
         time_diff = current_time - tmp_root['cooldown_start']
 
         # if too many reactions were sent
-        if tmp_root['change_count'] > SPAM_LIMIT:
+        if tmp_root['change_count'] > self.spam_limit:
             if time_diff < 60:
                 return True
 
@@ -422,9 +422,9 @@ class ReactionRoles(commands.Cog):
             tmp_root['change_count'] += 1
 
         # send a warning and freeze
-        if tmp_root['change_count'] > SPAM_LIMIT:
+        if tmp_root['change_count'] > self.spam_limit:
             tmp_root['cooldown_start'] = current_time
-            await user.send('Please wait a few moments and try again')
+            await user.send("Please wait a few moments and try again.")
             return True
 
         return False

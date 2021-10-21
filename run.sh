@@ -89,9 +89,25 @@ function update_dependencies() {
     echo $PIP_OUTPUT
 }
 
+function poetry_dependencies_to_requirements() {
+    CURRENT_DIR="$(pwd)"
+    cd "${KOAKUMA_HOME}"
+
+    if command_exists poetry; then
+        echo "Exporting dependencies to requirements.txt..."
+        poetry export --without-hashes --output requirements.txt
+    else
+        echo "Poetry was not detected."
+    fi
+
+    cd "${CURRENT_DIR}"
+}
+
 function update() {
     # Automatically sends updates to the bot. In the future it should also restart the running instance.
     echo "Updating bot files..."
+
+    poetry_dependencies_to_requirements
 
     if [ ! -n "$1" ]; then
         test_conectivity
@@ -101,7 +117,7 @@ function update() {
     TARGET_KOACONFIG="${KOAKUMA_CONNSTR}:~/.config/koa-bot"
 
     echo "Transferring source from ${KOAKUMA_HOME} to ${TARGET_KOAHOME}"
-    rsync -aAXv --include=.python-version --exclude=.* --exclude=__pycache__ --exclude=venv --progress "${KOAKUMA_HOME}/" "${TARGET_KOAHOME}"
+    rsync -aAXv --include=.python-version --exclude={.*,__pycache__,venv,poetry.lock} --progress "${KOAKUMA_HOME}/" "${TARGET_KOAHOME}"
     echo
     echo "Transferring config files from ${XDG_CONFIG_HOME}/koa-bot/ to ${TARGET_KOACONFIG}"
     rsync -aAXv --progress "${XDG_CONFIG_HOME}/koa-bot/" "${TARGET_KOACONFIG}"

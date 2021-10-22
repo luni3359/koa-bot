@@ -36,13 +36,18 @@ tldextract = "^3.1.2"
 tweepy = "^4.1.0"
 single-source = "^0.2.0"
 yt-dlp = "^2021.10.10"
-uvloop = {platform = "linux", version = "*"}
+uvloop = {platform = "linux", version = "*", optional = true}
+aiodns = {version = "*", optional = true}
+cchardet = {version = "*", optional = true}
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.5.7"
 pylint = "^2.11.1"
 rope = "^0.20.1"
 wheel = "^0.37.0"
+
+[tool.poetry.extras]
+speed = ["uvloop","aiodns","cchardet"]
 
 [tool.isort]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]

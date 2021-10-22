@@ -95,7 +95,7 @@ function poetry_dependencies_to_requirements() {
 
     if command_exists poetry; then
         echo "Exporting dependencies to requirements.txt..."
-        poetry export --without-hashes --output requirements.txt
+        poetry export --without-hashes --extras "speed" --output "requirements.txt"
     else
         echo "Poetry was not detected."
     fi

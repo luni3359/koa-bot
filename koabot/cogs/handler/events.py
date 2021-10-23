@@ -192,11 +192,11 @@ class BotEvents(commands.Cog):
                 embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon_url)
 
                 target_embed = embed_template.copy()
-                target_embed.description = f'Mention by {author.mention} from {channel.mention}\n\n[Click to go there]({msg.jump_url})'
+                target_embed.description = random.choice(self.bot.quotes['channel_linking_origin'].format(author=author.mention, channel=channel.mention, msg_url=msg.jump_url))
                 target_channel_msg = await mentioned_channel.send(embed=target_embed)
 
                 origin_embed = embed_template.copy()
-                origin_embed.description = f'Mention by {author.mention} to {mentioned_channel.mention}\n\n[Click to go there]({target_channel_msg.jump_url})'
+                origin_embed.description = random.choice(self.bot.quotes['channel_linking_target'].format(author=author.mention, channel=mentioned_channel.mention, msg_url=target_channel_msg.jump_url))
                 await channel.send(embed=origin_embed)
 
         url_matches_found = []

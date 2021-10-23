@@ -100,20 +100,24 @@ class Game(commands.Cog):
                 else:
                     message += "Subtract "
 
-                message += f"{abs(match.raw_points)} point{match.raw_points > 1 and 's' or ''}.\n"
+                s_or_no_s = (abs(match.raw_points) > 1 or match.raw_points == 0) and 's' or ''
+
+                message += f"{abs(match.raw_points)} point{s_or_no_s}.\n"
                 if i == 0 and match.sign == '+':
                     logic_string += f"__{match.raw_points}__ "
                 else:
-                    logic_string += f"{match.sign} __{match.raw_points}__ "
+                    logic_string += f"{match.sign} __{abs(match.raw_points)}__ "
 
                 total_sum += match.raw_points
                 continue
+
+            dice_or_die = match.quantity != 1 and 'dice' or 'die'
 
             if match.limited_quantity:
                 message += '\*'
 
             if match.quantity == 0 or match.pips == 0:
-                message += f"{num2words(match.quantity).capitalize()} {match.pips}-sided {match.quantity != 1 and 'dice' or 'die'}. Nothing to roll.  **0.**\n"
+                message += f"{num2words(match.quantity).capitalize()} {match.pips}-sided {dice_or_die}. Nothing to roll.  **0.**\n"
                 continue
 
             roll_list = []
@@ -136,7 +140,7 @@ class Game(commands.Cog):
             else:
                 message += f"Minus {num2words(match.quantity)}"
 
-            message += f" {match.pips}-sided {match.quantity != 1 and 'dice' or 'die'} for a "
+            message += f" {match.pips}-sided {dice_or_die} for a "
 
             for j in range(0, match.quantity):
                 die_roll = random.randint(1, match.pips)
@@ -151,6 +155,7 @@ class Game(commands.Cog):
                         elif keep_type == 'h':
                             keep_list = nlargest(keep_length, keep_list)
 
+                # Final die in group throw
                 if j == match.quantity - 1:
                     if match.quantity == 1:
                         message += f'{die_roll}.'
@@ -173,7 +178,7 @@ class Game(commands.Cog):
                         if i != 0 or match.sign != '+':
                             logic_string += f"{match.sign} "
 
-                        if len(keep_list) > 1 and len(matches_found) > 1:
+                        if len(keep_list) > 1 and (len(matches_found) > 1 or match.sign != "+"):
                             logic_string += f"__({' + '.join(map(str, keep_list))})__ "
                         else:
                             logic_string += f"__{' + '.join(map(str, keep_list))}__ "
@@ -199,7 +204,7 @@ class Game(commands.Cog):
                 if i != 0 or match.sign != '+':
                     logic_string += f"{match.sign} "
 
-                if len(roll_list) > 1 and len(matches_found) > 1:
+                if len(roll_list) > 1 and (len(matches_found) > 1 or match.sign != "+"):
                     logic_string += f"__({' + '.join(map(str, roll_list))})__ "
                 else:
                     logic_string += f"__{' + '.join(map(str, roll_list))}__ "

@@ -218,6 +218,7 @@ class Game(commands.Cog):
 
     @roll.error
     async def roll_error(self, ctx: commands.Context, exception: commands.CommandError):
+        """Roll exception handler"""
         if isinstance(exception, commands.MissingRequiredArgument):
             return await ctx.send("Please specify what you want to roll.")
 

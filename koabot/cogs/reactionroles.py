@@ -337,6 +337,7 @@ class ReactionRoles(commands.Cog):
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
     async def reaction_added(self, payload: discord.RawReactionActionEvent, user: discord.abc.User):
+        """When a reaction is added to a message"""
         handle_confirmation = str(payload.message_id) in self.rr_confirmations
         handle_reactionrole = str(payload.message_id) in self.rr_assignments
 
@@ -375,6 +376,7 @@ class ReactionRoles(commands.Cog):
             await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
 
     async def reaction_removed(self, payload: discord.RawReactionActionEvent, user: discord.abc.User):
+        """When a reaction is removed from a message"""
         handle_reactionrole = str(payload.message_id) in self.rr_assignments
 
         if handle_reactionrole:

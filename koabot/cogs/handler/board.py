@@ -206,7 +206,7 @@ class Board(commands.Cog):
                             text=guide['embed']['footer_text'],
                             icon_url=self.bot.assets[board]['favicon']['size16'])
 
-            if not show_nsfw and post['rating'] is not 's':
+            if not show_nsfw and post['rating'] != 's':
                 if 'nsfw_placeholder' in self.bot.assets[board]:
                     embed.set_image(url=self.bot.assets[board]['nsfw_placeholder'])
                 else:

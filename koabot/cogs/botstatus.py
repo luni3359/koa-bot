@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 from single_source import get_version
 
-from koabot.koakuma import BOT_DIRNAME, PROJECT_DIR
+from koabot import koakuma
 
 
 class BotStatus(commands.Cog):
@@ -87,7 +87,7 @@ class BotStatus(commands.Cog):
     @commands.command()
     async def version(self, ctx: commands.Context):
         """Show bot's version"""
-        version = get_version(BOT_DIRNAME, PROJECT_DIR)
+        version = get_version(koakuma.BOT_DIRNAME, koakuma.PROJECT_DIR)
         await ctx.send(f"On version `{version}`.")
 
     async def typing_a_message(self, ctx: commands.Context, **kwargs):
@@ -128,6 +128,12 @@ class BotStatus(commands.Cog):
             else:
                 await ctx.send(content)
 
+    def get_quote(self, key: str, **kwargs) -> str:
+        """Get a quote from Koakuma's file of things to say"""
+        if kwargs:
+            return random.choice(self.bot.quotes[key]).format(**kwargs)
+
+        return random.choice(self.bot.quotes[key])
 
 def setup(bot: commands.Bot):
     """Initiate cog"""

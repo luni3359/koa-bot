@@ -1,12 +1,12 @@
 """Routine tasks"""
 import asyncio
-import random
 from datetime import datetime
 
 import discord
 
 import koabot.utils.net as net_utils
 from koabot import koakuma
+from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
 from koabot.cogs.streamservice import StreamService
 
@@ -103,7 +103,7 @@ async def change_presence_periodically() -> None:
     """Changes presence at X time, once per day"""
 
     await koakuma.bot.wait_until_ready()
-
+    bot_cog: BotStatus = koakuma.bot.get_cog('BotStatus')
     day = datetime.utcnow().day
 
     while not koakuma.bot.is_closed():
@@ -112,7 +112,7 @@ async def change_presence_periodically() -> None:
         # if it's time and it's not the same day
         if time.hour == koakuma.bot.tasks['presence_change']['utc_hour'] and time.day != day:
             day = time.day
-            await koakuma.bot.change_presence(activity=discord.Game(name=random.choice(koakuma.bot.quotes['playing_status'])))
+            await koakuma.bot.change_presence(activity=discord.Game(name=bot_cog.get_quote('playing_status')))
 
         # check twice an hour
         await asyncio.sleep(60 * 30)
@@ -123,6 +123,7 @@ async def lookup_pending_posts() -> None:
 
     await koakuma.bot.wait_until_ready()
 
+    bot_cog: BotStatus = koakuma.bot.get_cog('BotStatus')
     board_cog: Board = koakuma.bot.get_cog('Board')
     pending_posts = []
     channel_categories = {}
@@ -153,11 +154,11 @@ async def lookup_pending_posts() -> None:
 
         if safe_posts or nsfw_posts:
             for channel in channel_categories['safe_channels']:
-                await channel.send(random.choice(koakuma.bot.quotes['posts_to_approve']) + '\n' + safe_posts)
+                await channel.send(bot_cog.get_quote('posts_to_approve') + '\n' + safe_posts)
 
         if nsfw_posts:
             for channel in channel_categories['nsfw_channels']:
-                await channel.send(random.choice(koakuma.bot.quotes['posts_to_approve']) + '\n' + nsfw_posts)
+                await channel.send(bot_cog.get_quote('posts_to_approve') + '\n' + nsfw_posts)
 
         # check every 5 minutes
         await asyncio.sleep(60 * 5)

@@ -1,6 +1,5 @@
 """Search information and definitions"""
 import math
-import random
 import re
 import urllib
 
@@ -11,6 +10,7 @@ from mediawiki import exceptions as MediaExceptions
 
 import koabot.utils.net as net_utils
 from koabot import koakuma
+from koabot.cogs.botstatus import BotStatus
 
 
 class InfoLookup(commands.Cog):
@@ -88,8 +88,8 @@ class InfoLookup(commands.Cog):
 
         # Check if there are any results at all
         if js['meta']['status'] != 200:
-            await ctx.send(random.choice(self.bot.quotes['dictionary_no_results']))
-            return
+            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
+            return await ctx.send(bot_cog.get_quote('dictionary_no_results'))
 
         embed = discord.Embed()
         embed.title = search_term
@@ -155,8 +155,8 @@ class InfoLookup(commands.Cog):
 
         # Check if there are any results at all
         if not 'list' in js or not js['list']:
-            await ctx.send(random.choice(self.bot.quotes['dictionary_no_results']))
-            return
+            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
+            return await ctx.send(bot_cog.get_quote('dictionary_no_results'))
 
         definition_embeds = []
         embed = discord.Embed()
@@ -212,12 +212,13 @@ class InfoLookup(commands.Cog):
 
         # Check if there are any results at all
         if not js:
-            await ctx.send(random.choice(self.bot.quotes['dictionary_no_results']))
-            return
+            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
+            return await ctx.send(bot_cog.get_quote('dictionary_no_results'))
 
         # If word has no direct definitions, they're word suggestions
         # (if there's no dicts, it's safe to assume they're strings)
         if not isinstance(js[0], dict):
+            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
             suggestions = js[:5]
 
             for i, suggestion in enumerate(suggestions):
@@ -229,8 +230,7 @@ class InfoLookup(commands.Cog):
             embed.set_footer(
                 text=self.bot.assets['merriam-webster']['name'],
                 icon_url=self.bot.assets['merriam-webster']['favicon'])
-            await ctx.send(random.choice(self.bot.quotes['dictionary_try_this']), embed=embed)
-            return
+            return await ctx.send(bot_cog.get_quote('dictionary_try_this'), embed=embed)
         # If there's suggestions to a different grammatical tense
         elif 'def' not in js[0]:
             tense_group = js[0]['cxs'][0]
@@ -345,7 +345,8 @@ class InfoLookup(commands.Cog):
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         if isinstance(error, commands.MissingRequiredArgument):
-            return await ctx.send(random.choice(self.bot.quotes['dictionary_blank_search']))
+            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
+            return await ctx.send(bot_cog.get_quote('dictionary_blank_search'))
 
 
 def strip_dictionary_oddities(txt: str, which: str):

@@ -1,9 +1,8 @@
 """Search and gallery operations for art websites"""
-import random
-
 import discord
 from discord.ext import commands
 
+from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
 from koabot.cogs.handler.gallery import Gallery
 
@@ -55,7 +54,8 @@ class ImageBoard(commands.Cog):
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         if isinstance(error, commands.MissingRequiredArgument):
-            return await ctx.send(random.choice(self.bot.quotes['board_blank_search']))
+            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
+            return await ctx.send(bot_cog.get_quote('board_blank_search'))
 
 
 def setup(bot: commands.Bot):

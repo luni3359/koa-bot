@@ -1,6 +1,5 @@
 """Commands for streaming services like Twitch and Picarto"""
 import os
-import random
 import re
 
 import discord
@@ -9,6 +8,7 @@ from discord.ext import commands
 import koabot.utils.net as net_utils
 import koabot.utils.posts as post_utils
 from koabot import koakuma
+from koabot.cogs.botstatus import BotStatus
 
 
 class StreamService(commands.Cog):
@@ -67,6 +67,8 @@ class StreamService(commands.Cog):
         channel: discord.TextChannel = msg.channel
         post_id = post_utils.get_post_id(url, '.tv/', '?')
 
+        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
+
         if not post_id:
             return
 
@@ -74,11 +76,11 @@ class StreamService(commands.Cog):
         picarto_request = (await net_utils.http_request(channel_url, json=True)).json
 
         if not picarto_request:
-            await channel.send(random.choice(self.bot.quotes['stream_preview_failed']))
+            await channel.send(bot_cog.get_quote('stream_preview_failed'))
             return
 
         if not picarto_request['online']:
-            await channel.send(random.choice(self.bot.quotes['stream_preview_offline']))
+            await channel.send(bot_cog.get_quote('stream_preview_offline'))
             return
 
         image = await net_utils.fetch_image(picarto_request['thumbnails']['web'])

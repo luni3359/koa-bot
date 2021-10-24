@@ -1,6 +1,5 @@
 """Handles the use of imageboard galleries"""
 import os
-import random
 import re
 import shutil
 from pathlib import Path
@@ -98,7 +97,7 @@ class Gallery(commands.Cog):
             # else:
             #     embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-            # content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
+            # content = f"{msg.author.mention} {bot_cog.get_quote('improper_content_reminder')}"
             # await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
         if board == 'e621':
@@ -230,12 +229,11 @@ class Gallery(commands.Cog):
                 await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
         else:
             if post['rating'] == 's' and not nsfw_culled or on_nsfw_channel:
-                print('Removed all duplicates')
-                return
+                return print('Removed all duplicates')
             elif post['rating'] == 's':
-                content = random.choice(self.bot.quotes['cannot_show_nsfw_gallery'])
+                content = bot_cog.get_quote('cannot_show_nsfw_gallery')
             else:
-                content = random.choice(self.bot.quotes['rude_cannot_show_nsfw_gallery'])
+                content = bot_cog.get_quote('rude_cannot_show_nsfw_gallery')
 
             await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
@@ -340,6 +338,7 @@ class Gallery(commands.Cog):
 
         print(f'Pixiv auth passed! (for #{post_id})')
 
+        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         illust = illust_json.illust
         # if illust.x_restrict != 0 and not channel.is_nsfw():
         #     embed = discord.Embed()
@@ -349,14 +348,14 @@ class Gallery(commands.Cog):
         #     else:
         #         embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-        #     content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
+        #     content = f"{msg.author.mention} {bot_cog.get_quote('improper_content_reminder')}"
 
         #     bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
         #     await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
         #     return
 
-        temp_message = await channel.send(f"***{random.choice(self.bot.quotes['processing_long_task'])}***")
+        temp_message = await channel.send(f"***{bot_cog.get_quote('processing_long_task')}***")
         async with channel.typing():
             total_illust_pictures = illust.page_count
 

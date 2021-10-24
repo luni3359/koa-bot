@@ -1,5 +1,4 @@
 """Bot events"""
-import random
 import re
 import sys
 import traceback
@@ -182,7 +181,9 @@ class BotEvents(commands.Cog):
         channel: discord.TextChannel = msg.channel
 
         # Reference channels together
-        if len(content) and content[0] == '!':  # only if explicitly asked for
+        if len(content) and content[0] == '!' and msg.channel_mentions:  # only if explicitly asked for
+            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
+
             for mentioned_channel in msg.channel_mentions:
                 if mentioned_channel == channel:
                     continue
@@ -192,11 +193,13 @@ class BotEvents(commands.Cog):
                 embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon_url)
 
                 target_embed = embed_template.copy()
-                target_embed.description = random.choice(self.bot.quotes['channel_linking_origin'].format(author=author.mention, channel=channel.mention, msg_url=msg.jump_url))
+                target_embed.description = bot_cog.get_quote(
+                    'channel_linking_target', author=author.mention, channel=channel.mention, msg_url=msg.jump_url)
                 target_channel_msg = await mentioned_channel.send(embed=target_embed)
 
                 origin_embed = embed_template.copy()
-                origin_embed.description = random.choice(self.bot.quotes['channel_linking_target'].format(author=author.mention, channel=mentioned_channel.mention, msg_url=target_channel_msg.jump_url))
+                origin_embed.description = bot_cog.get_quote(
+                    'channel_linking_origin', author=author.mention, channel=mentioned_channel.mention, msg_url=target_channel_msg.jump_url)
                 await channel.send(embed=origin_embed)
 
         url_matches_found = []
@@ -293,15 +296,16 @@ class BotEvents(commands.Cog):
                 self.bot.last_channel_warned = True
                 bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
-                await bot_cog.typing_a_message(channel, content=random.choice(self.bot.quotes['quiet_channel_past_threshold']), rnd_duration=[1, 2])
+                await bot_cog.typing_a_message(channel, content=bot_cog.get_quote('quiet_channel_past_threshold'), rnd_duration=[1, 2])
 
     @commands.Cog.listener()
     async def on_ready(self):
         """On bot start"""
+        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         print(f'Logged in to Discord  [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
 
         # Change play status to something fitting
-        await self.bot.change_presence(activity=discord.Game(name=random.choice(self.bot.quotes['playing_status'])))
+        await self.bot.change_presence(activity=discord.Game(name=bot_cog.get_quote('playing_status')))
 
     @commands.Cog.listener()
     async def on_connect(self):

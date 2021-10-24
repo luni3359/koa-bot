@@ -39,6 +39,7 @@ yt-dlp = "^2021.10.10"
 uvloop = {platform = "linux", version = "*", optional = true}
 aiodns = {version = "*", optional = true}
 cchardet = {version = "*", optional = true}
+Brotli = {version = "*", optional = true}
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.5.7"
@@ -47,7 +48,7 @@ rope = "^0.20.1"
 wheel = "^0.37.0"
 
 [tool.poetry.extras]
-speed = ["uvloop","aiodns","cchardet"]
+speed = ["uvloop","aiodns","cchardet","Brotli"]
 
 [tool.isort]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]

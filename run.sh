@@ -117,7 +117,7 @@ function update() {
     TARGET_KOACONFIG="${KOAKUMA_CONNSTR}:~/.config/koa-bot"
 
     echo "Transferring source from ${KOAKUMA_HOME} to ${TARGET_KOAHOME}"
-    rsync -aAXv --include=.python-version --exclude={.*,__pycache__,venv,poetry.lock} --progress "${KOAKUMA_HOME}/" "${TARGET_KOAHOME}"
+    rsync -aAXv --exclude={.*,__pycache__,venv,poetry.lock} --progress "${KOAKUMA_HOME}/" "${TARGET_KOAHOME}"
     echo
     echo "Transferring config files from ${XDG_CONFIG_HOME}/koa-bot/ to ${TARGET_KOACONFIG}"
     rsync -aAXv --progress "${XDG_CONFIG_HOME}/koa-bot/" "${TARGET_KOACONFIG}"

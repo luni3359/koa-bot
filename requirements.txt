@@ -36,7 +36,7 @@ pycparser==2.20; python_full_version >= "3.5.3"
 pycryptodomex==3.11.0; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" and python_version >= "3.6"
 pymediawiki==0.7.1
 pynacl==1.4.0; python_full_version >= "3.5.3"
-pyparsing==2.4.7; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.3.0" and python_version >= "3.6"
+pyparsing==3.0.0; python_version >= "3.6"
 pytz==2021.3
 pywavelets==1.1.1; python_version >= "3.5"
 requests-file==1.5.1; python_version >= "3.6"
@@ -54,5 +54,5 @@ urllib3==1.26.7; python_version >= "2.7" and python_full_version < "3.0.0" or py
 uvloop==0.16.0; sys_platform == "linux"
 websockets==10.0; python_version >= "3.7"
 yarl==1.7.0; python_version >= "3.6" and python_full_version >= "3.5.3"
-yt-dlp==2021.10.10; python_version >= "3.6"
+yt-dlp==2021.10.22; python_version >= "3.6"
 zipp==3.6.0; python_version < "3.8" and python_version >= "3.6"

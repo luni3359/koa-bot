@@ -102,9 +102,7 @@ class BotEvents(commands.Cog):
         if hasattr(ctx.command, 'on_error'):
             return
 
-        # TODO: Walrus opportunity
-        cog = ctx.cog
-        if cog:
+        if cog := ctx.cog:
             if cog._get_overridden_method(cog.cog_command_error) is not None:
                 return
 
@@ -212,10 +210,7 @@ class BotEvents(commands.Cog):
                 i += 1
                 continue
 
-            url_match = URL_PATTERN.match(content, i)
-            # TODO Soon... in Python 3.8
-            # if (url_match := URL_PATTERN.match(content, i)):
-            if url_match:
+            if url_match := URL_PATTERN.match(content, i):
                 if not escaped_url or url_match.end() >= len(content) or url_match.end() < len(content) and content[url_match.end()] != '>':
                     url_matches_found.append(
                         {'full_url': url_match.group(),

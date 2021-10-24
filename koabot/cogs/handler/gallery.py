@@ -499,14 +499,11 @@ class Gallery(commands.Cog):
         if len(embed.description) > 200:
             embed.description = embed.description[:200] + "..."
 
-        # TODO: Walrus operator opportunity
-        # if da_favorites := deviation['stats']['favourites'] > 0:
-        if deviation['stats']['favourites'] > 0:
-            embed.add_field(name='Favorites', value=f"{deviation['stats']['favourites']:,}")
+        if (da_favorites := deviation['stats']['favourites']) > 0:
+            embed.add_field(name='Favorites', value=f"{da_favorites:,}")
 
-        # if da_views := deviation['extended']['stats']['views'] > 0:
-        if deviation['extended']['stats']['views'] > 0:
-            embed.add_field(name='Views', value=f"{deviation['extended']['stats']['views']:,}")
+        if (da_views := deviation['extended']['stats']['views']) > 0:
+            embed.add_field(name='Views', value=f"{da_views:,}")
 
         embed.set_image(url=image_url)
         embed.set_footer(
@@ -529,12 +526,11 @@ class Gallery(commands.Cog):
 
         embed.description = deviation['textContent']['excerpt'] + "..."
 
-        # TODO: Walrus operator opportunity
-        if deviation['stats']['favourites'] > 0:
-            embed.add_field(name='Favorites', value=f"{deviation['stats']['favourites']:,}")
+        if (da_favorites := deviation['stats']['favourites']) > 0:
+            embed.add_field(name='Favorites', value=f"{da_favorites:,}")
 
-        if deviation['extended']['stats']['views'] > 0:
-            embed.add_field(name='Views', value=f"{deviation['extended']['stats']['views']:,}")
+        if (da_views := deviation['extended']['stats']['views']) > 0:
+            embed.add_field(name='Views', value=f"{da_views:,}")
 
         embed.set_footer(
             text=self.bot.assets['deviantart']['name'],

@@ -2,7 +2,7 @@
 # This script is run automatically when the pi runs, directly from /etc/xdg/autostart/koa-bot.desktop
 # You can define the environmental variables either in ./.env or at ~/.profile
 
-MIN_PYTHON_VERSION="3.7.3"
+MIN_PYTHON_VERSION="3.8"
 
 # Checking XDG variables
 # https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
@@ -166,10 +166,10 @@ function install() {
     fi
 
     # Python dependencies
-    MIN_PYTHON_VERSION=($(echo "$MIN_PYTHON_VERSION" | grep -o -E '[0-9]+'))
+    MPV_VERSION_NUMBERS=($(echo "$MIN_PYTHON_VERSION" | grep -o -E '[0-9]+'))
 
-    if [ ${#MIN_PYTHON_VERSION[@]} -gt 3 ]; then
-        echo "Invalid minimum python version requirement. Exiting."
+    if [ ${#MPV_VERSION_NUMBERS[@]} -gt 3 ]; then
+        echo "Cannot recognize version from MIN_PYTHON_VERSION. Exiting."
         exit 1
     fi
 
@@ -185,10 +185,12 @@ function install() {
         exit 1
     fi
 
-    PYTHON_VERSION=($(echo $($PYTHON_BIN -c 'import platform; major, minor, patch = platform.python_version_tuple(); print(major); print(minor); print(patch);')))
-
-    for (( i=0; i<${#MIN_PYTHON_VERSION[@]}; i++ )); do
-        if [ ${PYTHON_VERSION[i]} -lt ${MIN_PYTHON_VERSION[i]} ]; then
+    PYTHON_VERSION=($(echo $($PYTHON_BIN -c 'import platform; print(platform.python_version())')))
+    PV_VERSION_NUMBERS=($(echo "$PYTHON_VERSION" | grep -o -E '[0-9]+'))
+    for (( i=0; i<${#MPV_VERSION_NUMBERS[@]}; i++ )); do
+        if [ ${PV_VERSION_NUMBERS[i]} -lt ${MPV_VERSION_NUMBERS[i]} ]; then
+            echo "You need at least version $MIN_PYTHON_VERSION to run this program."
+            echo "You are running python $PYTHON_VERSION"
             echo "Minimum python version requirement not met. Exiting."
             exit 1
         fi

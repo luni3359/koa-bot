@@ -29,7 +29,7 @@ By default some restrictions will apply based on the safety setting your text ch
 
 ### Game features
 + Roll the dice, as many as you want, of any number of pips!
-    + You can mix up rolls however you want (e.g. ``!roll d6 2d2``)
+    + You can mix up rolls however you want (e.g. `!roll d6 2d2`)
 
 ### Play music
 + Play music from local sources and from YouTube.
@@ -62,13 +62,13 @@ For example, at first Twitter previews used to show only one image regardless of
 
 
 ## How to setup
-1. Install python 3.7.3 (current version on Raspberry Pi OS).
-    + If you have problems switching versions try using ``pyenv``.
-2. Install the dependencies from ``requirements.txt``.
+1. Make sure you've got python 3.8 or above installed.
+    + If you have problems getting the right version check out [pyenv](https://github.com/pyenv/pyenv).
+2. Install the dependencies from `requirements.txt`.
 > Note: You might need to install additional dependencies either via pip or through your package manager to make use of ImageHash.
 3. You're done!
 
 ## How to run
 Once installed, this bot should automatically start on the next reboot.
 
-You can manually run it by executing the ``run.sh`` script on Linux, and ``winrun.cmd`` on Windows.
+You can manually run it by executing the `run.sh` script on Linux, and `winrun.cmd` on Windows.

@@ -103,7 +103,7 @@ async def debug_check(ctx: commands.Context):
     return True
 
 
-def start(debugging=False):
+def start(debugging=False, /):
     """Starts the bot"""
     print(f"Starting {BOT_DIRNAME}...")
     bot.launch_time = datetime.utcnow()
@@ -115,7 +115,7 @@ def start(debugging=False):
     ]
 
     if debugging:
-        print('In debug mode.')
+        print('Running in debug mode.')
         data_filenames.insert(0, 'beta.jsonc')
     else:
         data_filenames.insert(0, 'config.jsonc')

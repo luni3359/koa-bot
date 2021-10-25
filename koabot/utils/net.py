@@ -22,7 +22,7 @@ class NetResponse():
             self.plain_text = self.response_body
 
 
-async def http_request(url: str, **kwargs):
+async def http_request(url: str, **kwargs) -> NetResponse:
     """Make an http request
     Arguments:
         url::str
@@ -59,7 +59,8 @@ async def handle_request(response: aiohttp.ClientResponse, **kwargs) -> NetRespo
 
     Keywords:
         json::bool
-            true = must return json. false/unset = returns plain text
+            True = must return json
+            False/unset = returns plain text
         err_msg::str
             message to display on failure
     """
@@ -69,8 +70,9 @@ async def handle_request(response: aiohttp.ClientResponse, **kwargs) -> NetRespo
     if response.status != 200:
         # Timeout error
         # if response.status == 524
-        print(
-            f'> {datetime.now()}\nFailed connecting to {response.real_url}\n[Network status {response.status}]: {response.reason} "{err_msg}"')
+        failure_msg = f"> {datetime.now()}\nFailed connecting to {response.real_url}\n"
+        failure_msg += f"[Network status {response.status}]: {response.reason} \"{err_msg}\""
+        print(failure_msg)
         return NetResponse(response)
 
     if json:
@@ -81,29 +83,28 @@ async def handle_request(response: aiohttp.ClientResponse, **kwargs) -> NetRespo
     return NetResponse(response, response_body=response_body, **kwargs)
 
 
-async def fetch_image(url: str, **kwargs) -> io.BytesIO:
+async def fetch_image(url: str, /, **kwargs) -> io.BytesIO:
     """Download an image"""
-
     img_bytes = io.BytesIO((await http_request(url, image=True, **kwargs)).image)
     return img_bytes
 
 
-def get_url_filename(url: str) -> str:
+def get_url_filename(url: str, /) -> str:
     """Get the file name from an url"""
     return url.split('/')[-1]
 
 
-def get_url_fileext(url: str) -> str:
+def get_url_fileext(url: str, /) -> str:
     """Get the file extension from an url"""
     return get_url_filename(url).split('.')[-1].split('?')[0]
 
 
-def get_domain(url: str) -> str:
+def get_domain(url: str, /) -> str:
     """Get domain from an url"""
     return url.split('//')[-1].split('/')[0].split('?')[0]
 
 
-def get_domains(lst: List[str]) -> List[str]:
+def get_domains(lst: List[str], /) -> List[str]:
     """Get domains from a list of urls
     https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868
     """

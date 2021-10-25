@@ -20,24 +20,21 @@ class Board(commands.Cog):
         self.e621_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['e621']['username'],
                                            password=self.bot.auth_keys['e621']['key'])
 
-    async def search_board(self, ctx: commands.Context, tags: str, board: str = 'danbooru', **kwargs):
+    async def search_board(self, ctx: commands.Context, tags: str, /,  *, board: str = 'danbooru', guide: dict, hide_posts_remaining: bool = False) -> None:
         """Search on image boards!
         Arguments:
-            ctx
+            ctx::comands.Context
                 The context to interact with the discord API
             tags::str
                 A string of the tags that have been sent by the user
+        Keywords:
             board::str
                 The board to manage. Default is 'danbooru'
-        Keywords:
             guide::dict
                 The data which holds the board information
             hide_posts_remaining::bool
                 Omit the final remaining count on the final post. False by default.
         """
-
-        guide: dict = kwargs.get('guide', None)
-        hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
         on_nsfw_channel = ctx.channel.is_nsfw()
 
         print(f'User searching for: {tags}')
@@ -50,20 +47,18 @@ class Board(commands.Cog):
                 posts = None
 
         if not posts:
-            await ctx.send('Sorry, nothing found!')
-            return
+            return await ctx.send('Sorry, nothing found!')
 
         if 'posts' in posts:
             posts = posts['posts']
 
         # if the query is weird, ids won't appear in the results
         if 'id' not in posts[0]:
-            await ctx.send('Sorry, nothing found!')
-            return
+            return await ctx.send('Sorry, nothing found!')
 
         await self.send_posts(ctx, posts[:3], board=board, guide=guide, hide_posts_remaining=hide_posts_remaining)
 
-    async def search_query(self, **kwargs):
+    async def search_query(self, *, board: str = 'danbooru', guide: dict, **kwargs):
         """Handle searching in boards
         Keywords:
             board::str
@@ -85,9 +80,6 @@ class Board(commands.Cog):
         Returns:
             json::dict
         """
-
-        board = kwargs.get('board', 'danbooru')
-        guide = kwargs.get('guide', None)
         post_id = kwargs.get('post_id')
         tags = kwargs.get('tags')
         limit = kwargs.get('limit', 0)
@@ -141,7 +133,7 @@ class Board(commands.Cog):
         else:
             raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
 
-    async def send_posts(self, ctx: commands.Context, posts, **kwargs):
+    async def send_posts(self, ctx: commands.Context, posts, /, *, board: str = 'danbooru', guide: dict, show_nsfw: bool = True, max_posts: int = 4, hide_posts_remaining: bool = False) -> None:
         """Handle sending posts retrieved from image boards
         Arguments:
             ctx
@@ -162,13 +154,6 @@ class Board(commands.Cog):
             hide_posts_remaining::bool
                 Omit the final remaining count on the final post. False by default.
         """
-
-        board = kwargs.get('board', 'danbooru')
-        guide = kwargs.get('guide', None)
-        show_nsfw = kwargs.get('show_nsfw', True)
-        max_posts = kwargs.get('max_posts', 4)
-        hide_posts_remaining = kwargs.get('hide_posts_remaining', False)
-
         if not isinstance(posts, list):
             posts = [posts]
 
@@ -226,7 +211,7 @@ class Board(commands.Cog):
 
             print(f'Post #{post_id} complete')
 
-    def generate_embed(self, post, **kwargs):
+    def generate_embed(self, post, /, *, board: str = 'danbooru', guide: dict):
         """Generate embeds for image board post urls
         Arguments:
             post
@@ -238,9 +223,6 @@ class Board(commands.Cog):
             guide::dict
                 The data which holds the board information
         """
-
-        board = kwargs.get('board', 'danbooru')
-        guide = kwargs.get('guide', None)
         embed = discord.Embed()
 
         post_id = post['id']

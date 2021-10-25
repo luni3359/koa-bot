@@ -5,15 +5,20 @@ from typing import Union
 from koabot import koakuma
 
 
-def get_post_id(url: str, words_to_match: Union[str, list], trim_to: str, has_regex: bool = False):
+def get_post_id(url: str, words_to_match: Union[str, list], trim_to: str, /, *, has_regex: bool = False) -> int:
     """Get post id from url
     Arguments:
         url::str
+            Url to extract the id from
         words_to_match::str or list
+            First part to start looking from
         trim_to::str or regex pattern (str)
+            The final part to stop at
 
     Keywords:
         has_regex::bool
+            Indicates whether or not 'trim_to' should be treated
+            as a regex pattern.
     """
 
     if not isinstance(words_to_match, list):
@@ -33,7 +38,7 @@ def get_post_id(url: str, words_to_match: Union[str, list], trim_to: str, has_re
     return url.split(matching_word)[1].split(trim_to)[0]
 
 
-def combine_tags(tags: Union[str, list], **kwargs) -> str:
+def combine_tags(tags: Union[str, list], /,  *, maximum: int = 5) -> str:
     """Combine tags and give them a readable format
     Arguments:
         tags::str or list
@@ -42,9 +47,6 @@ def combine_tags(tags: Union[str, list], **kwargs) -> str:
         maximum::int
             How many tags should be taken into account
     """
-
-    maximum: int = kwargs.get('maximum', 5)
-
     if not isinstance(tags, list):
         tag_list = tags.split()
     else:
@@ -67,7 +69,7 @@ def combine_tags(tags: Union[str, list], **kwargs) -> str:
     return ''.join(tag_list).strip().replace('_', ' ')
 
 
-def post_is_missing_preview(post, **kwargs) -> bool:
+def post_is_missing_preview(post, /, *, board: str = 'danbooru') -> bool:
     """Determine whether or not a post is missing its preview
     Arguments:
         post::json object
@@ -76,9 +78,6 @@ def post_is_missing_preview(post, **kwargs) -> bool:
         board::str
             The board to check the rules with. Default is 'danbooru'
     """
-
-    board: str = kwargs.get('board', 'danbooru')
-
     if board == 'e621':
         return koakuma.list_contains(post['tags']['general'], koakuma.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
     if board == 'sankaku':

@@ -20,7 +20,7 @@ class BotStatus(commands.Cog):
         self.bot = bot
 
     @commands.command(name='temperature', aliases=['temp'])
-    async def report_bot_temp(self, ctx: commands.Context):
+    async def report_bot_temp(self, ctx: commands.Context, /):
         """Show the bot's current temperature"""
 
         temp_commands = ['vcgencmd measure_temp', 'sensors']
@@ -70,12 +70,12 @@ class BotStatus(commands.Cog):
             await ctx.send("I can't get the temperature...")
 
     @commands.command(name='last')
-    async def talk_status(self, ctx: commands.Context):
+    async def talk_status(self, ctx: commands.Context, /):
         """Mention a brief summary of the last used channel"""
         await ctx.send(f'Last channel: {self.bot.last_channel}\nCurrent count there: {self.bot.last_channel_message_count}')
 
     @commands.command()
-    async def uptime(self, ctx: commands.Context):
+    async def uptime(self, ctx: commands.Context, /):
         """Mention the current uptime"""
 
         delta_uptime = datetime.utcnow() - self.bot.launch_time
@@ -85,12 +85,12 @@ class BotStatus(commands.Cog):
         await ctx.send(f"I've been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.")
 
     @commands.command()
-    async def version(self, ctx: commands.Context):
+    async def version(self, ctx: commands.Context, /):
         """Show bot's version"""
         version = get_version(koakuma.BOT_DIRNAME, koakuma.PROJECT_DIR)
         await ctx.send(f"On version `{version}`.")
 
-    async def typing_a_message(self, ctx: commands.Context, **kwargs):
+    async def typing_a_message(self, ctx: commands.Context, /, **kwargs):
         """Make Koakuma seem alive with a 'is typing' delay
 
         Keywords:
@@ -128,12 +128,13 @@ class BotStatus(commands.Cog):
             else:
                 await ctx.send(content)
 
-    def get_quote(self, key: str, **kwargs) -> str:
+    def get_quote(self, key: str, /, **kwargs) -> str:
         """Get a quote from Koakuma's file of things to say"""
         if kwargs:
             return random.choice(self.bot.quotes[key]).format(**kwargs)
 
         return random.choice(self.bot.quotes[key])
+
 
 def setup(bot: commands.Bot):
     """Initiate cog"""

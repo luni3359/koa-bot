@@ -128,13 +128,31 @@ function restart() {
 }
 
 function run() {
-    echo "Starting bot..."
+    echo "Initiating..."
     cd "${KOAKUMA_HOME}"
 
     # pyenv specific
     if ! command_exists pyenv; then
-        export PYENV_ROOT=$HOME/.pyenv
-        export PATH="$PYENV_ROOT/bin:$PATH"
+        if ! (var_is_defined PYENV_ROOT && path_is_valid "${PYENV_ROOT}"); then
+            local possible_pyenv_paths=(
+                $XDG_DATA_HOME/pyenv
+                $HOME/.pyenv
+            )
+
+            for path in ${possible_pyenv_paths[*]}; do
+                if path_is_valid "${path}"; then
+                    PYENV_ROOT="${path}"
+                    break
+                fi
+            done
+
+            export PYENV_ROOT
+            export PATH="$PYENV_ROOT/bin:$PATH"
+        else
+            echo "run.sh cannot find the command pyenv"
+            echo "Please make sure that you've properly installed pyenv"
+            exit 1
+        fi
     fi
 
     if command_exists pyenv; then

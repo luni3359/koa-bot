@@ -25,7 +25,8 @@ class ImageBoard(commands.Cog):
         board_cog: Board = self.bot.get_cog('Board')
         await board_cog.search_board(ctx, tags, board='e621', guide=self.bot.guides['gallery']['e621-default'])
 
-    @commands.command(name='sankaku')
+    # Might as well use pixiv
+    @commands.command(name='sankaku', enabled=False)
     async def search_sankaku(self, ctx, *, tags: str):
         """Search on sankaku!"""
         board_cog: Board = self.bot.get_cog('Board')

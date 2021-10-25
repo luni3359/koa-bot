@@ -134,7 +134,8 @@ async def lookup_pending_posts() -> None:
             channel_categories[channel_category].append(koakuma.bot.get_channel(int(channel)))
 
     while not koakuma.bot.is_closed():
-        posts = (await board_cog.search_query(tags=koakuma.bot.tasks['danbooru']['tag_list'], limit=5, random=True)).json
+        guide = koakuma.bot.guides['gallery']['danbooru-default']
+        posts = (await board_cog.search_query(tags=koakuma.bot.tasks['danbooru']['tag_list'], guide=guide, limit=5, random=True)).json
 
         safe_posts = []
         nsfw_posts = []
@@ -142,7 +143,7 @@ async def lookup_pending_posts() -> None:
             post_id = post['id']
             if not post_id in pending_posts:
                 pending_posts.append(post_id)
-                url_to_append = koakuma.bot.assets['danbooru']['search_url'].format(post_id)
+                url_to_append = guide['post']['url'].format(post_id)
 
                 if post['rating'] == 's':
                     safe_posts.append(url_to_append)

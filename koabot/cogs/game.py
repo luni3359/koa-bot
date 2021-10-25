@@ -88,8 +88,9 @@ class Game(commands.Cog):
 
         total_sum = 0
         logic_string = ""
-        die_or_dice = roll_count > 1 and 'dice' or 'die'
-        message = f">>> {ctx.author.mention} rolled the {die_or_dice}.\n"
+        # die_or_dice = roll_count > 1 and 'dice' or 'die'
+        # message = f">>> {ctx.author.mention} rolled the {die_or_dice}.\n"
+        message = ">>> "
 
         for i, match in enumerate(matches_found):
             match: RollMatch = match
@@ -209,12 +210,12 @@ class Game(commands.Cog):
                 else:
                     logic_string += f"__{' + '.join(map(str, roll_list))}__ "
 
-        if logic_string:
-            message += f"{logic_string}\n"
+        # if logic_string:
+            # message += f"{logic_string}\n"
 
         message += f"For a total of **{total_sum}.**"
 
-        await ctx.send(message[0:2000])
+        await ctx.reply(message[0:2000], mention_author=False)
 
     @roll.error
     async def roll_error(self, ctx: commands.Context, exception: commands.CommandError):

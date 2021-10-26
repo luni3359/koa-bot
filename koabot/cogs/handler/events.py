@@ -102,9 +102,10 @@ class BotEvents(commands.Cog):
         if hasattr(ctx.command, 'on_error'):
             return
 
-        if cog := ctx.cog:
-            if cog._get_overridden_method(cog.cog_command_error) is not None:
-                return
+        # Temporarily disabled as this makes cog_command_error override this listener entirely
+        # if cog := ctx.cog:
+        #     if cog._get_overridden_method(cog.cog_command_error) is not None:
+        #         return
 
         ignored = (commands.CommandNotFound, commands.CheckFailure, )
         error = getattr(error, 'original', error)

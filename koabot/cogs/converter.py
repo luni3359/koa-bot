@@ -1,6 +1,5 @@
 """Unit manager for any dimension and type"""
 import itertools
-import random
 
 import forex_python.converter as currency
 from discord.ext import commands
@@ -16,12 +15,12 @@ class Converter(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.ureg = UnitRegistry()
-        self.ureg.default_format = '~P.3f'
-        self.Q_ = self.ureg.Quantity
+        self.ureg.default_format = "~P.3f"
+        self.quantity = self.ureg.Quantity
         self.currency = currency.CurrencyRates()
 
     @commands.command(name='convert', aliases=['conv', 'cv'])
-    async def unit_convert(self, ctx, *, units):
+    async def unit_convert(self, ctx: commands.Context, *, units: str = ""):
         """Convert units"""
 
         unit_matches = []
@@ -29,7 +28,8 @@ class Converter(commands.Cog):
         while i < len(units):
             ftin_match = SPECIAL_UNIT_PATTERN_TUPLE[1].match(units, i)
             if ftin_match:
-                unit_matches.append((SPECIAL_UNIT_PATTERN_TUPLE[0], float(ftin_match.group(1)), float(ftin_match.group(2))))
+                unit_matches.append((SPECIAL_UNIT_PATTERN_TUPLE[0], float(
+                    ftin_match.group(1)), float(ftin_match.group(2))))
                 # unit_matches.append((unit_name, value in feet, value in inches))
                 i = ftin_match.end()
                 continue
@@ -51,7 +51,7 @@ class Converter(commands.Cog):
             await self.convert_units(ctx, unit_matches)
 
     @commands.command(name='exchange', aliases=['currency', 'xc', 'c'])
-    async def convert_currency(self, ctx, amount: float, currency_type1: str, _, currency_type2: str):
+    async def convert_currency(self, ctx: commands.Context, amount: float, currency_type1: str, _, currency_type2: str):
         """Convert currency to others"""
 
         currency_type1 = currency_type1.upper()
@@ -60,49 +60,37 @@ class Converter(commands.Cog):
 
         await ctx.send(f'```{amount} {currency_type1} → {converted_amount:0.2f} {currency_type2}```')
 
-    async def convert_units(self, ctx, units):
-        """Convert units found to their opposite (SI <-> imp)"""
+    async def convert_units(self, ctx: commands.Context, units: list):
+        """Convert units found to their opposite (SI <-> imp)
+        Arguments:
+            units::list
+                List of units of measurement that have been parsed by unit_convert
+        """
+        conversion_str = '```'
 
-        imperial_units = [
-            'feet',
-            'inches',
-            'miles',
-            'pounds',
-        ]
-        si_units = [
-            'meters',
-            'centimeters',
-            'kilometers',
-            'kilograms'
-        ]
+        for unit_str, value, *extra_value in units:
+            if unit_str == 'footinches':
+                extra_value = extra_value[0]
+                converted_value = (value * self.ureg.foot + extra_value * self.ureg.inch).to_base_units()
+                calculation_str = f'{value * self.ureg.foot} {extra_value * self.ureg.inch} → {converted_value}'
 
-        if not units:
-            return
-
-        conversion_str = random.choice(self.bot.quotes['converting_units']) + '```'
-
-        for quantity in units:
-            if quantity[0] == 'footinches':
-                value = quantity[1]
-                value2 = quantity[2]
-
-                converted_value = (value * self.ureg.foot + value2 * self.ureg.inch).to_base_units()
-                calculation_str = f'{value * self.ureg.foot} {value2 * self.ureg.inch} → {converted_value}'
                 print(calculation_str)
                 conversion_str += f'\n{calculation_str}'
                 continue
 
-            (unit, value) = quantity
-            value = value * self.ureg[unit]
+            unit = self.ureg[unit_str]
+            value = self.quantity(value, unit)
 
-            if unit in imperial_units:
-                converted_value = value.to_base_units()
-                converted_value = converted_value.to_compact()
-            elif unit in si_units:
-                if unit == 'kilometers':
+            if unit.u in dir(self.ureg.sys.imperial) or unit in (self.ureg['fahrenheit'], self.ureg['gallon']):
+                if str(unit.dimensionality) == '[temperature]':
+                    converted_value = value.to(self.ureg.celsius)
+                else:
+                    converted_value = value.to_base_units()
+                    converted_value = converted_value.to_compact()
+            # elif unit.u in dir(self.ureg.sys.mks):
+            elif str(unit.dimensionality) == '[length]':
+                if unit == self.ureg['kilometer']:
                     converted_value = value.to(self.ureg.miles)
-                elif unit == 'kilograms':
-                    converted_value = value.to(self.ureg.pounds)
                 elif value.magnitude >= 300:
                     converted_value = value.to(self.ureg.yards)
                 else:
@@ -111,6 +99,15 @@ class Converter(commands.Cog):
                     feet = int(inches.magnitude / 12)
                     remainder_inches = round(inches.magnitude % 12)
                     converted_value = f'{feet} ft {remainder_inches} in ({raw_feet})'
+
+            elif str(unit.dimensionality) == '[length] ** 3':
+                converted_value = value.to(self.ureg.gallon)
+
+            elif str(unit.dimensionality) == '[mass]':
+                converted_value = value.to(self.ureg.pounds)
+
+            elif str(unit.dimensionality) == '[temperature]':
+                converted_value = value.to(self.ureg.fahrenheit)
 
             calculation_str = f'{value} → {converted_value}'
             print(calculation_str)

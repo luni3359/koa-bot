@@ -1,20 +1,23 @@
 """Handles the use of imageboard galleries"""
 import os
-import random
+import re
 import shutil
-import typing
 from pathlib import Path
 
 import discord
 import imagehash
-import pixivpy3
+import pixivpy_async
 import tweepy
 from discord.ext import commands
 from PIL import Image
 
-import koabot.koakuma as koakuma
-import koabot.utils as utils
+import koabot.utils.net as net_utils
+import koabot.utils.posts as post_utils
+from koabot import koakuma
+from koabot.cogs.botstatus import BotStatus
+from koabot.cogs.handler.board import Board
 from koabot.koakuma import CACHE_DIR
+from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
 
 class Gallery(commands.Cog):
@@ -22,52 +25,44 @@ class Gallery(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'], bot.auth_keys['twitter']['consumer_secret'])
+        twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'],
+                                        bot.auth_keys['twitter']['consumer_secret'])
         twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
         self.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
-        self.pixiv_api = pixivpy3.AppPixivAPI()
+        self.pixiv_aapi = pixivpy_async.AppPixivAPI()
         self.pixiv_refresh_token = None
 
-    async def display_static(self, channel, msg, url, **kwargs):
+    async def display_static(self, channel: discord.TextChannel, url: str, /, *, board: str = 'danbooru', guide: dict, only_missing_preview: bool = False, **kwargs) -> None:
         """Display posts from a gallery in separate unmodifiable embeds
         Arguments:
             channel::discord.TextChannel
                 Channel the message is in
-            msg::discord.Message
-                Message sent by the author
             url::str
                 Url to get a gallery from
         Keywords:
             board::str
                 Name of the board to handle. Default is 'danbooru'
-            id_start::str
-                The point at which an url's id is stripped from
-            id_end::str
-                The point at which an url's id is stripped to
-                The board to handle. Default is 'danbooru'
             guide::dict
                 The data which holds the board information
             end_regex::bool
                 Whether or not id_end is regex. Default is False
+            only_missing_preview::bool
+                Only shows a preview if the native embed is missing from the original link. Default is False
         """
-
-        board = kwargs.get('board', 'danbooru')
-        guide = kwargs.get('guide', None)
-        end_regex = kwargs.get('end_regex', False)
+        end_regex: bool = kwargs.get('end_regex', False)
 
         if not guide:
-            raise ValueError('The \'guide\' keyword argument is not defined.')
+            raise ValueError("The 'guide' keyword argument is not defined.")
 
         id_start = guide['post']['id_start']
         id_end = guide['post']['id_end']
 
-        on_nsfw_channel = channel.is_nsfw()
-        post_id = utils.posts.get_post_id(url, id_start, id_end, has_regex=end_regex)
+        post_id = post_utils.get_post_id(url, id_start, id_end, has_regex=end_regex)
 
         if not post_id:
             return
 
-        board_cog = self.bot.get_cog('Board')
+        board_cog: Board = self.bot.get_cog('Board')
 
         post = (await board_cog.search_query(board=board, guide=guide, post_id=post_id)).json
 
@@ -80,20 +75,22 @@ class Gallery(commands.Cog):
 
         post_id = post['id']
 
-        bot_cog = self.bot.get_cog('BotStatus')
+        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         on_nsfw_channel = channel.is_nsfw()
-        first_post_missing_preview = utils.posts.post_is_missing_preview(post, board=board)
+        first_post_missing_preview = post_utils.post_is_missing_preview(post, board=board)
         posts = []
 
         if post['rating'] != 's' and not on_nsfw_channel:
-            embed = discord.Embed()
-            if 'nsfw_placeholder' in self.bot.assets[board]:
-                embed.set_image(url=self.bot.assets[board]['nsfw_placeholder'])
-            else:
-                embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
+            # Silently ignore
+            return
+            # embed = discord.Embed()
+            # if 'nsfw_placeholder' in self.bot.assets[board]:
+            #     embed.set_image(url=self.bot.assets[board]['nsfw_placeholder'])
+            # else:
+            #     embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-            content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
-            await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+            # content = f"{msg.author.mention} {bot_cog.get_quote('improper_content_reminder')}"
+            # await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
         if board == 'e621':
             has_children = post['relationships']['has_active_children']
@@ -109,24 +106,28 @@ class Gallery(commands.Cog):
             c_search = f'parent:{post_id} order:id -id:{post_id}'
             p_search = f'parent:{parent_id} order:id -id:{post_id}'
 
+        if only_missing_preview:
+            if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
+                await board_cog.send_posts(channel, post, board=board, guide=guide)
+            return
+
         if has_children:
             search = c_search
         elif parent_id:
             search = p_search
         else:
-            if first_post_missing_preview:
-                if post['rating'] == 's' or on_nsfw_channel:
-                    await board_cog.send_posts(channel, post, board=board, guide=guide)
+            if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
+                await board_cog.send_posts(channel, post, board=board, guide=guide)
             return
 
         if isinstance(search, str):
             search = [search]
 
         for s in search:
-            results = (await board_cog.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)).json
+            results = await board_cog.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)
 
             # e621 fix for broken API
-            if 'posts' in results:
+            if 'posts' in results.json:
                 results = results['posts']
 
             posts.extend(results)
@@ -155,7 +156,7 @@ class Gallery(commands.Cog):
                 for res_key in self.bot.assets[board]['post_quality']:
                     if res_key in test_post:
                         url_candidate = test_post[res_key]
-                        file_ext = utils.net.get_url_fileext(url_candidate)
+                        file_ext = net_utils.get_url_fileext(url_candidate)
                         if file_ext in ['png', 'jpg', 'webp']:
                             file_url = url_candidate
                             file_name = str(test_post['id']) + '.' + file_ext
@@ -178,7 +179,7 @@ class Gallery(commands.Cog):
 
                 if should_cache:
                     print(f"Caching post #{test_post['id']}...")
-                    image_bytes = await utils.net.fetch_image(file_url)
+                    image_bytes = await net_utils.fetch_image(file_url)
                     with open(os.path.join(file_cache_dir, file_name), 'wb') as image_file:
                         shutil.copyfileobj(image_bytes, image_file)
                 else:
@@ -188,17 +189,18 @@ class Gallery(commands.Cog):
 
             ground_truth = parsed_posts[0]
             for hash_func in [imagehash.phash, imagehash.dhash, imagehash.average_hash, imagehash.colorhash]:
-                if hash_func == imagehash.colorhash:
-                    hash_param = {'binbits': 6}
-                else:
+                if hash_func != imagehash.colorhash:
                     hash_param = {'hash_size': 16}
+                else:
+                    hash_param = {'binbits': 6}
 
                 ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), **hash_param))
 
                 for parsed_post in parsed_posts[1:]:
                     parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), **hash_param))
 
-                    hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - parsed_post['hash'][len(parsed_post['hash']) - 1]
+                    hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - \
+                        parsed_post['hash'][len(parsed_post['hash']) - 1]
                     parsed_post['score'].append(hash_diff)
 
             print(f'Scores for post #{post_id}')
@@ -218,41 +220,58 @@ class Gallery(commands.Cog):
             else:
                 await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
         else:
-            if post['rating'] == 's' and not nsfw_culled:
-                print('Removed all duplicates')
-                return
+            if post['rating'] == 's' and not nsfw_culled or on_nsfw_channel:
+                return print('Removed all duplicates')
             elif post['rating'] == 's':
-                content = random.choice(self.bot.quotes['cannot_show_nsfw_gallery'])
+                content = bot_cog.get_quote('cannot_show_nsfw_gallery')
             else:
-                content = random.choice(self.bot.quotes['rude_cannot_show_nsfw_gallery'])
+                content = bot_cog.get_quote('rude_cannot_show_nsfw_gallery')
 
             await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
-    async def get_twitter_gallery(self, msg, url, **kwargs):
+    async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict) -> None:
         """Automatically fetch and post any image galleries from twitter
+        Parameters:
+            msg::discord.Message
+                The message where the link was sent
+            url::str
+                Link of the tweet
         Keywords:
             guide::dict
                 The data which holds the board information
         """
-
-        channel = msg.channel
-        guide = kwargs.get('guide', self.bot.guides['gallery']['twitter-gallery'])
+        channel: discord.TextChannel = msg.channel
+        guide = guide or self.bot.guides['gallery']['twitter-gallery']
 
         id_start = guide['post']['id_start']
         id_end = guide['post']['id_end']
 
-        post_id = utils.posts.get_post_id(url, id_start, id_end)
+        post_id = post_utils.get_post_id(url, id_start, id_end)
         if not post_id:
             return
 
-        tweet = self.twitter_api.get_status(post_id, tweet_mode='extended')
+        try:
+            tweet = self.twitter_api.get_status(post_id, tweet_mode='extended')
+        except tweepy.HTTPException as e:
+            # Error codes: https://developer.twitter.com/en/support/twitter-api/error-troubleshooting
+            if e.response is not None:
+                code = e.response.status
+                print(f"Failure on Tweet #{post_id}: [E{code}]")
+            else:
+                print(f"Failure on Tweet #{post_id}")
+
+            print(e)
+            return
 
         if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
             print('Preview gallery not applicable.')
             return
 
+        # Supress original embed (sorry, desktop-only users)
+        await msg.edit(suppress=True)
+
         gallery_pics = []
-        for picture in tweet.extended_entities['media'][1:]:
+        for picture in tweet.extended_entities['media'][0:]:
             if picture['type'] != 'photo':
                 return
 
@@ -264,40 +283,50 @@ class Gallery(commands.Cog):
             total_gallery_pics -= 1
 
             embed = discord.Embed()
-            embed.set_author(
-                name=f'{tweet.author.name} (@{tweet.author.screen_name})',
-                url=guide['post']['url'].format(tweet.author.screen_name),
-                icon_url=tweet.author.profile_image_url_https)
             embed.set_image(url=picture)
+            embed.colour = discord.Colour.from_rgb(29, 161, 242)  # Twitter color
+
+            # If it's the first picture to show, add author, body, and counters
+            if total_gallery_pics + 1 == len(gallery_pics):
+                embed.set_author(
+                    name=f'{tweet.author.name} (@{tweet.author.screen_name})',
+                    url=guide['post']['url'].format(tweet.author.screen_name),
+                    icon_url=tweet.author.profile_image_url_https)
+                embed.description = tweet.full_text[tweet.display_text_range[0]:tweet.display_text_range[1]]
+                embed.add_field(name='Retweets', value=tweet.retweet_count)
+                embed.add_field(name='Likes', value=tweet.favorite_count)
 
             # If it's the last picture to show, add a brand footer
             if total_gallery_pics <= 0:
                 embed.set_footer(
-                    text=guide['embed']['footer_text'],
+                    text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
                     icon_url=self.bot.assets['twitter']['favicon'])
 
             await channel.send(embed=embed)
 
-    async def get_pixiv_gallery(self, msg, url):
-        """Automatically fetch and post any image galleries from pixiv"""
+    async def get_pixiv_gallery(self, msg: discord.Message, url: str, /) -> None:
+        """Automatically fetch and post any image galleries from pixiv
+        Parameters:
+            msg::discord.Message
+                The message where the link was sent
+            url::str
+                Link of the pixiv post
+        """
+        channel: discord.TextChannel = msg.channel
 
-        channel = msg.channel
-
-        post_id = utils.posts.get_post_id(url, ['illust_id=', '/artworks/'], '&')
+        post_id = post_utils.get_post_id(url, ['illust_id=', '/artworks/'], r'[0-9]+', has_regex=True)
         if not post_id:
             return
 
-        print(f'Now starting to process pixiv link #{post_id}')
+        print(f"Now starting to process pixiv link #{post_id}")
+        url = f"https://www.pixiv.net/artworks/{post_id}"
 
         # Login
-        if self.pixiv_api.access_token is None:
-            self.reauthenticate_pixiv()
-        else:
-            self.pixiv_api.auth(refresh_token=self.pixiv_refresh_token)
+        await self.reauthenticate_pixiv()
 
         try:
-            illust_json = self.pixiv_api.illust_detail(post_id, req_auth=True)
-        except pixivpy3.PixivError as e:
+            illust_json = await self.pixiv_aapi.illust_detail(post_id, req_auth=True)
+        except pixivpy_async.PixivError as e:
             await channel.send('Odd...')
             print(e)
             return
@@ -310,23 +339,24 @@ class Gallery(commands.Cog):
 
         print(f'Pixiv auth passed! (for #{post_id})')
 
+        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         illust = illust_json.illust
-        if illust.x_restrict != 0 and not channel.is_nsfw():
-            embed = discord.Embed()
+        # if illust.x_restrict != 0 and not channel.is_nsfw():
+        #     embed = discord.Embed()
 
-            if 'nsfw_placeholder' in self.bot.assets['pixiv']:
-                embed.set_image(url=self.bot.assets['pixiv']['nsfw_placeholder'])
-            else:
-                embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
+        #     if 'nsfw_placeholder' in self.bot.assets['pixiv']:
+        #         embed.set_image(url=self.bot.assets['pixiv']['nsfw_placeholder'])
+        #     else:
+        #         embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-            content = f"{msg.author.mention} {random.choice(self.bot.quotes['improper_content_reminder'])}"
+        #     content = f"{msg.author.mention} {bot_cog.get_quote('improper_content_reminder')}"
 
-            bot_cog = self.bot.get_cog('BotStatus')
+        #     bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
-            await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
-            return
+        #     await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+        #     return
 
-        temp_message = await channel.send(f"***{random.choice(self.bot.quotes['processing_long_task'])}***")
+        temp_message = await channel.send(f"***{bot_cog.get_quote('processing_long_task')}***")
         async with channel.typing():
             total_illust_pictures = illust.page_count
 
@@ -335,11 +365,25 @@ class Gallery(commands.Cog):
             else:
                 pictures = [illust]
 
-            total_to_preview = 5
+            total_to_preview = 1
             for i, picture in enumerate(pictures[:total_to_preview]):
                 print(f'Retrieving picture #{post_id}...')
 
-                (embed, url, filename) = await self.generate_pixiv_embed(picture, illust.user)
+                img_url = picture.image_urls.medium
+                filename = net_utils.get_url_filename(img_url)
+
+                embed = discord.Embed()
+                embed.set_image(url=f'attachment://{filename}')
+
+                if i == 0:
+                    if illust.title != "無題":
+                        embed.title = illust.title
+
+                    embed.url = url
+                    embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', illust.caption).strip()
+                    embed.set_author(
+                        name=illust.user.name,
+                        url=f'https://www.pixiv.net/users/{illust.user.id}')
 
                 # create if pixiv cache directory if it doesn't exist
                 file_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'files')
@@ -350,7 +394,7 @@ class Gallery(commands.Cog):
                 image_bytes = None
                 if not os.path.exists(image_path):
                     print('Saving to cache...')
-                    image_bytes = await utils.net.fetch_image(url, headers=koakuma.bot.assets['pixiv']['headers'])
+                    image_bytes = await net_utils.fetch_image(img_url, headers=koakuma.bot.assets['pixiv']['headers'])
 
                     with open(os.path.join(file_cache_dir, filename), 'wb') as image_file:
                         shutil.copyfileobj(image_bytes, image_file)
@@ -367,132 +411,100 @@ class Gallery(commands.Cog):
                     embed.set_footer(
                         text=remaining_footer,
                         icon_url=self.bot.assets['pixiv']['favicon'])
+
                 if image_bytes:
-                    await channel.send(file=discord.File(fp=image_bytes, filename=filename), embed=embed)
+                    await msg.reply(file=discord.File(fp=image_bytes, filename=filename), embed=embed, mention_author=False)
                     image_bytes.close()
                 else:
                     print('Uploading from cache...')
-                    await channel.send(file=discord.File(fp=image_path, filename=filename), embed=embed)
+                    await msg.reply(file=discord.File(fp=image_path, filename=filename), embed=embed, mention_author=False)
 
         await temp_message.delete()
+        await msg.edit(suppress=True)
+
         print('DONE PIXIV!')
 
-    def reauthenticate_pixiv(self):
+    async def reauthenticate_pixiv(self) -> None:
         """Fetch and cache the refresh token"""
+        if self.pixiv_refresh_token:
+            return await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
+
         pixiv_cache_dir = os.path.join(CACHE_DIR, 'pixiv')
         token_filename = 'refresh_token'
         token_path = os.path.join(pixiv_cache_dir, token_filename)
 
-        if self.pixiv_refresh_token:
-            self.pixiv_api.auth(refresh_token=self.pixiv_refresh_token)
-        elif os.path.exists(token_path):
-            with open(token_path) as token_file:
+        if os.path.exists(token_path):
+            with open(token_path, encoding="UTF-8") as token_file:
                 token = token_file.readline()
                 self.pixiv_refresh_token = token
-                self.pixiv_api.auth(refresh_token=token)
+                await self.pixiv_aapi.login(refresh_token=token)
         else:
-            self.pixiv_api.login(self.bot.auth_keys['pixiv']['username'], self.bot.auth_keys['pixiv']['password'])
-            self.pixiv_refresh_token = self.pixiv_api.refresh_token
+            pixiv_auth = self.bot.auth_keys['pixiv']
+            await self.pixiv_aapi.login(pixiv_auth['username'], pixiv_auth['password'])
+            self.pixiv_refresh_token = self.pixiv_aapi.refresh_token
             os.makedirs(pixiv_cache_dir, exist_ok=True)
-            with open(token_path, 'w') as token_file:
-                token_file.write(self.pixiv_api.refresh_token)
+            with open(token_path, 'w', encoding="UTF-8") as token_file:
+                token_file.write(self.pixiv_aapi.refresh_token)
 
-    async def generate_pixiv_embed(self, post, user):
-        """Generate embeds for pixiv urls
-        Arguments:
-            post
-                The post object
-            user
-                The artist of the post
-        Returns:
-            embed::discord.Embed
-                Embed object
-            image_filename::str
-                Image filename, extension included
-        """
-
-        img_url = post.image_urls.medium
-        image_filename = utils.net.get_url_filename(img_url)
-
-        embed = discord.Embed()
-        embed.set_author(
-            name=user.name,
-            url=f'https://www.pixiv.net/member.php?id={user.id}')
-        embed.set_image(url=f'attachment://{image_filename}')
-        return embed, img_url, image_filename
-
-    async def get_sankaku_post(self, msg, url):
-        """Automatically fetch a bigger preview from Sankaku Complex"""
-
-        channel = msg.channel
-
-        post_id = utils.posts.get_post_id(url, '/show/', '?')
-        if not post_id:
-            return
-
-        search_url = f"{self.bot.assets['sankaku']['id_search_url']}{post_id}"
-        api_result = (await utils.net.http_request(search_url, json=True)).json
-
-        if not api_result or 'code' in api_result:
-            print(f"Sankaku error\nCode #{api_result['code']}")
-            return
-
-        valid_urls_keys = [
-            'sample_url',   # medium quality / large sample
-            'file_url',     # highest quality / file (png, zip, webm)
-            'preview_url'   # lowest quality / thumbnail
-        ]
-        approved_ext = ['png', 'jpg', 'webp', 'gif']
-
-        img_url = api_result['preview_url']
-        image_filename = utils.net.get_url_filename(img_url)
-        image = await utils.net.fetch_image(img_url)
-
-        embed = discord.Embed()
-        embed.set_image(url=f"attachment://{image_filename}")
-        embed.set_footer(
-            text=self.bot.assets['sankaku']['name'],
-            icon_url=self.bot.assets['sankaku']['favicon'])
-
-        await channel.send(file=discord.File(fp=image, filename=image_filename), embed=embed)
-
-    async def get_deviantart_post(self, msg, url):
+    async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch post from deviantart"""
 
-        channel = msg.channel
+        channel: discord.TextChannel = msg.channel
 
-        post_id = utils.posts.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
+        post_id = post_utils.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
         if not post_id:
             return
 
         search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
+        api_result = (await net_utils.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
 
-        api_result = (await utils.net.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
+        deviation = api_result['deviation']
 
-        if not api_result['deviation']['isMature']:
-            return
-
-        if 'token' in api_result['deviation']['media']:
-            token = api_result['deviation']['media']['token'][0]
+        if deviation['type'] == "image":
+            await msg.edit(suppress=True)
+            await self.send_deviantart_image(channel, url, deviation)
+        elif deviation['type'] == "literature":
+            await msg.edit(suppress=True)
+            await self.send_deviantart_literature(channel, url,  deviation)
         else:
-            print('No token!!!!')
+            print(f"Incapable of handling DeviantArt url (type: {deviation['type']}):\n{url}")
 
-        baseUri = api_result['deviation']['media']['baseUri']
-        prettyName = api_result['deviation']['media']['prettyName']
+    async def send_deviantart_image(self, channel: discord.TextChannel, url: str, deviation):
+        """DeviantArt image embed sender"""
 
-        for media_type in api_result['deviation']['media']['types']:
+        token = deviation['media']['token'][0]
+        base_uri = deviation['media']['baseUri']
+        pretty_name = deviation['media']['prettyName']
+
+        for media_type in deviation['media']['types']:
             if media_type['t'] == 'preview':
-                preview_url = media_type['c'].replace('<prettyName>', prettyName)
+                preview_url = media_type['c'].replace('<prettyName>', pretty_name)
                 break
 
-        image_url = f'{baseUri}/{preview_url}?token={token}'
+        image_url = f'{base_uri}/{preview_url}?token={token}'
         print(image_url)
 
         embed = discord.Embed()
+        embed.title = deviation['title']
+        embed.url = url
+        embed.color = 0x06070d
         embed.set_author(
-            name=api_result['deviation']['author']['username'],
-            url=f"https://www.deviantart.com/{api_result['deviation']['author']['username']}",
-            icon_url=api_result['deviation']['author']['usericon'])
+            name=deviation['author']['username'],
+            url=f"https://www.deviantart.com/{deviation['author']['username']}",
+            icon_url=deviation['author']['usericon'])
+
+        embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
+                                   deviation['extended']['description']).strip()
+
+        if len(embed.description) > 200:
+            embed.description = embed.description[:200] + "..."
+
+        if (da_favorites := deviation['stats']['favourites']) > 0:
+            embed.add_field(name='Favorites', value=f"{da_favorites:,}")
+
+        if (da_views := deviation['extended']['stats']['views']) > 0:
+            embed.add_field(name='Views', value=f"{da_views:,}")
+
         embed.set_image(url=image_url)
         embed.set_footer(
             text=self.bot.assets['deviantart']['name'],
@@ -500,17 +512,43 @@ class Gallery(commands.Cog):
 
         await channel.send(embed=embed)
 
-    async def get_imgur_gallery(self, msg, url):
+    async def send_deviantart_literature(self, channel: discord.TextChannel, url: str, deviation):
+        """DeviantArt literature embed sender"""
+
+        embed = discord.Embed()
+        embed.title = deviation['title']
+        embed.url = url
+        embed.color = 0x06070d
+        embed.set_author(
+            name=deviation['author']['username'],
+            url=f"https://www.deviantart.com/{deviation['author']['username']}",
+            icon_url=deviation['author']['usericon'])
+
+        embed.description = deviation['textContent']['excerpt'] + "..."
+
+        if (da_favorites := deviation['stats']['favourites']) > 0:
+            embed.add_field(name='Favorites', value=f"{da_favorites:,}")
+
+        if (da_views := deviation['extended']['stats']['views']) > 0:
+            embed.add_field(name='Views', value=f"{da_views:,}")
+
+        embed.set_footer(
+            text=self.bot.assets['deviantart']['name'],
+            icon_url=self.bot.assets['deviantart']['favicon'])
+
+        await channel.send(embed=embed)
+
+    async def get_imgur_gallery(self, msg: discord.Message, url: str):
         """Automatically fetch and post any image galleries from imgur"""
 
-        channel = msg.channel
+        channel: discord.TextChannel = msg.channel
 
-        album_id = utils.posts.get_post_id(url, ['/a/', '/gallery/'], '?')
+        album_id = post_utils.get_post_id(url, ['/a/', '/gallery/'], '?')
         if not album_id:
             return
 
         search_url = self.bot.assets['imgur']['album_url'].format(album_id)
-        api_result = (await utils.net.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)).json
+        api_result = (await net_utils.http_request(search_url, headers=self.bot.assets['imgur']['headers'], json=True)).json
 
         if not api_result or api_result['status'] != 200:
             return

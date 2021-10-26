@@ -1,11 +1,12 @@
 """Handle looking at posts from forum sites"""
 import html
 import itertools
-import random
 
 import basc_py4chan
 import discord
 from discord.ext import commands
+
+from koabot.cogs.botstatus import BotStatus
 
 
 class Forums(commands.Cog):
@@ -15,7 +16,7 @@ class Forums(commands.Cog):
         self.bot = bot
 
     @commands.command(name='4chan', aliases=['4c', '4ch'])
-    async def get_4chan_posts(self, ctx, user_board: str = 'u', thread_id: int = 0):
+    async def get_4chan_posts(self, ctx: commands.Context, user_board: str = 'u', thread_id: int = 0):
         """Get posts from a specific board, mostly those with pictures"""
 
         board = basc_py4chan.Board(user_board, https=True)
@@ -24,8 +25,8 @@ class Forums(commands.Cog):
             max_posts = 5
 
             if not thread:
-                await ctx.send(random.choice(self.bot.quotes['thread_missing']))
-                return
+                bot_cog: BotStatus = self.bot.get_cog('BotStatus')
+                return await ctx.send(bot_cog.get_quote('thread_missing'))
 
             posts_ready = []
             for post in thread.posts:

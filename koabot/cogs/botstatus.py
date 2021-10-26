@@ -4,8 +4,13 @@ import random
 import re
 import subprocess
 from datetime import datetime
+from typing import Union
 
+import discord
 from discord.ext import commands
+from single_source import get_version
+
+from koabot import koakuma
 
 
 class BotStatus(commands.Cog):
@@ -15,7 +20,7 @@ class BotStatus(commands.Cog):
         self.bot = bot
 
     @commands.command(name='temperature', aliases=['temp'])
-    async def report_bot_temp(self, ctx):
+    async def report_bot_temp(self, ctx: commands.Context, /):
         """Show the bot's current temperature"""
 
         temperature_cmds = ['vcgencmd measure_temp', 'sensors']
@@ -59,48 +64,33 @@ class BotStatus(commands.Cog):
             cpu_temp = float(cpu_temp)
 
             print(f'CPU Temp: {cpu_temp:0.1f} °C')
-            await ctx.send(f'I\'m at {cpu_temp:0.1f} °C.')
+            await ctx.send(f"I'm at {cpu_temp:0.1f} °C.")
         except NameError:
             print('Unable to report temperature.')
-            await ctx.send('I can\'t get the temperature...')
+            await ctx.send("I can't get the temperature...")
 
     @commands.command(name='last')
-    async def talk_status(self, ctx):
+    async def talk_status(self, ctx: commands.Context, /):
         """Mention a brief summary of the last used channel"""
         await ctx.send(f'Last channel: {self.bot.last_channel}\nCurrent count there: {self.bot.last_channel_message_count}')
 
     @commands.command()
-    async def uptime(self, ctx):
+    async def uptime(self, ctx: commands.Context, /):
         """Mention the current uptime"""
 
         delta_uptime = datetime.utcnow() - self.bot.launch_time
         (hours, remainder) = divmod(int(delta_uptime.total_seconds()), 3600)
         (minutes, seconds) = divmod(remainder, 60)
         (days, hours) = divmod(hours, 24)
-        await ctx.send(f'I\'ve been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.')
+        await ctx.send(f"I've been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.")
 
     @commands.command()
-    async def version(self, ctx):
+    async def version(self, ctx: commands.Context, /):
         """Show bot's version"""
-        version_cmds = ['git describe --always']
-        version_cmd = ''
+        version = get_version(koakuma.BOT_DIRNAME, koakuma.PROJECT_DIR)
+        await ctx.send(f"On version `{version}`.")
 
-        for cmd in version_cmds:
-            cmd_parts = cmd.split()
-            version_cmd = cmd_parts[0]
-
-            try:
-                output = subprocess.check_output(cmd_parts).strip()
-            except FileNotFoundError:
-                print(f'"{cmd}" is missing in system.')
-
-        if not version_cmd:
-            await ctx.send('I have no way to figure out what version I\'m in...')
-
-        if version_cmd == 'git':
-            await ctx.send(f"On commit ``{output.decode('utf-8')}``.")
-
-    async def typing_a_message(self, ctx, **kwargs):
+    async def typing_a_message(self, ctx: commands.Context, /, **kwargs):
         """Make Koakuma seem alive with a 'is typing' delay
 
         Keywords:
@@ -115,19 +105,17 @@ class BotStatus(commands.Cog):
                 The amount of time that will be waited regardless of rnd_duration.
         """
 
-        content = kwargs.get('content')
-        embed = kwargs.get('embed')
-        rnd_duration = kwargs.get('rnd_duration')
-        min_duration = kwargs.get('min_duration', 0)
+        content: str = kwargs.get('content')
+        embed: discord.Embed = kwargs.get('embed')
+        rnd_duration: Union[list, int] = kwargs.get('rnd_duration')
+        min_duration: int = kwargs.get('min_duration', 0)
 
         if isinstance(rnd_duration, int):
             rnd_duration = [0, rnd_duration]
 
         async with ctx.typing():
             if rnd_duration:
-                time_to_wait = random.randint(rnd_duration[0], rnd_duration[1])
-                if time_to_wait < min_duration:
-                    time_to_wait = min_duration
+                time_to_wait = max(min_duration, random.randint(rnd_duration[0], rnd_duration[1]))
                 await asyncio.sleep(time_to_wait)
             else:
                 await asyncio.sleep(min_duration)
@@ -139,6 +127,13 @@ class BotStatus(commands.Cog):
                     await ctx.send(embed=embed)
             else:
                 await ctx.send(content)
+
+    def get_quote(self, key: str, /, **kwargs) -> str:
+        """Get a quote from Koakuma's file of things to say"""
+        if kwargs:
+            return random.choice(self.bot.quotes[key]).format(**kwargs)
+
+        return random.choice(self.bot.quotes[key])
 
 
 def setup(bot: commands.Bot):

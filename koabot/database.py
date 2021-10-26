@@ -1,3 +1,4 @@
+"""Database attempt"""
 import os
 import sqlite3
 
@@ -6,7 +7,7 @@ from koabot.koakuma import CACHE_DIR
 conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbTest.sqlite3'))
 c = conn.cursor()
 
-with open('db/database.sql') as f:
+with open('db/database.sql', encoding="UTF-8") as f:
     sql_script = f.read()
 c.executescript(sql_script)
 conn.commit()

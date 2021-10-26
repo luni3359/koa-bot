@@ -1,7 +1,8 @@
 """__init.py__"""
 import sys
 
-MIN_PYTHON_VERSION = (3, 7, 3)
+MIN_PYTHON_VERSION = (3, 8)
 
 if sys.version_info < MIN_PYTHON_VERSION:
-    sys.exit(1)
+    version_str = '.'.join(map(str, MIN_PYTHON_VERSION))
+    raise EnvironmentError("Python version needs to be at least " + version_str)

@@ -81,10 +81,8 @@ def load_all_extensions(path: str) -> None:
 
 
 @bot.check
-async def debug_check(ctx: commands.Context):
+async def debug_check(ctx: commands.Context) -> bool:
     """Disable live instance for specific users if a beta instance is running"""
-
-    beta_bot_id = bot.koa['discord_user']['beta_id']
 
     # ignore everything in DMs
     if ctx.guild is None:
@@ -92,21 +90,24 @@ async def debug_check(ctx: commands.Context):
 
     # if the author is not a debug user
     if ctx.author.id not in bot.testing['debug_users']:
-        return ctx.guild.me.id != beta_bot_id
+        return not bot.is_beta
 
-    beta_bot = ctx.guild.get_member(beta_bot_id)
+    if not bot.is_beta:
+        beta_bot_id = bot.koa['discord_user']['beta_id']
+        beta_bot: discord.Member = ctx.guild.get_member(beta_bot_id)
 
-    # if the beta bot is online
-    if beta_bot and beta_bot.status == discord.Status.online:
-        return ctx.guild.me.id == beta_bot_id
+        # if the beta bot is online
+        if beta_bot and beta_bot.status == discord.Status.online:
+            return False
 
     return True
 
 
-def start(debugging=False, /):
+def start(debugging: bool = False, /):
     """Starts the bot"""
     print(f"Starting {BOT_DIRNAME}...")
     bot.launch_time = datetime.utcnow()
+    bot.is_beta = debugging
     bot_data = {}
 
     data_filenames = [

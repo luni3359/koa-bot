@@ -65,14 +65,14 @@ class StreamService(commands.Cog):
         """Automatically fetch a preview of the running stream"""
 
         channel: discord.TextChannel = msg.channel
-        post_id = post_utils.get_post_id(url, '.tv/', '?')
+        channel_name = post_utils.get_name_or_id(url, start='.tv/')
 
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
-        if not post_id:
+        if not channel_name:
             return
 
-        channel_url = f'https://api.picarto.tv/api/v1/channel/name/{post_id}'
+        channel_url = f'https://api.picarto.tv/api/v1/channel/name/{channel_name}'
         picarto_request = (await net_utils.http_request(channel_url, json=True)).json
 
         if not picarto_request:
@@ -88,8 +88,8 @@ class StreamService(commands.Cog):
 
         embed = discord.Embed()
         embed.set_author(
-            name=post_id,
-            url=f'https://picarto.tv/{post_id}',
+            name=channel_name,
+            url=f'https://picarto.tv/{channel_name}',
             icon_url=picarto_request['avatar'])
         embed.description = f"**{picarto_request['title']}**"
         embed.set_image(url=f'attachment://{filename}')

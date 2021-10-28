@@ -5,37 +5,52 @@ from typing import Union
 from koabot import koakuma
 
 
-def get_post_id(url: str, words_to_match: Union[str, list], trim_to: str, /, *, has_regex: bool = False) -> int:
-    """Get post id from url
+def get_name_or_id(url: str, /, *, start: Union[str, list] = [], end: Union[str, list] = ['?'], pattern: str = "") -> str:
+    """Get a name or an id from an url
     Arguments:
         url::str
             Url to extract the id from
-        words_to_match::str or list
-            First part to start looking from
-        trim_to::str or regex pattern (str)
-            The final part to stop at
-
     Keywords:
-        has_regex::bool
-            Indicates whether or not 'trim_to' should be treated
-            as a regex pattern.
+        start::str | list
+            First part to start looking from
+        end::str | list
+            The final part to stop at. By default it tries to trim out
+            anything past a question mark.
+        pattern::str (regex pattern)
+            If set to a pattern, it will be used after <start> and <end>
+            have done their job.
     """
 
-    if not isinstance(words_to_match, list):
-        words_to_match = [words_to_match]
+    if not isinstance(start, list):
+        start = [start]
 
-    matching_word = False
-    for v in words_to_match:
+    starting_match = None
+    for v in start:
         if v in url:
-            matching_word = v
+            starting_match = v
 
-    if not matching_word:
+    if not starting_match:
         return
 
-    if has_regex:
-        return re.findall(trim_to, url.split(matching_word)[1])[0]
+    # Index 1, because index 0 is everything before the character that matched
+    url = url.split(starting_match)[1]
 
-    return url.split(matching_word)[1].split(trim_to)[0]
+    if not isinstance(end, list):
+        end = [end]
+
+    ending_match = None
+    for v in end:
+        if v in url:
+            ending_match = v
+
+    if ending_match:
+        # Index 0, because index 1 is everything after the character that matched
+        url = url.split(ending_match)[0]
+
+    if pattern:
+        return re.findall(pattern, url)[0]
+
+    return url
 
 
 def combine_tags(tags: Union[str, list], /,  *, maximum: int = 5) -> str:

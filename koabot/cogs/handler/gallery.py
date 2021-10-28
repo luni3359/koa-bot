@@ -32,7 +32,7 @@ class Gallery(commands.Cog):
         self.pixiv_aapi = pixivpy_async.AppPixivAPI()
         self.pixiv_refresh_token = None
 
-    async def display_static(self, channel: discord.TextChannel, url: str, /, *, board: str = 'danbooru', guide: dict, only_missing_preview: bool = False, **kwargs) -> None:
+    async def display_static(self, channel: discord.TextChannel, url: str, /, *, board: str = 'danbooru', guide: dict, only_missing_preview: bool = False) -> None:
         """Display posts from a gallery in separate unmodifiable embeds
         Arguments:
             channel::discord.TextChannel
@@ -44,21 +44,17 @@ class Gallery(commands.Cog):
                 Name of the board to handle. Default is 'danbooru'
             guide::dict
                 The data which holds the board information
-            end_regex::bool
-                Whether or not id_end is regex. Default is False
             only_missing_preview::bool
                 Only shows a preview if the native embed is missing from the original link. Default is False
         """
-        end_regex: bool = kwargs.get('end_regex', False)
-
         if not guide:
             raise ValueError("The 'guide' keyword argument is not defined.")
 
         id_start = guide['post']['id_start']
-        id_end = guide['post']['id_end']
+        id_end = 'id_end' in guide['post'] and guide['post']['id_end'] or ['?']
+        pattern = 'pattern' in guide['post'] and guide['post']['pattern'] or ""
 
-        post_id = post_utils.get_post_id(url, id_start, id_end, has_regex=end_regex)
-
+        post_id = post_utils.get_name_or_id(url, start=id_start, end=id_end, pattern=pattern)
         if not post_id:
             return
 
@@ -246,7 +242,7 @@ class Gallery(commands.Cog):
         id_start = guide['post']['id_start']
         id_end = guide['post']['id_end']
 
-        post_id = post_utils.get_post_id(url, id_start, id_end)
+        post_id = post_utils.get_name_or_id(url, start=id_start, end=id_end)
         if not post_id:
             return
 
@@ -314,7 +310,7 @@ class Gallery(commands.Cog):
         """
         channel: discord.TextChannel = msg.channel
 
-        post_id = post_utils.get_post_id(url, ['illust_id=', '/artworks/'], r'[0-9]+', has_regex=True)
+        post_id = post_utils.get_name_or_id(url, start=['illust_id=', '/artworks/'], pattern=r'[0-9]+')
         if not post_id:
             return
 
@@ -451,7 +447,7 @@ class Gallery(commands.Cog):
 
         channel: discord.TextChannel = msg.channel
 
-        post_id = post_utils.get_post_id(url, '/art/', r'[0-9]+$', has_regex=True)
+        post_id = post_utils.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')
         if not post_id:
             return
 
@@ -543,7 +539,7 @@ class Gallery(commands.Cog):
 
         channel: discord.TextChannel = msg.channel
 
-        album_id = post_utils.get_post_id(url, ['/a/', '/gallery/'], '?')
+        album_id = post_utils.get_name_or_id(url, start=['/a/', '/gallery/'])
         if not album_id:
             return
 

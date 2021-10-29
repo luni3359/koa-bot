@@ -121,9 +121,10 @@ class Gallery(commands.Cog):
 
         for s in search:
             results = await board_cog.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)
+            results = results.json
 
             # e621 fix for broken API
-            if 'posts' in results.json:
+            if 'posts' in results:
                 results = results['posts']
 
             posts.extend(results)
@@ -225,7 +226,7 @@ class Gallery(commands.Cog):
 
             await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
-    async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict) -> None:
+    async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict = []) -> None:
         """Automatically fetch and post any image galleries from twitter
         Parameters:
             msg::discord.Message

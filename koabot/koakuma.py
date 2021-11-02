@@ -60,6 +60,7 @@ def load_all_extensions(path: str) -> None:
     start_load_time = timeit.default_timer()
     cog_prefix = 'koabot.cogs'
     cog_list = []
+    dropped_cogs = 0
 
     for p, _, f in os.walk(path):
         for file in f:
@@ -74,10 +75,21 @@ def load_all_extensions(path: str) -> None:
                 cog_list.append(cog_path)
 
     for ext in cog_list:
-        print(f'Loading "{ext}"...'.ljust(40), end='\r')
-        bot.load_extension(ext)
+        try:
+            print(f"Loading \"{ext}\"...".ljust(40), end='\r')
+            bot.load_extension(ext)
+        except commands.errors.ExtensionFailed:
+            dropped_cogs += 1
+            print(f"Failed to load \"{ext}\".")
 
-    print(f'Finished loading {len(cog_list)} cogs in {timeit.default_timer() - start_load_time:0.2f}s.'.ljust(40))
+    time_to_finish = timeit.default_timer() - start_load_time
+
+    if dropped_cogs == 0:
+        log_msg = f"Finished loading {len(cog_list)} cogs in {time_to_finish:0.2f}s."
+    else:
+        log_msg = f"WARNING: Only {len(cog_list)-dropped_cogs}/{len(cog_list)} succesfully loaded (in {time_to_finish:0.2f}s)."
+
+    print(log_msg.ljust(40))
 
 
 @bot.check

@@ -237,7 +237,6 @@ class Gallery(commands.Cog):
             guide::dict
                 The data which holds the board information
         """
-        channel: discord.TextChannel = msg.channel
         guide = guide or self.bot.guides['gallery']['twitter-gallery']
 
         id_start = guide['post']['id_start']
@@ -275,6 +274,7 @@ class Gallery(commands.Cog):
             # Appending :orig to get a better image quality
             gallery_pics.append(f"{picture['media_url_https']}:orig")
 
+        embeds_to_send = []
         total_gallery_pics = len(gallery_pics)
         for picture in gallery_pics:
             total_gallery_pics -= 1
@@ -299,7 +299,9 @@ class Gallery(commands.Cog):
                     text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
                     icon_url=self.bot.assets['twitter']['favicon'])
 
-            await channel.send(embed=embed)
+            embeds_to_send.append(embed)
+
+        await msg.reply(embeds=embeds_to_send, mention_author=False)
 
     async def get_pixiv_gallery(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch and post any image galleries from pixiv
@@ -537,9 +539,6 @@ class Gallery(commands.Cog):
 
     async def get_imgur_gallery(self, msg: discord.Message, url: str):
         """Automatically fetch and post any image galleries from imgur"""
-
-        channel: discord.TextChannel = msg.channel
-
         album_id = post_utils.get_name_or_id(url, start=['/a/', '/gallery/'])
         if not album_id:
             return
@@ -555,6 +554,7 @@ class Gallery(commands.Cog):
         if total_album_pictures < 1:
             return
 
+        embeds_to_send = []
         pictures_processed = 0
         for image in api_result['data'][1:5]:
             pictures_processed += 1
@@ -574,7 +574,9 @@ class Gallery(commands.Cog):
                     text=remaining_footer,
                     icon_url=self.bot.assets['imgur']['favicon']['size32'])
 
-            await channel.send(embed=embed)
+            embeds_to_send.append(embed)
+
+        await msg.reply(embeds=embeds_to_send, mention_author=False)
 
 
 def setup(bot: commands.Bot):

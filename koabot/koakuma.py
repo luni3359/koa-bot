@@ -12,7 +12,20 @@ from discord.ext import commands
 
 import koabot.tasks
 
-if os.name != "nt":
+SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
+PROJECT_DIR = Path(SOURCE_DIR).parent
+BOT_DIRNAME = 'koa-bot'
+
+DATA_DIR = appdirs.user_data_dir(BOT_DIRNAME)
+CONFIG_DIR = appdirs.user_config_dir(BOT_DIRNAME)
+CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
+
+# Create base directories if they're absent
+for b_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
+    os.makedirs(b_dir, exist_ok=True)
+
+# Install uvloop in compatible systems
+if os.name == "posix":
     try:
         import uvloop
         uvloop.install()
@@ -24,18 +37,6 @@ intents.members = True
 intents.presences = True
 
 bot = commands.Bot(command_prefix='!', description='', intents=intents)
-
-SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
-PROJECT_DIR = Path(SOURCE_DIR).parent
-BOT_DIRNAME = 'koa-bot'
-
-DATA_DIR = appdirs.user_data_dir(BOT_DIRNAME)
-CONFIG_DIR = appdirs.user_config_dir(BOT_DIRNAME)
-CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
-
-# Make dirs if they're missing
-for k_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
-    os.makedirs(k_dir, exist_ok=True)
 
 
 def run_periodic_tasks() -> None:

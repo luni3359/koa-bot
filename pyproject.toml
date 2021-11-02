@@ -50,11 +50,11 @@ wheel = "^0.37.0"
 [tool.poetry.extras]
 speed = ["uvloop","aiodns","cchardet","Brotli"]
 
-[tool.isort]
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
-
 [tool.autopep8]
 max-line-length = 120
+
+[tool.isort]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 
 [tool.pylint.messages_control]
 max-line-length = 120

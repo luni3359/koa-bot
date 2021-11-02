@@ -3,6 +3,7 @@ import re
 from typing import Union
 
 from koabot import koakuma
+from koabot.utils.base import list_contains
 
 
 def get_name_or_id(url: str, /, *, start: Union[str, list] = [], end: Union[str, list] = ['?'], pattern: str = "") -> str:
@@ -94,8 +95,8 @@ def post_is_missing_preview(post, /, *, board: str = 'danbooru') -> bool:
             The board to check the rules with. Default is 'danbooru'
     """
     if board == 'e621':
-        return koakuma.list_contains(post['tags']['general'], koakuma.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
+        return list_contains(post['tags']['general'], koakuma.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
     if board == 'sankaku':
         return True
 
-    return koakuma.list_contains(post['tag_string_general'].split(), koakuma.bot.rules['no_preview_tags'][board]) or post['is_banned']
+    return list_contains(post['tag_string_general'].split(), koakuma.bot.rules['no_preview_tags'][board]) or post['is_banned']

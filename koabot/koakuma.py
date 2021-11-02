@@ -38,15 +38,6 @@ for k_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
     os.makedirs(k_dir, exist_ok=True)
 
 
-def list_contains(lst: list, items_to_be_matched: list) -> bool:
-    """Helper function for checking if a list contains any elements of another list"""
-    for item in items_to_be_matched:
-        if item in lst:
-            return True
-
-    return False
-
-
 def run_periodic_tasks() -> None:
     """Bot routines"""
     bot.loop.create_task(koabot.tasks.check_live_streamers())

@@ -15,19 +15,21 @@ class UserActions(commands.Cog):
         """Display an user's avatar"""
 
         if ctx.message.mentions:
+            embeds = []
             for mention in ctx.message.mentions:
                 embed = discord.Embed()
-                embed.set_image(url=mention.avatar_url)
+                embed.set_image(url=mention.avatar.url)
                 embed.set_author(
                     name=f'{mention.name} #{mention.discriminator}',
-                    icon_url=mention.avatar_url)
-                await ctx.send(embed=embed)
+                    icon_url=mention.avatar.url)
+                embeds.append(embed)
+            await ctx.send(embeds=embeds)
         else:
             embed = discord.Embed()
-            embed.set_image(url=ctx.message.author.avatar_url)
+            embed.set_image(url=ctx.message.author.avatar.url)
             embed.set_author(
                 name=f'{ctx.message.author.name} #{ctx.message.author.discriminator}',
-                icon_url=ctx.message.author.avatar_url)
+                icon_url=ctx.message.author.avatar.url)
             await ctx.send(embed=embed)
 
     @commands.command(name="reload", hidden=True)

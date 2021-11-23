@@ -188,8 +188,8 @@ class BotEvents(commands.Cog):
                     continue
 
                 embed_template = discord.Embed()
-                embed_template.set_author(name=author.display_name, icon_url=author.avatar_url)
-                embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon_url)
+                embed_template.set_author(name=author.display_name, icon_url=author.avatar.url)
+                embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon.url)
 
                 target_embed = embed_template.copy()
                 target_embed.description = bot_cog.get_quote(

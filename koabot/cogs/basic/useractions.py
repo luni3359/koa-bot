@@ -2,6 +2,7 @@
 
 import discord
 from discord.ext import commands
+from discord.ext.commands.errors import ExtensionAlreadyLoaded, ExtensionNotLoaded
 
 
 class UserActions(commands.Cog):
@@ -46,6 +47,21 @@ class UserActions(commands.Cog):
             await ctx.send(f"{type(e).__name__}: {e}")
         else:
             await ctx.send(f"Successfully reloaded '{module}'.")
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def autoreload(self, ctx: commands.Context, mode: str):
+        target = 'koabot.cogs.livereload'
+
+        try:
+            if mode == "on":
+                self.bot.load_extension(target)
+            elif mode == "off":
+                self.bot.unload_extension(target)
+        except ExtensionAlreadyLoaded:
+            print("Autoreload is already on.")
+        except ExtensionNotLoaded:
+            print("Autoreload is already off.")
 
 
 def setup(bot: commands.Bot):

@@ -448,8 +448,6 @@ class Gallery(commands.Cog):
     async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch post from deviantart"""
 
-        channel: discord.TextChannel = msg.channel
-
         post_id = post_utils.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')
         if not post_id:
             return
@@ -461,14 +459,14 @@ class Gallery(commands.Cog):
 
         if deviation['type'] == "image":
             await msg.edit(suppress=True)
-            await self.send_deviantart_image(channel, url, deviation)
+            await self.send_deviantart_image(msg, url, deviation)
         elif deviation['type'] == "literature":
             await msg.edit(suppress=True)
-            await self.send_deviantart_literature(channel, url,  deviation)
+            await self.send_deviantart_literature(msg, url, deviation)
         else:
             print(f"Incapable of handling DeviantArt url (type: {deviation['type']}):\n{url}")
 
-    async def send_deviantart_image(self, channel: discord.TextChannel, url: str, deviation):
+    async def send_deviantart_image(self, msg: discord.Message, url: str, deviation):
         """DeviantArt image embed sender"""
 
         token = deviation['media']['token'][0]
@@ -509,9 +507,9 @@ class Gallery(commands.Cog):
             text=self.bot.assets['deviantart']['name'],
             icon_url=self.bot.assets['deviantart']['favicon'])
 
-        await channel.send(embed=embed)
+        await msg.reply(embed=embed, mention_author=False)
 
-    async def send_deviantart_literature(self, channel: discord.TextChannel, url: str, deviation):
+    async def send_deviantart_literature(self, msg: discord.Message, url: str, deviation):
         """DeviantArt literature embed sender"""
 
         embed = discord.Embed()
@@ -535,7 +533,7 @@ class Gallery(commands.Cog):
             text=self.bot.assets['deviantart']['name'],
             icon_url=self.bot.assets['deviantart']['favicon'])
 
-        await channel.send(embed=embed)
+        await msg.reply(embed=embed, mention_author=False)
 
     async def get_imgur_gallery(self, msg: discord.Message, url: str):
         """Automatically fetch and post any image galleries from imgur"""

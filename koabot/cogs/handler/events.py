@@ -250,7 +250,7 @@ class BotEvents(commands.Cog):
                         gallery.append({'url': full_url, 'board': group, 'guide': guide_content})
                     elif guide_type == 'stream' and group == 'picarto':
                         streams_cog: StreamService = self.bot.get_cog('StreamService')
-                        picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url)
+                        picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=content[0] == '!')
 
                         if picarto_preview_shown and content[0] == '!':
                             await msg.delete()

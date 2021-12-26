@@ -61,8 +61,19 @@ class StreamService(commands.Cog):
 
                 await ctx.send(embed=embed)
 
-    async def get_picarto_stream_preview(self, msg: discord.Message, url: str):
-        """Automatically fetch a preview of the running stream"""
+    async def get_picarto_stream_preview(self, msg: discord.Message, url: str, /, *, orig_to_be_deleted: bool = False) -> bool:
+        """Automatically fetch a preview of the running stream
+        Arguments:
+            msg::discord.Message
+                The message where the link was sent
+            url::str
+                Link of the picarto stream
+        Keywords:
+            orig_to_be_deleted::bool
+                Whether or not the message that invoked this preview is marked for deletion
+        Returns:
+            preview_was_successfuly_sent::bool
+        """
 
         channel: discord.TextChannel = msg.channel
         channel_name = post_utils.get_name_or_id(url, start='.tv/')
@@ -70,18 +81,18 @@ class StreamService(commands.Cog):
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
         if not channel_name:
-            return
+            return False
 
         channel_url = f'https://api.picarto.tv/api/v1/channel/name/{channel_name}'
         picarto_request = (await net_utils.http_request(channel_url, json=True)).json
 
         if not picarto_request:
             await channel.send(bot_cog.get_quote('stream_preview_failed'))
-            return
+            return False
 
         if not picarto_request['online']:
             await channel.send(bot_cog.get_quote('stream_preview_offline'))
-            return
+            return False
 
         image = await net_utils.fetch_image(picarto_request['thumbnails']['web'])
         filename = net_utils.get_url_filename(picarto_request['thumbnails']['web'])
@@ -96,7 +107,13 @@ class StreamService(commands.Cog):
         embed.set_footer(
             text=self.bot.assets['picarto']['name'],
             icon_url=self.bot.assets['picarto']['favicon'])
-        await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
+
+        if orig_to_be_deleted:
+            await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
+        else:
+            await msg.edit(suppress=True)
+            await msg.reply(file=discord.File(fp=image, filename=filename), embed=embed, mention_author=False)
+
         return True
 
     @property

@@ -40,6 +40,7 @@ uvloop = {platform = "linux", version = "*", optional = true}
 aiodns = {version = "*", optional = true}
 cchardet = {version = "*", optional = true}
 Brotli = {version = "*", optional = true}
+asyncpraw = "^7.5.0"
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.5.7"

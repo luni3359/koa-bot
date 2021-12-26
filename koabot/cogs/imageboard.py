@@ -32,7 +32,7 @@ class ImageBoard(commands.Cog):
         board_cog: Board = self.bot.get_cog('Board')
         await board_cog.search_board(ctx, tags, board='sankaku', guide=self.bot.guides['gallery']['sankaku-show'], hide_posts_remaining=True)
 
-    async def show_gallery(self, msg: discord.Message, url: str, board: str, guide: dict, only_missing_preview: bool = False):
+    async def show_gallery(self, msg: discord.Message, url: str, /, *, board: str, guide: dict, only_missing_preview: bool = False):
         """Show a gallery"""
         gallery_cog: Gallery = self.bot.get_cog('Gallery')
 
@@ -50,6 +50,8 @@ class ImageBoard(commands.Cog):
             await gallery_cog.get_deviantart_post(msg, url)
         elif board == 'imgur':
             await gallery_cog.get_imgur_gallery(msg, url)
+        elif board == 'reddit':
+            await gallery_cog.get_reddit_gallery(msg, url, guide=guide)
         else:
             raise ValueError(f'Board "{board}" has no gallery entry.')
 

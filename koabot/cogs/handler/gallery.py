@@ -4,6 +4,7 @@ import re
 import shutil
 from pathlib import Path
 
+import asyncpraw
 import discord
 import imagehash
 import pixivpy_async
@@ -31,6 +32,11 @@ class Gallery(commands.Cog):
         self.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
         self.pixiv_aapi = pixivpy_async.AppPixivAPI()
         self.pixiv_refresh_token = None
+        self.reddit_api = asyncpraw.Reddit(client_id=bot.auth_keys['reddit']['client_id'],
+                                           client_secret=bot.auth_keys['reddit']['client_secret'],
+                                           username=bot.auth_keys['reddit']['username'],
+                                           password=bot.auth_keys['reddit']['password'],
+                                           user_agent=bot.auth_keys['reddit']['headers']['User-Agent'])
 
     async def display_static(self, channel: discord.TextChannel, url: str, /, *, board: str = 'danbooru', guide: dict, only_missing_preview: bool = False) -> None:
         """Display posts from a gallery in separate unmodifiable embeds
@@ -576,6 +582,25 @@ class Gallery(commands.Cog):
             embeds_to_send.append(embed)
 
         await msg.reply(embeds=embeds_to_send, mention_author=False)
+
+    async def get_reddit_gallery(self, msg: discord.Message, url: str, /, *, guide: dict):
+        submission = await self.reddit_api.submission(url=url)
+
+        if hasattr(submission, 'preview') and 'images' in submission.preview:
+            # Fetching the last element from the resolutions list (highest preview-friendly res)
+            hd_preview = submission.preview['images'][0]['resolutions'][-1]
+
+        url_prefix = "https://" + guide['post']['url']
+        embed = discord.Embed()
+        embed.set_image(url=hd_preview['url'])
+        embed.set_author(name=submission.subreddit_name_prefixed,
+                         url=f"{url_prefix}/{submission.subreddit_name_prefixed}")
+        embed.title = submission.title
+        embed.url = f"{url_prefix}{submission.permalink}"
+        embed.set_footer(text=guide['embed']['footer_text'])
+
+        await msg.edit(suppress=True)
+        await msg.reply(embed=embed, mention_author=False)
 
 
 def setup(bot: commands.Bot):

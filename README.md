@@ -8,17 +8,20 @@
 
 ## Features
 
+
+### Rich embeds
+Top websites will have their embeds overriden by me! Be it a lacking embed, or one that's been purposefully gimped.
+
++ Automatically get better embed previews of the link you're sharing with your friends.
+    + Supported sites: danbooru, e621, imgur, pixiv, twitter, reddit
+
 ### Search anime images
 Got tired of uploading entire images or posting multiple links to see the previews of that very short comic you want others to see? Don't worry, we got you covered!
 
-+ Automatically get previews of the pictures related to the post you're sharing with your friends.
-    + Supported sites: danbooru, e621, imgur, pixiv, twitter
-
-+ Your link doesn't show a preview on Discord for arbitrary reasons? That won't stop me!
-    + Supported sites: danbooru, deviantart, e621, pixiv, sankaku
-
 + Search tags directly from anime picture boards!
     + Supported sites: danbooru, e621
+
++ Paired with rich embeds, expect your links to show more bang for the paste!
 
 By default some restrictions will apply based on the safety setting your text channel is set to, such as to avoid embarrassing situations, but you can configure it to behave in any way you like. However, some sites make it impossible to tell apart the safety rating of their images, so sites like imgur and twitter ignore this check entirely.
 

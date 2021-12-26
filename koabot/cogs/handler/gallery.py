@@ -297,8 +297,8 @@ class Gallery(commands.Cog):
                     url=guide['post']['url'].format(tweet.author.screen_name),
                     icon_url=tweet.author.profile_image_url_https)
                 embed.description = tweet.full_text[tweet.display_text_range[0]:tweet.display_text_range[1]]
-                embed.add_field(name='Retweets', value=tweet.retweet_count)
-                embed.add_field(name='Likes', value=tweet.favorite_count)
+                embed.add_field(name='Retweets', value=f"{tweet.retweet_count:,}")
+                embed.add_field(name='Likes', value=f"{tweet.favorite_count:,}")
 
             # If it's the last picture to show, add a brand footer
             if total_gallery_pics <= 0:
@@ -387,9 +387,33 @@ class Gallery(commands.Cog):
 
                     embed.url = url
                     embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', illust.caption).strip()
-                    embed.set_author(
-                        name=illust.user.name,
-                        url=f'https://www.pixiv.net/users/{illust.user.id}')
+
+                    if (px_favorites := illust.total_bookmarks) > 0:
+                        embed.add_field(name='Favorites', value=f"{px_favorites:,}")
+
+                    if (px_views := illust.total_view) > 0:
+                        embed.add_field(name='Views', value=f"{px_views:,}")
+                        
+                    embed.set_author(name=illust.user.name,
+                                     url=f"https://www.pixiv.net/users/{illust.user.id}")
+
+                    # Thanks Pixiv... even your avatars are inaccessible!
+                    # //////////////////////////////////////////////////////////////////
+                    # avatar_url = illust.user.profile_image_urls.medium
+                    # avatar_filename = net_utils.get_url_filename(avatar_url)
+                    # avatar_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'avatars')
+                    # os.makedirs(avatar_cache_dir, exist_ok=True)
+                    # avatar_path = os.path.join(avatar_cache_dir, avatar_filename)
+
+                    # # cache file if it doesn't exist
+                    # image_bytes = None
+                    # if not os.path.exists(image_path):
+                    #     print('Saving to cache...')
+                    #     image_bytes = await net_utils.fetch_image(avatar_url, headers=koakuma.bot.assets['pixiv']['headers'])
+
+                    #     with open(os.path.join(avatar_cache_dir, avatar_filename), 'wb') as image_file:
+                    #         shutil.copyfileobj(image_bytes, image_file)
+                    #     image_bytes.seek(0)
 
                 # create if pixiv cache directory if it doesn't exist
                 file_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'files')
@@ -596,8 +620,8 @@ class Gallery(commands.Cog):
                                 icon_url=submission.subreddit.community_icon)
         header_embed.title = submission.title
         header_embed.url = f"{reddit_url_prefix}{submission.permalink}"
-        header_embed.add_field(name='Score', value=submission.score)
-        header_embed.add_field(name='Comments', value=submission.num_comments)
+        header_embed.add_field(name='Score', value=f"{submission.score:,}")
+        header_embed.add_field(name='Comments', value=f"{submission.num_comments:,}")
         footer_text = guide['embed']['footer_text']
 
         embeds = [header_embed]

@@ -476,6 +476,7 @@ class Gallery(commands.Cog):
         for media_type in deviation['media']['types']:
             if media_type['t'] == 'preview':
                 preview_url = media_type['c'].replace('<prettyName>', pretty_name)
+                preview_url = preview_url.replace(',q_80', ',q_100')
                 break
 
         image_url = f'{base_uri}/{preview_url}?token={token}'

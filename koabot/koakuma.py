@@ -2,6 +2,7 @@
 import os
 import sqlite3
 import timeit
+import traceback
 from datetime import datetime
 from pathlib import Path
 
@@ -70,8 +71,9 @@ def load_all_extensions(path: str) -> None:
         try:
             print(f"Loading \"{ext}\"...".ljust(40), end='\r')
             bot.load_extension(ext)
-        except commands.errors.ExtensionFailed:
+        except commands.errors.ExtensionFailed as e:
             dropped_cogs += 1
+            print(e)
             print(f"Failed to load \"{ext}\".")
 
     time_to_finish = timeit.default_timer() - start_load_time

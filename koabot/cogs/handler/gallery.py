@@ -9,6 +9,7 @@ import discord
 import imagehash
 import pixivpy_async
 import tweepy
+from asyncpraw.reddit import Submission
 from discord.ext import commands
 from PIL import Image
 
@@ -585,28 +586,53 @@ class Gallery(commands.Cog):
 
     async def get_reddit_gallery(self, msg: discord.Message, url: str, /, *, guide: dict):
         """Automatically post Reddit galleries whenever possible"""
-        submission = await self.reddit_api.submission(url=url)
+        reddit_url_prefix = "https://" + guide['post']['url']
+        submission: Submission = await self.reddit_api.submission(url=url)
         await submission.subreddit.load()
 
-        url_prefix = "https://" + guide['post']['url']
-        embed = discord.Embed()
+        header_embed = discord.Embed()
+        header_embed.set_author(name=submission.subreddit_name_prefixed,
+                                url=f"{reddit_url_prefix}/{submission.subreddit_name_prefixed}",
+                                icon_url=submission.subreddit.community_icon)
+        header_embed.title = submission.title
+        header_embed.url = f"{reddit_url_prefix}{submission.permalink}"
+        header_embed.add_field(name='Score', value=submission.score)
+        header_embed.add_field(name='Comments', value=submission.num_comments)
+        footer_text = guide['embed']['footer_text']
 
-        if hasattr(submission, 'preview') and 'images' in submission.preview:
-            # Fetching the last element from the resolutions list (highest preview-friendly res)
+        embeds = [header_embed]
+        # Post has a media gallery
+        if hasattr(submission, 'gallery_data'):
+            media_count = len(submission.gallery_data['items'])
+            ordered_media_data = sorted(submission.gallery_data['items'], key=lambda x: x['id'])
+            for i, item_data in enumerate(ordered_media_data[0:4]):
+                media_element = submission.media_metadata[item_data['media_id']]
+                if i == 0:
+                    embed = header_embed
+                else:
+                    embed = discord.Embed()
+                    embeds.append(embed)
+
+                if media_element['e'] == "Image":
+                    # Fetching the last element from the resolutions list (highest preview-friendly res)
+                    post_preview = media_element['p'][-1]['u']
+                    embed.set_image(url=post_preview)
+
+                # If we're on the last element
+                if i == len(ordered_media_data[0:4]) - 1:
+                    if media_count > 4:
+                        footer_text = f"{media_count - 4}+ remaining"
+        # Post has only one picture
+        elif hasattr(submission, 'preview') and 'images' in submission.preview:
             post_preview = submission.preview['images'][0]['resolutions'][-1]
-            embed.set_image(url=post_preview['url'])
+            header_embed.set_image(url=post_preview['url'])
 
-        embed.set_author(name=submission.subreddit_name_prefixed,
-                         url=f"{url_prefix}/{submission.subreddit_name_prefixed}",
-                         icon_url=submission.subreddit.community_icon)
-        embed.title = submission.title
-        embed.url = f"{url_prefix}{submission.permalink}"
         # TODO: Icon urls should be within config guides file
-        embed.set_footer(text=guide['embed']['footer_text'],
-                         icon_url="https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png")
+        embeds[-1].set_footer(text=footer_text,
+                              icon_url="https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png")
 
         await msg.edit(suppress=True)
-        await msg.reply(embed=embed, mention_author=False)
+        await msg.reply(embeds=embeds, mention_author=False)
 
 
 def setup(bot: commands.Bot):

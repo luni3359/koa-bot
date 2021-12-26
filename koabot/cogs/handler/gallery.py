@@ -584,20 +584,26 @@ class Gallery(commands.Cog):
         await msg.reply(embeds=embeds_to_send, mention_author=False)
 
     async def get_reddit_gallery(self, msg: discord.Message, url: str, /, *, guide: dict):
+        """Automatically post Reddit galleries whenever possible"""
         submission = await self.reddit_api.submission(url=url)
-
-        if hasattr(submission, 'preview') and 'images' in submission.preview:
-            # Fetching the last element from the resolutions list (highest preview-friendly res)
-            hd_preview = submission.preview['images'][0]['resolutions'][-1]
+        await submission.subreddit.load()
 
         url_prefix = "https://" + guide['post']['url']
         embed = discord.Embed()
-        embed.set_image(url=hd_preview['url'])
+
+        if hasattr(submission, 'preview') and 'images' in submission.preview:
+            # Fetching the last element from the resolutions list (highest preview-friendly res)
+            post_preview = submission.preview['images'][0]['resolutions'][-1]
+            embed.set_image(url=post_preview['url'])
+
         embed.set_author(name=submission.subreddit_name_prefixed,
-                         url=f"{url_prefix}/{submission.subreddit_name_prefixed}")
+                         url=f"{url_prefix}/{submission.subreddit_name_prefixed}",
+                         icon_url=submission.subreddit.community_icon)
         embed.title = submission.title
         embed.url = f"{url_prefix}{submission.permalink}"
-        embed.set_footer(text=guide['embed']['footer_text'])
+        # TODO: Icon urls should be within config guides file
+        embed.set_footer(text=guide['embed']['footer_text'],
+                         icon_url="https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png")
 
         await msg.edit(suppress=True)
         await msg.reply(embed=embed, mention_author=False)

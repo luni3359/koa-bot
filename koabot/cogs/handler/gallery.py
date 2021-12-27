@@ -388,8 +388,8 @@ class Gallery(commands.Cog):
                     embed.url = url
                     embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', illust.caption).strip()
 
-                    if (px_favorites := illust.total_bookmarks) > 0:
-                        embed.add_field(name='Favorites', value=f"{px_favorites:,}")
+                    if (px_bookmarks := illust.total_bookmarks) > 0:
+                        embed.add_field(name='Bookmarks', value=f"{px_bookmarks:,}")
 
                     if (px_views := illust.total_view) > 0:
                         embed.add_field(name='Views', value=f"{px_views:,}")

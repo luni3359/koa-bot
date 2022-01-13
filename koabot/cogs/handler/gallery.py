@@ -612,6 +612,12 @@ class Gallery(commands.Cog):
         """Automatically post Reddit galleries whenever possible"""
         reddit_url_prefix = "https://" + guide['post']['url']
         submission: Submission = await self.reddit_api.submission(url=url)
+
+        # Don't override videos
+        if submission.is_video:
+            print("Preview gallery not applicable. (reddit video)")
+            return
+
         await submission.subreddit.load()
 
         header_embed = discord.Embed()

@@ -41,7 +41,7 @@ class ImageBoard(commands.Cog):
         elif board == 'e621':
             await gallery_cog.display_static(msg.channel, url, board='e621', guide=guide, only_missing_preview=only_missing_preview)
         elif board == 'twitter':
-            await gallery_cog.get_twitter_gallery(msg, url)
+            await gallery_cog.get_twitter_gallery(msg, url, guide=guide)
         elif board == 'pixiv':
             await gallery_cog.get_pixiv_gallery(msg, url)
         elif board == 'sankaku':

@@ -288,7 +288,8 @@ class Gallery(commands.Cog):
 
             embed = discord.Embed()
             embed.set_image(url=picture)
-            embed.colour = discord.Colour.from_rgb(29, 161, 242)  # Twitter color
+            hex_color = int(guide['embed']['color'], 16)
+            embed.colour = discord.Colour(hex_color)
 
             # If it's the first picture to show, add author, body, and counters
             if total_gallery_pics + 1 == len(gallery_pics):

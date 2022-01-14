@@ -1,0 +1,11 @@
+.git
+.github
+.poetry-lock
+.python-version
+.vscode
+*.pyc
+**/__pycache__
+examples
+favicons
+run.sh
+winrun.cmd

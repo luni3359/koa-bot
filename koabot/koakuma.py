@@ -81,7 +81,7 @@ def load_all_extensions(path: str) -> None:
     if dropped_cogs == 0:
         log_msg = f"Finished loading {len(cog_list)} cogs in {time_to_finish:0.2f}s."
     else:
-        log_msg = f"WARNING: Only {len(cog_list)-dropped_cogs}/{len(cog_list)} succesfully loaded (in {time_to_finish:0.2f}s)."
+        log_msg = f"WARNING: Only {len(cog_list)-dropped_cogs} out of {len(cog_list)} cogs loaded successfully (in {time_to_finish:0.2f}s)."
 
     print(log_msg.ljust(40))
 

@@ -271,7 +271,14 @@ class Gallery(commands.Cog):
             return
 
         # Supress original embed (sorry, desktop-only users)
-        await msg.edit(suppress=True)
+        try:
+            await msg.edit(suppress=True)
+        except discord.errors.Forbidden as e:
+            # Missing Permissions
+            if e.code == 50013:
+                print("Missing Permissions: Cannot suppress embed from sender's message")
+            else:
+                print(f"Forbidden: Status {e.status} (code {e.code}")
 
         gallery_pics = []
         for picture in tweet.extended_entities['media'][0:]:
@@ -451,7 +458,14 @@ class Gallery(commands.Cog):
                     await msg.reply(file=discord.File(fp=image_path, filename=filename), embed=embed, mention_author=False)
 
         await temp_message.delete()
-        await msg.edit(suppress=True)
+        try:
+            await msg.edit(suppress=True)
+        except discord.errors.Forbidden as e:
+            # Missing Permissions
+            if e.code == 50013:
+                print("Missing Permissions: Cannot suppress embed from sender's message")
+            else:
+                print(f"Forbidden: Status {e.status} (code {e.code}")
 
         print('DONE PIXIV!')
 
@@ -490,10 +504,24 @@ class Gallery(commands.Cog):
         deviation = api_result['deviation']
 
         if deviation['type'] == "image":
-            await msg.edit(suppress=True)
+            try:
+                await msg.edit(suppress=True)
+            except discord.errors.Forbidden as e:
+                # Missing Permissions
+                if e.code == 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                else:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
             await self.send_deviantart_image(msg, url, deviation)
         elif deviation['type'] == "literature":
-            await msg.edit(suppress=True)
+            try:
+                await msg.edit(suppress=True)
+            except discord.errors.Forbidden as e:
+                # Missing Permissions
+                if e.code == 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                else:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
             await self.send_deviantart_literature(msg, url, deviation)
         else:
             print(f"Incapable of handling DeviantArt url (type: {deviation['type']}):\n{url}")
@@ -684,7 +712,14 @@ class Gallery(commands.Cog):
         embeds[-1].set_footer(text=footer_text,
                               icon_url="https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png")
 
-        await msg.edit(suppress=True)
+        try:
+            await msg.edit(suppress=True)
+        except discord.errors.Forbidden as e:
+            # Missing Permissions
+            if e.code == 50013:
+                print("Missing Permissions: Cannot suppress embed from sender's message")
+            else:
+                print(f"Forbidden: Status {e.status} (code {e.code}")
         await msg.reply(embeds=embeds, mention_author=False)
 
 

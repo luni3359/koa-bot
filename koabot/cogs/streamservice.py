@@ -111,7 +111,14 @@ class StreamService(commands.Cog):
         if orig_to_be_deleted:
             await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)
         else:
-            await msg.edit(suppress=True)
+            try:
+                await msg.edit(suppress=True)
+            except discord.errors.Forbidden as e:
+                # Missing Permissions
+                if e.code == 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                else:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
             await msg.reply(file=discord.File(fp=image, filename=filename), embed=embed, mention_author=False)
 
         return True

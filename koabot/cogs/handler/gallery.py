@@ -708,9 +708,7 @@ class Gallery(commands.Cog):
             post_preview = preview_root['resolutions'][-1]['url']
             header_embed.set_image(url=post_preview)
 
-        # TODO: Icon urls should be within config guides file
-        embeds[-1].set_footer(text=footer_text,
-                              icon_url="https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png")
+        embeds[-1].set_footer(text=footer_text, icon_url=guide['embed']['favicon']['size192'])
 
         try:
             await msg.edit(suppress=True)

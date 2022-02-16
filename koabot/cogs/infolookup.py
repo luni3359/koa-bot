@@ -54,7 +54,7 @@ class InfoLookup(commands.Cog):
 
             embed.description = summary
             embed.set_footer(text=self.bot.guides['explanation']['wikipedia-default']['embed']['footer_text'],
-                             icon_url=self.bot.guides['explanation']['wikipedia-default']['favicon']['size16'])
+                             icon_url=self.bot.guides['explanation']['wikipedia-default']['embed']['favicon']['size16'])
             await ctx.send(embed=embed)
         except MediaExceptions.DisambiguationError as e:
             bot_msg = 'There are many definitions for that... do you see anything that matches?\n'

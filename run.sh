@@ -27,7 +27,7 @@ EOF
 }
 
 function var_is_defined() {
-    [ -v $1 ]
+    [ -v "$1" ]
 }
 
 function var_is_empty() {
@@ -39,7 +39,7 @@ function path_is_valid() {
 }
 
 function command_exists() {
-    command -v $1 1> /dev/null 2>&1;
+    command -v "$1" 1> /dev/null 2>&1;
 }
 
 function check_env_vars() {
@@ -68,7 +68,7 @@ function test_conectivity() {
 
     # Test if host is up
     if [ $ssh_return_value -ne 0 ]; then
-        echo "Unable to connect to host ("${KOAKUMA_CONNSTR}") [Return value: $ssh_return_value]"
+        echo "Unable to connect to host (${KOAKUMA_CONNSTR}) [Return value: $ssh_return_value]"
         exit 1
     fi
 
@@ -86,7 +86,7 @@ function update_dependencies() {
     fi
 
     PIP_OUTPUT=$(ssh "${KOAKUMA_CONNSTR}" 'source ~/.profile; pip3 install -r $KOAKUMA_HOME/requirements.txt')
-    echo $PIP_OUTPUT
+    echo "$PIP_OUTPUT"
 }
 
 function poetry_dependencies_to_requirements() {
@@ -121,6 +121,9 @@ function update() {
     echo
     echo "Transferring config files from ${XDG_CONFIG_HOME}/koa-bot/ to ${TARGET_KOACONFIG}"
     rsync -aAXv --progress "${XDG_CONFIG_HOME}/koa-bot/" "${TARGET_KOACONFIG}"
+
+    echo "Update complete!"
+    exit 0
 }
 
 function restart() {
@@ -144,7 +147,7 @@ function run() {
             $HOME/.pyenv
         )
 
-        for path in ${possible_pyenv_paths[*]}; do
+        for path in "${possible_pyenv_paths[@]}"; do
             if path_is_valid "${path}"; then
                 PYENV_ROOT="${path}"
                 break
@@ -171,15 +174,15 @@ function install() {
     # NOTE: ffmpeg is necessary to play music
     local package_deps=(ffmpeg)
 
-    for pdep in ${package_deps[*]}; do
-        if ! command_exists $pdep; then
+    for pdep in "${package_deps[@]}"; do
+        if ! command_exists "$pdep"; then
             pckgs="${pckgs}${pdep} "
         fi
     done
 
-    if ! var_is_empty $pckgs; then
+    if ! var_is_empty "$pckgs"; then
         # TODO: check if user cancels or apt errors out
-        sudo apt install ${pckgs} -y
+        sudo apt install "${pckgs}" -y
     else
         echo "Required system dependencies met."
     fi
@@ -242,5 +245,5 @@ else
     run
 
     # Prevent terminal from closing
-    read -p "Bot terminated."
+    read -rp "Bot terminated."
 fi

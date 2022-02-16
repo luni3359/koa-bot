@@ -71,10 +71,57 @@ For example, at first Twitter previews used to show only one image regardless of
 
 1. Make sure you've got python 3.8 or above installed.
 2. Install the dependencies from `requirements.txt`.
-3. You're done!
+3. Create a file named `auth.jsonc` under `~/.config/koa-bot` and fill in your secrets as shown below. Replace `site_name` with the name of the website you want the bot to authenticate with, `token_name` with the name of the field (i.e. `token`), and put your secret as the `token_value`.
+
+```jsonc
+{
+    "auth_keys": {
+      "site_name": {
+        "token_name": "token_value"
+      }
+    }
+}
+```
 
 You might need to install additional dependencies either via pip or through your package manager to make use of ImageHash. If you have problems getting the right Python version check out [pyenv](https://github.com/pyenv/pyenv).
 
 ## How to run
 
 You can manually run the bot by executing the `run.sh` script on Linux, and `winrun.cmd` on Windows.
+
+```text
+$ $KOAKUMA_HOME/run.sh
+Initiating...
+```
+
+## How to update
+
+The bot features an easy-to-use local update function in its run scripts for those times you're debugging and aren't sure whether it's a good idea to commit anything yet.
+
+### Updating only to the host
+
+You can use the `-u` flag to send all development changes you've made to your server, but you will first need to define the environmental variable `KOAKUMA_CONNSTR` *locally* and then define `KOAKUMA_HOME` in your *server*.
+
+You can define these variables anywhere within your system, but it's preferable if you place them within a `.env` file that should be located inside the bot's folder. The run script will read off of this file if it exists.
+
+```text
+$ $KOAKUMA_HOME/run.sh -u
+Updating bot files...
+Exporting dependencies to requirements.txt...
+Transferring source from /home/user/koa-bot to remoteuser@192.168.1.2:/home/remoteuser/koa-bot
+sending incremental file list
+README.md
+          4,731 100%    3.84MB/s    0:00:00 (xfr#1, to-chk=75/78)
+requirements.txt
+          3,614 100%    3.45MB/s    0:00:00 (xfr#2, to-chk=70/78)
+
+sent 3,260 bytes  received 146 bytes  57.24 bytes/sec
+total size is 11,518,109  speedup is 3,381.71
+
+Transferring config files from /home/user/.config/koa-bot/ to remoteuser@192.168.1.2:~/.config/koa-bot
+sending incremental file list
+
+sent 256 bytes  received 12 bytes  178.67 bytes/sec
+total size is 58,011  speedup is 216.46
+Update complete!
+```

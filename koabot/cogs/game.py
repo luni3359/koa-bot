@@ -223,6 +223,11 @@ class Game(commands.Cog):
         if isinstance(exception, commands.MissingRequiredArgument):
             return await ctx.send("Please specify what you want to roll.")
 
+    @commands.command()
+    async def flip(self, ctx: commands.Context):
+        """Flip a coin"""
+        await ctx.send(random.getrandbits(1) and "Heads!" or "Tails!")
+
 
 def setup(bot: commands.Bot):
     """Initiate cog"""

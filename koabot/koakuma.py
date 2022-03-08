@@ -36,6 +36,7 @@ if os.name == "posix":
 intents = discord.Intents.default()
 intents.members = True
 intents.presences = True
+intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', description='', intents=intents)
 

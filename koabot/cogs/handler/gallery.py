@@ -504,27 +504,21 @@ class Gallery(commands.Cog):
         deviation = api_result['deviation']
 
         if deviation['type'] == "image":
-            try:
-                await msg.edit(suppress=True)
-            except discord.errors.Forbidden as e:
-                # Missing Permissions
-                if e.code == 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                else:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
             await self.send_deviantart_image(msg, url, deviation)
         elif deviation['type'] == "literature":
-            try:
-                await msg.edit(suppress=True)
-            except discord.errors.Forbidden as e:
-                # Missing Permissions
-                if e.code == 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                else:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
             await self.send_deviantart_literature(msg, url, deviation)
         else:
             print(f"Incapable of handling DeviantArt url (type: {deviation['type']}):\n{url}")
+            return
+
+        try:
+            await msg.edit(suppress=True)
+        except discord.errors.Forbidden as e:
+            # Missing Permissions
+            if e.code == 50013:
+                print("Missing Permissions: Cannot suppress embed from sender's message")
+            else:
+                print(f"Forbidden: Status {e.status} (code {e.code}")
 
     async def send_deviantart_image(self, msg: discord.Message, url: str, deviation):
         """DeviantArt image embed sender"""
@@ -551,8 +545,9 @@ class Gallery(commands.Cog):
             url=f"https://www.deviantart.com/{deviation['author']['username']}",
             icon_url=deviation['author']['usericon'])
 
-        embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
-                                   deviation['extended']['description']).strip()
+        if 'description' in deviation['extended']:
+            embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
+                                       deviation['extended']['description']).strip()
 
         if len(embed.description) > 200:
             embed.description = embed.description[:200] + "..."

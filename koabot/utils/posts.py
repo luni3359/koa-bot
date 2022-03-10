@@ -6,7 +6,7 @@ from koabot import koakuma
 from koabot.utils.base import list_contains
 
 
-def get_name_or_id(url: str, /, *, start: Union[str, list] = [], end: Union[str, list] = ['?'], pattern: str = "") -> str:
+def get_name_or_id(url: str, /, *, start: Union[str, list] = None, end: Union[str, list] = None, pattern: str = "") -> str:
     """Get a name or an id from an url
     Arguments:
         url::str
@@ -22,8 +22,17 @@ def get_name_or_id(url: str, /, *, start: Union[str, list] = [], end: Union[str,
             have done their job.
     """
 
+    if start is None:
+        start = []
+
+    if end is None:
+        end = ['?']
+
     if not isinstance(start, list):
-        start = [start]
+        if isinstance(start, str):
+            start = [start]
+        else:
+            raise ValueError("`start` keyword argument needs to be either str or list")
 
     starting_match = None
     for v in start:
@@ -37,7 +46,10 @@ def get_name_or_id(url: str, /, *, start: Union[str, list] = [], end: Union[str,
     url = url.split(starting_match)[1]
 
     if not isinstance(end, list):
-        end = [end]
+        if isinstance(end, str):
+            end = [end]
+        else:
+            raise ValueError("`end` keyword argument needs to be either str or list")
 
     ending_match = None
     for v in end:

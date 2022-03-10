@@ -115,7 +115,7 @@ class Game(commands.Cog):
             dice_or_die = match.quantity != 1 and 'dice' or 'die'
 
             if match.limited_quantity:
-                message += '\*'
+                message += '\\*'
 
             if match.quantity == 0 or match.pips == 0:
                 message += f"{num2words(match.quantity).capitalize()} {match.pips}-sided {dice_or_die}. Nothing to roll.  **0.**\n"

@@ -370,7 +370,7 @@ def strip_dictionary_oddities(txt: str, which: str):
             for match in matches:
                 txt = txt.replace(match[0], f"*{match[1].upper()}*")
     elif which == 'urban':
-        txt = txt.replace('*', '\*')
+        txt = txt.replace('*', '\\*')
 
         matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
         for match in matches:

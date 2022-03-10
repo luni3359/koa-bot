@@ -140,8 +140,7 @@ async def lookup_pending_posts() -> None:
         safe_posts = []
         nsfw_posts = []
         for post in posts:
-            post_id = post['id']
-            if not post_id in pending_posts:
+            if not (post_id := post['id']) in pending_posts:
                 pending_posts.append(post_id)
                 url_to_append = guide['post']['url'].format(post_id)
 

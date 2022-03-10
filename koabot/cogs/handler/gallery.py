@@ -61,8 +61,7 @@ class Gallery(commands.Cog):
         id_end = 'id_end' in guide['post'] and guide['post']['id_end'] or ['?']
         pattern = 'pattern' in guide['post'] and guide['post']['pattern'] or ""
 
-        post_id = post_utils.get_name_or_id(url, start=id_start, end=id_end, pattern=pattern)
-        if not post_id:
+        if not (post_id := post_utils.get_name_or_id(url, start=id_start, end=id_end, pattern=pattern)):
             return
 
         board_cog: Board = self.bot.get_cog('Board')
@@ -233,7 +232,7 @@ class Gallery(commands.Cog):
 
             await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
-    async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict = []) -> None:
+    async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict = None) -> None:
         """Automatically fetch and post any image galleries from twitter
         Parameters:
             msg::discord.Message
@@ -249,8 +248,7 @@ class Gallery(commands.Cog):
         id_start = guide['post']['id_start']
         id_end = guide['post']['id_end']
 
-        post_id = post_utils.get_name_or_id(url, start=id_start, end=id_end)
-        if not post_id:
+        if not (post_id := post_utils.get_name_or_id(url, start=id_start, end=id_end)):
             return
 
         try:
@@ -505,8 +503,7 @@ class Gallery(commands.Cog):
     async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch post from deviantart"""
 
-        post_id = post_utils.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')
-        if not post_id:
+        if not (post_id := post_utils.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')):
             return
 
         search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)

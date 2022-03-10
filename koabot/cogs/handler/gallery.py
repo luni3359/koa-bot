@@ -266,25 +266,26 @@ class Gallery(commands.Cog):
             print(e)
             return
 
-        if not hasattr(tweet, 'extended_entities') or len(tweet.extended_entities['media']) <= 1:
-            print('Preview gallery not applicable.')
-            return
+        if not hasattr(tweet, 'extended_entities'):
+            return print("Twitter preview not applicable. (No extended entities)")
 
-        # Supress original embed (sorry, desktop-only users)
-        try:
-            await msg.edit(suppress=True)
-        except discord.errors.Forbidden as e:
-            # Missing Permissions
-            if e.code == 50013:
-                print("Missing Permissions: Cannot suppress embed from sender's message")
-            else:
-                print(f"Forbidden: Status {e.status} (code {e.code}")
+        if len((tweet_ee_media := tweet.extended_entities['media'])) == 1:
+            if tweet_ee_media[0]['type'] == 'photo':
+                # Twitter embeds from 'possibly_sensitive' tweets stopped working today temporarily for no reason.
+                # Uncomment below in case this happens again.
+                # #####
+                # if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
+                #     return print("Twitter preview not applicable. (Media photo is sfw)")
+                return print("Twitter preview not applicable. (Native Discord embed exists)")
+            else:   # 'video' or 'animated_gif'
+                if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
+                    fixed_url = url.replace("twitter", "fxtwitter", 1)
+                    await msg.reply(content=f"Sorry! Due to Discord's API limitations I cannot embed videos. (Twitter disallows NSFW previews)\n{fixed_url}", mention_author=False)
 
-        gallery_pics = []
-        for picture in tweet.extended_entities['media'][0:]:
-            if picture['type'] != 'photo':
                 return
 
+        gallery_pics = []
+        for picture in tweet_ee_media:
             # Appending :orig to get a better image quality
             gallery_pics.append(f"{picture['media_url_https']}:orig")
 
@@ -317,6 +318,16 @@ class Gallery(commands.Cog):
             embeds_to_send.append(embed)
 
         await msg.reply(embeds=embeds_to_send, mention_author=False)
+
+        # Supress original embed (sorry, desktop-only users)
+        try:
+            await msg.edit(suppress=True)
+        except discord.errors.Forbidden as e:
+            # Missing Permissions
+            if e.code == 50013:
+                print("Missing Permissions: Cannot suppress embed from sender's message")
+            else:
+                print(f"Forbidden: Status {e.status} (code {e.code}")
 
     async def get_pixiv_gallery(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch and post any image galleries from pixiv

@@ -306,8 +306,8 @@ class Gallery(commands.Cog):
                     url=guide['post']['url'].format(tweet.author.screen_name),
                     icon_url=tweet.author.profile_image_url_https)
                 embed.description = tweet.full_text[tweet.display_text_range[0]:tweet.display_text_range[1]]
-                embed.add_field(name='Retweets', value=f"{tweet.retweet_count:,}")
                 embed.add_field(name='Likes', value=f"{tweet.favorite_count:,}")
+                embed.add_field(name='Retweets', value=f"{tweet.retweet_count:,}")
 
             # If it's the last picture to show, add a brand footer
             if total_gallery_pics <= 0:

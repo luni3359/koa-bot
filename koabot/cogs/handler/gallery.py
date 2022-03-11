@@ -362,8 +362,8 @@ class Gallery(commands.Cog):
 
         print(f'Pixiv auth passed! (for #{post_id})')
 
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         illust = illust_json.illust
+        # bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         # if illust.x_restrict != 0 and not channel.is_nsfw():
         #     embed = discord.Embed()
 
@@ -379,7 +379,7 @@ class Gallery(commands.Cog):
         #     await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
         #     return
 
-        temp_message = await channel.send(f"***{bot_cog.get_quote('processing_long_task')}***")
+        # temp_message = await channel.send(f"***{bot_cog.get_quote('processing_long_task')}***")
         async with channel.typing():
             total_illust_pictures = illust.page_count
 
@@ -466,7 +466,7 @@ class Gallery(commands.Cog):
                     print('Uploading from cache...')
                     await msg.reply(file=discord.File(fp=image_path, filename=filename), embed=embed, mention_author=False)
 
-        await temp_message.delete()
+        # await temp_message.delete()
         try:
             await msg.edit(suppress=True)
         except discord.errors.Forbidden as e:

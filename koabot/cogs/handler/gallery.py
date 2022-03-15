@@ -269,12 +269,8 @@ class Gallery(commands.Cog):
 
         if len((tweet_ee_media := tweet.extended_entities['media'])) == 1:
             if tweet_ee_media[0]['type'] == 'photo':
-                # Twitter embeds from 'possibly_sensitive' tweets stopped working today temporarily for no reason.
-                # Uncomment below in case this happens again.
-                # #####
-                # if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
-                #     return print("Twitter preview not applicable. (Media photo is sfw)")
-                return print("Twitter preview not applicable. (Native Discord embed exists)")
+                if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
+                    return print("Twitter preview not applicable. (Media photo is sfw)")
             else:   # 'video' or 'animated_gif'
                 if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
                     fixed_url = url.replace("twitter", "fxtwitter", 1)

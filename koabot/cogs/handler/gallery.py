@@ -271,7 +271,14 @@ class Gallery(commands.Cog):
             if tweet_ee_media[0]['type'] == 'photo':
                 if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
                     return print("Twitter preview not applicable. (Media photo is sfw)")
+
+                # TODO: There's got to be a better way...
+                if guide['embed']['footer_text'] == "TwitFix":
+                    return print("Twitter preview not applicable. (Gallery by TwitFix)")
             else:   # 'video' or 'animated_gif'
+                if guide['embed']['footer_text'] == "TwitFix":
+                    return print("Twitter preview not applicable. (Video by TwitFix)")
+                    
                 if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
                     fixed_url = url.replace("twitter", "fxtwitter", 1)
                     await msg.reply(content=f"Sorry! Due to Discord's API limitations I cannot embed videos. (Twitter disallows NSFW previews)\n{fixed_url}", mention_author=False)

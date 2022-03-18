@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "koa-bot"
-version = "0.14.3"
+version = "0.14.4"
 description = ""
 authors = []
 readme = "README.md"
@@ -22,7 +22,7 @@ python = "^3.8"
 appdirs = "^1.4.4"
 BASC-py4chan = "^0.6.5"
 commentjson = "^0.9.0"
-"discord.py" = {git = "https://github.com/Rapptz/discord.py", extras = ["voice"]} # discord.py 2.0
+"discord.py" = {git = "https://github.com/Rapptz/discord.py", extras = ["voice"], rev = "ef92170"} # discord.py 2.0
 emoji = "^1.6.1"
 forex-python = "^1.6"
 ImageHash = "^4.2.1"
@@ -44,7 +44,7 @@ asyncpraw = "^7.5.0"
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.5.7"
-pylint = "^2.11.1"
+pylint = "2.12.1"
 rope = "^0.21.0"
 wheel = "^0.37.0"
 

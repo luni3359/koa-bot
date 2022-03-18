@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 from pathlib import Path
+from typing import List
 
 import asyncpraw
 import discord
@@ -12,6 +13,7 @@ import tweepy
 from asyncpraw.reddit import Submission
 from discord.ext import commands
 from PIL import Image
+from thefuzz import fuzz
 
 import koabot.utils.net as net_utils
 import koabot.utils.posts as post_utils
@@ -517,13 +519,13 @@ class Gallery(commands.Cog):
 
         deviation = api_result['deviation']
 
-        if deviation['type'] == "image":
-            await self.send_deviantart_image(msg, url, deviation)
-        elif deviation['type'] == "literature":
-            await self.send_deviantart_literature(msg, url, deviation)
+        if deviation['type'] in ['image', 'literature']:
+            embed = self.build_deviantart_embed(url, deviation)
         else:
             print(f"Incapable of handling DeviantArt url (type: {deviation['type']}):\n{url}")
             return
+
+        await msg.reply(embed=embed, mention_author=False)
 
         try:
             await msg.edit(suppress=True)
@@ -534,76 +536,125 @@ class Gallery(commands.Cog):
             else:
                 print(f"Forbidden: Status {e.status} (code {e.code}")
 
-    async def send_deviantart_image(self, msg: discord.Message, url: str, deviation):
-        """DeviantArt image embed sender"""
+    async def get_deviantart_posts(self, msg: discord.Message, urls: List[str]):
+        """Automatically fetch multiple posts from deviantart"""
 
-        token = deviation['media']['token'][0]
-        base_uri = deviation['media']['baseUri']
-        pretty_name = deviation['media']['prettyName']
+        title_to_test_against = urls[0].split('/')[-1].rsplit('-', maxsplit=1)[0]
+        similarity_ratio = 0
+        for url in urls[1:]:
+            title = url.split('/')[-1].rsplit('-', maxsplit=1)[0]
+            similarity_ratio += fuzz.ratio(title, title_to_test_against)
+            print(f"{title}: {title_to_test_against} ({fuzz.ratio(title, title_to_test_against)})")
 
-        for media_type in deviation['media']['types']:
-            if media_type['t'] == 'preview':
-                preview_url = media_type['c'].replace('<prettyName>', pretty_name)
-                preview_url = preview_url.replace(',q_80', ',q_100')
-                break
+        similarity_ratio /= len(urls) - 1
+        print(f"Url similarity ratio: {similarity_ratio}")
+        if similarity_ratio < 90:
+            return
 
-        image_url = f'{base_uri}/{preview_url}?token={token}'
-        print(image_url)
+        deviation_type = None
+        api_results = []
+        for url in urls:
+            if not (post_id := post_utils.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')):
+                return
+
+            search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
+            api_result = (await net_utils.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
+
+            deviation = api_result['deviation']
+
+            if deviation_type is None:
+                deviation_type = deviation['type']
+
+            if deviation['type'] != deviation_type:
+                print("Preview not available. Deviation types differ.")
+                return
+
+            api_results.append(api_result)
+
+        embeds = []
+        total_da_count = len(api_results)
+        last_embed_index = min(4, total_da_count - 1)
+        for i, api_result in enumerate(api_results[:5]):
+            if i != last_embed_index:
+                if i == 0:
+                    embed = self.build_deviantart_embed(urls[i], api_result['deviation'])
+                    embed.remove_footer()
+                else:
+                    embed = self.build_deviantart_embed(urls[i], api_result['deviation'], image_only=True)
+            if i == last_embed_index:
+                embed = self.build_deviantart_embed(urls[i], api_result['deviation'])
+                embed.description = ""
+                embed.remove_author()
+                embed.clear_fields()
+                if total_da_count > 5:
+                    embed.set_footer(text=f"{total_da_count - 5}+ remaining", icon_url=embed.footer.icon_url)
+
+            embeds.append(embed)
+
+        await msg.reply(embeds=embeds, mention_author=False)
+
+        try:
+            await msg.edit(suppress=True)
+        except discord.errors.Forbidden as e:
+            # Missing Permissions
+            if e.code == 50013:
+                print("Missing Permissions: Cannot suppress embed from sender's message")
+            else:
+                print(f"Forbidden: Status {e.status} (code {e.code}")
+
+    def build_deviantart_embed(self, url: str, deviation: dict, *, image_only=False) -> discord.Embed:
+        """DeviantArt embed builder"""
 
         embed = discord.Embed()
         embed.title = deviation['title']
         embed.url = url
         embed.color = 0x06070d
-        embed.set_author(
-            name=deviation['author']['username'],
-            url=f"https://www.deviantart.com/{deviation['author']['username']}",
-            icon_url=deviation['author']['usericon'])
 
-        if 'description' in deviation['extended']:
-            embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
-                                       deviation['extended']['description']).strip()
+        if not image_only:
+            embed.set_author(
+                name=deviation['author']['username'],
+                url=f"https://www.deviantart.com/{deviation['author']['username']}",
+                icon_url=deviation['author']['usericon'])
 
-        if len(embed.description) > 200:
-            embed.description = embed.description[:200] + "..."
+        if (deviation_type := deviation['type']) == 'image':
+            token = deviation['media']['token'][0]
+            base_uri = deviation['media']['baseUri']
+            pretty_name = deviation['media']['prettyName']
 
-        if (da_favorites := deviation['stats']['favourites']) > 0:
-            embed.add_field(name='Favorites', value=f"{da_favorites:,}")
+            for media_type in deviation['media']['types']:
+                if media_type['t'] == 'preview':
+                    preview_url = media_type['c'].replace('<prettyName>', pretty_name)
+                    preview_url = preview_url.replace(',q_80', ',q_100')
+                    break
 
-        if (da_views := deviation['extended']['stats']['views']) > 0:
-            embed.add_field(name='Views', value=f"{da_views:,}")
+            image_url = f'{base_uri}/{preview_url}?token={token}'
+            print(image_url)
 
-        embed.set_image(url=image_url)
-        embed.set_footer(
-            text=self.bot.assets['deviantart']['name'],
-            icon_url=self.bot.assets['deviantart']['favicon'])
+            if 'description' in deviation['extended'] and not image_only:
+                embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
+                                           deviation['extended']['description']).strip()
 
-        await msg.reply(embed=embed, mention_author=False)
+            if len(embed.description) > 200:
+                embed.description = embed.description[:200] + "..."
 
-    async def send_deviantart_literature(self, msg: discord.Message, url: str, deviation):
-        """DeviantArt literature embed sender"""
+            embed.set_image(url=image_url)
+        elif deviation_type == 'literature':
+            embed.description = deviation['textContent']['excerpt'] + "..."
+        else:
+            raise ValueError("Unknown DeviantArt embed type!")
 
-        embed = discord.Embed()
-        embed.title = deviation['title']
-        embed.url = url
-        embed.color = 0x06070d
-        embed.set_author(
-            name=deviation['author']['username'],
-            url=f"https://www.deviantart.com/{deviation['author']['username']}",
-            icon_url=deviation['author']['usericon'])
+        if not image_only:
+            if (da_favorites := deviation['stats']['favourites']) > 0:
+                embed.add_field(name='Favorites', value=f"{da_favorites:,}")
 
-        embed.description = deviation['textContent']['excerpt'] + "..."
+            if (da_views := deviation['extended']['stats']['views']) > 0:
+                embed.add_field(name='Views', value=f"{da_views:,}")
 
-        if (da_favorites := deviation['stats']['favourites']) > 0:
-            embed.add_field(name='Favorites', value=f"{da_favorites:,}")
+            embed.set_footer(
+                text=self.bot.assets['deviantart']['name'],
+                icon_url=self.bot.assets['deviantart']['favicon'])
 
-        if (da_views := deviation['extended']['stats']['views']) > 0:
-            embed.add_field(name='Views', value=f"{da_views:,}")
-
-        embed.set_footer(
-            text=self.bot.assets['deviantart']['name'],
-            icon_url=self.bot.assets['deviantart']['favicon'])
-
-        await msg.reply(embed=embed, mention_author=False)
+        return embed
 
     async def get_imgur_gallery(self, msg: discord.Message, url: str):
         """Automatically fetch and post any image galleries from imgur"""

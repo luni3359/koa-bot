@@ -1,4 +1,6 @@
 """Search and gallery operations for art websites"""
+from typing import List
+
 import discord
 from discord.ext import commands
 
@@ -54,6 +56,13 @@ class ImageBoard(commands.Cog):
             await gallery_cog.get_reddit_gallery(msg, url, guide=guide)
         else:
             raise ValueError(f'Board "{board}" has no gallery entry.')
+
+    async def show_combined_gallery(self, msg: discord.Message, urls: List[str], /, *, board: str, guide: dict):
+        """Show multiple galleries that share one common element as one"""
+        gallery_cog: Gallery = self.bot.get_cog('Gallery')
+
+        if board == 'deviantart':
+            await gallery_cog.get_deviantart_posts(msg, urls)
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         if isinstance(error, commands.MissingRequiredArgument):

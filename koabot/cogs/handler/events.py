@@ -272,6 +272,17 @@ class BotEvents(commands.Cog):
             # or if it's anything else
             else:
                 await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery_board, guide=gallery['guide'])
+        elif len(gallery) > 1:
+            common_domain = gallery[0]['board']
+            for gallery_element in gallery:
+                if gallery_element['board'] != common_domain:
+                    common_domain = False
+                    print("Skipping previews. The links sent do not belong to the same domain.")
+                    break
+
+            if common_domain:
+                imageboard_cog: ImageBoard = self.bot.get_cog('ImageBoard')
+                await imageboard_cog.show_combined_gallery(msg, [e['url'] for e in gallery], board=common_domain, guide=gallery[0]['guide'])
 
         # checking if a command has been issued
         command_issued = False

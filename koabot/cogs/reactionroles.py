@@ -3,6 +3,7 @@ import json
 import os
 import re
 import timeit
+from typing import Set
 
 import discord
 import emoji
@@ -51,7 +52,7 @@ class ReactionRoles(commands.Cog):
         message = await channel.fetch_message(message_id)
         user_id = user.id
 
-        message_reactions = set()
+        message_reactions: Set[str] = set()
         for em in message.reactions:
             if not isinstance(em, str):
                 em = str(em)
@@ -131,7 +132,7 @@ class ReactionRoles(commands.Cog):
             await ctx.send('Invalid command!')
 
     @reaction_roles.command()
-    async def assign(self, ctx: commands.Context, url: str):
+    async def assign(self, ctx: commands.Context, url: str) -> None:
         """Initialize the emoji-message-role binding process"""
         url_matches = CHANNEL_URL_PATTERN.match(url)
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
@@ -139,7 +140,7 @@ class ReactionRoles(commands.Cog):
             return await ctx.send(bot_cog.get_quote('rr_assign_missing_or_invalid_message_url'))
 
         message_id = url_matches.group(0).split('/')[-1]
-        message = None
+        message: discord.Message = None
 
         channel_id = url_matches.group(0).split('/')[-2]
         if channel_id != ctx.channel.id:
@@ -166,15 +167,16 @@ class ReactionRoles(commands.Cog):
         if bind_tag in self.rr_temporary_list:
             return await ctx.send(bot_cog.get_quote('rr_assign_already_assigning'))
 
-        self.rr_temporary_list[bind_tag] = {}
-        self.rr_temporary_list[bind_tag]['bind_message'] = message_id
-        self.rr_temporary_list[bind_tag]['bind_channel'] = channel_id
-        self.rr_temporary_list[bind_tag]['links'] = []
+        tmp_bind = {}
+        tmp_bind['bind_message'] = message_id
+        tmp_bind['bind_channel'] = channel_id
+        tmp_bind['links'] = []
+        self.rr_temporary_list[bind_tag] = tmp_bind
 
         await ctx.send(bot_cog.get_quote('rr_assign_process_complete'))
 
     @reaction_roles.command()
-    async def bind(self, ctx: commands.Context):
+    async def bind(self, ctx: commands.Context) -> None:
         """Add a new emoji-role binding to the message being currently assigned to"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
@@ -245,13 +247,12 @@ class ReactionRoles(commands.Cog):
         bind_object = {}
         bind_object['reactions'] = emoji_list
         bind_object['roles'] = roles_list
-
         self.rr_temporary_list[bind_tag]['links'].append(bind_object)
 
         await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
     @reaction_roles.command()
-    async def undo(self, ctx: commands.Context, call_type: str):
+    async def undo(self, ctx: commands.Context, call_type: str) -> None:
         """Cancel the last issued reaction roles entry"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
@@ -266,7 +267,7 @@ class ReactionRoles(commands.Cog):
             self.rr_temporary_list[bind_tag]['links'] = []
 
     @reaction_roles.command()
-    async def save(self, ctx: commands.Context):
+    async def save(self, ctx: commands.Context) -> None:
         """Complete the emoji-role registration"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
@@ -325,7 +326,7 @@ class ReactionRoles(commands.Cog):
         await ctx.send('Registration complete!')
 
     @reaction_roles.command(aliases=['quit', 'exit', 'stop'])
-    async def cancel(self, ctx: commands.Context):
+    async def cancel(self, ctx: commands.Context) -> None:
         """Quit the reaction roles binding process"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
@@ -338,10 +339,14 @@ class ReactionRoles(commands.Cog):
 
     async def reaction_added(self, payload: discord.RawReactionActionEvent, user: discord.abc.User):
         """When a reaction is added to a message"""
-        handle_confirmation = str(payload.message_id) in self.rr_confirmations
-        handle_reactionrole = str(payload.message_id) in self.rr_assignments
+        # Handle reaction role
+        if str(payload.message_id) in self.rr_assignments:
+            if await self.manage_rr_cooldown(user):
+                return
 
-        if handle_confirmation:
+            await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
+        # Handle confirmation
+        elif str(payload.message_id) in self.rr_confirmations:
             tmp_root = self.rr_confirmations[payload.message_id]
 
             if str(payload.user_id) != tmp_root['bind_tag'].split('/')[0]:
@@ -362,24 +367,18 @@ class ReactionRoles(commands.Cog):
             self.rr_confirmations.pop(payload.message_id)
 
             channel = self.bot.get_channel(payload.channel_id)
-
             message = await channel.fetch_message(payload.message_id)
             await message.clear_reactions()
+
             if str(reaction) == emoji.emojize(':o:', use_aliases=True):
                 await message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
             else:
                 await message.add_reaction(emoji.emojize(':stop_sign:', use_aliases=True))
-        elif handle_reactionrole:
-            if await self.manage_rr_cooldown(user):
-                return
-
-            await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
 
     async def reaction_removed(self, payload: discord.RawReactionActionEvent, user: discord.abc.User):
         """When a reaction is removed from a message"""
-        handle_reactionrole = str(payload.message_id) in self.rr_assignments
-
-        if handle_reactionrole:
+        # Handle reaction role
+        if str(payload.message_id) in self.rr_assignments:
             if await self.manage_rr_cooldown(user):
                 return
 
@@ -434,14 +433,14 @@ class ReactionRoles(commands.Cog):
 
         return False
 
-    def add_rr_confirmation(self, message_id: str, bind_tag: str, single_link: list, emoji_list: list):
+    def add_rr_confirmation(self, message_id: str, bind_tag: str, single_link: list, emoji_list: list) -> None:
         """Creates an entry pending to be handled for reaction roles overwrite request"""
         self.rr_confirmations[message_id] = {}
         self.rr_confirmations[message_id]['bind_tag'] = bind_tag
         self.rr_confirmations[message_id]['emoji_list'] = emoji_list
         self.rr_confirmations[message_id]['link'] = single_link
 
-    def add_rr_watch(self, message_id: str, channel_id: str, links: list):
+    def add_rr_watch(self, message_id: str, channel_id: str, links: list) -> None:
         """Starts keeping track of what messages have bound actions"""
         tmp_obj = {}
         tmp_obj['channel_id'] = channel_id

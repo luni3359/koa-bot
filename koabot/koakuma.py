@@ -2,9 +2,9 @@
 import os
 import sqlite3
 import timeit
-import traceback
 from datetime import datetime
 from pathlib import Path
+from typing import List
 
 import appdirs
 import commentjson
@@ -49,16 +49,15 @@ def run_periodic_tasks() -> None:
 
 def load_all_extensions(path: str) -> None:
     """Recursively load all cogs in the project"""
-    print('Loading cogs in project...')
+    print("Loading cogs in project...")
 
     start_load_time = timeit.default_timer()
-    cog_prefix = 'koabot.cogs'
-    cog_list = []
-    dropped_cogs = 0
+    cog_prefix = "koabot.cogs"
+    cog_paths: List[str] = []
 
     for p, _, f in os.walk(path):
         for file in f:
-            if file.endswith('.py'):
+            if file.endswith(".py"):
                 container_dir = p.replace(path, '').replace('/', '.')
                 (filename, _) = os.path.splitext(file)
 
@@ -66,9 +65,10 @@ def load_all_extensions(path: str) -> None:
                     continue
 
                 cog_path = cog_prefix + container_dir + '.' + filename
-                cog_list.append(cog_path)
+                cog_paths.append(cog_path)
 
-    for ext in cog_list:
+    dropped_cogs = 0
+    for ext in cog_paths:
         try:
             print(f"Loading \"{ext}\"...".ljust(40), end='\r')
             bot.load_extension(ext)
@@ -80,9 +80,9 @@ def load_all_extensions(path: str) -> None:
     time_to_finish = timeit.default_timer() - start_load_time
 
     if dropped_cogs == 0:
-        log_msg = f"Finished loading {len(cog_list)} cogs in {time_to_finish:0.2f}s."
+        log_msg = f"Finished loading {len(cog_paths)} cogs in {time_to_finish:0.2f}s."
     else:
-        log_msg = f"WARNING: Only {len(cog_list)-dropped_cogs} out of {len(cog_list)} cogs loaded successfully (in {time_to_finish:0.2f}s)."
+        log_msg = f"WARNING: Only {len(cog_paths)-dropped_cogs} out of {len(cog_paths)} cogs loaded successfully (in {time_to_finish:0.2f}s)."
 
     print(log_msg.ljust(40))
 
@@ -118,15 +118,15 @@ def start(debugging: bool = False, /):
     bot_data = {}
 
     data_filenames = [
-        'auth.jsonc',
-        'quotes.jsonc'
+        "auth.jsonc",
+        "quotes.jsonc"
     ]
 
     if debugging:
         print('Running in debug mode.')
-        data_filenames.insert(0, 'beta.jsonc')
+        data_filenames.insert(0, "beta.jsonc")
     else:
-        data_filenames.insert(0, 'config.jsonc')
+        data_filenames.insert(0, "config.jsonc")
 
     for filename in data_filenames:
         try:
@@ -137,26 +137,26 @@ def start(debugging: bool = False, /):
 
     bot.__dict__.update(bot_data)
 
-    print('Connecting to database...')
+    print("Connecting to database...")
     start_load_time = timeit.default_timer()
 
     try:
-        bot.sqlite_conn = sqlite3.connect(os.path.join(CACHE_DIR, 'dbBeta.sqlite3'))
+        bot.sqlite_conn = sqlite3.connect(os.path.join(CACHE_DIR, "dbBeta.sqlite3"))
 
         # Generate tables in database
-        with open('db/database.sql', encoding="UTF-8") as f:
+        with open("db/database.sql", encoding="UTF-8") as f:
             sql_script = f.read()
 
         c = bot.sqlite_conn.cursor()
         c.executescript(sql_script)
         bot.sqlite_conn.commit()
         c.close()
-        print(f'To database in {timeit.default_timer() - start_load_time:0.3f}s')
+        print(f"To database in {timeit.default_timer() - start_load_time:0.3f}s")
     except sqlite3.Error as e:
         print(e)
-        print('Could not connect to the database! Functionality will be limited.')
+        print("Could not connect to the database! Functionality will be limited.")
 
-    load_all_extensions(os.path.join(SOURCE_DIR, 'cogs'))
+    load_all_extensions(os.path.join(SOURCE_DIR, "cogs"))
     run_periodic_tasks()
 
     bot.run(bot.koa['token'])

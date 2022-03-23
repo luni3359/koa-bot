@@ -3,7 +3,7 @@ import asyncio
 import random
 import re
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Union
 
 import discord
@@ -63,11 +63,11 @@ class BotStatus(commands.Cog):
 
             cpu_temp = float(cpu_temp)
 
-            print(f'CPU Temp: {cpu_temp:0.1f} °C')
+            print(f"CPU Temp: {cpu_temp:0.1f} °C")
             await ctx.send(f"I'm at {cpu_temp:0.1f} °C.")
         except NameError:
-            print('Unable to report temperature.')
-            await ctx.send("I can't get the temperature...")
+            print("Unable to report temperature.")
+            await ctx.send("I can't get the CPU's temperature...")
 
     @commands.command(name='last')
     async def talk_status(self, ctx: commands.Context, /):
@@ -78,7 +78,7 @@ class BotStatus(commands.Cog):
     async def uptime(self, ctx: commands.Context, /):
         """Mention the current uptime"""
 
-        delta_uptime = datetime.utcnow() - self.bot.launch_time
+        delta_uptime: timedelta = datetime.utcnow() - self.bot.launch_time
         (hours, remainder) = divmod(int(delta_uptime.total_seconds()), 3600)
         (minutes, seconds) = divmod(remainder, 60)
         (days, hours) = divmod(hours, 24)
@@ -98,7 +98,7 @@ class BotStatus(commands.Cog):
                 Message to be said.
             embed::discord.Embed
                 Self-explanatory. Default is None.
-            rnd_duration::list or int
+            rnd_duration::list | int
                 A list with two int values of what's the least that should be waited for to the most, chosen at random.
                 If provided an int the 0 will be assumed at the start.
             min_duration::int

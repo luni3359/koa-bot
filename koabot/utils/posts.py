@@ -69,7 +69,7 @@ def get_name_or_id(url: str, /, *, start: Union[str, list] = None, end: Union[st
 def combine_tags(tags: Union[str, list], /,  *, maximum: int = 5) -> str:
     """Combine tags and give them a readable format
     Arguments:
-        tags::str or list
+        tags::str | list
 
     Keywords:
         maximum::int

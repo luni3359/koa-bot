@@ -236,7 +236,7 @@ class Gallery(commands.Cog):
 
     async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict = None) -> None:
         """Automatically fetch and post any image galleries from twitter
-        Parameters:
+        Arguments:
             msg::discord.Message
                 The message where the link was sent
             url::str
@@ -337,7 +337,7 @@ class Gallery(commands.Cog):
 
     async def get_pixiv_gallery(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch and post any image galleries from pixiv
-        Parameters:
+        Arguments:
             msg::discord.Message
                 The message where the link was sent
             url::str
@@ -358,17 +358,17 @@ class Gallery(commands.Cog):
         try:
             illust_json = await self.pixiv_aapi.illust_detail(post_id, req_auth=True)
         except pixivpy_async.PixivError as e:
-            await channel.send('Odd...')
+            await channel.send("Odd...")
             print(e)
             return
 
         print(illust_json)
         if 'illust' not in illust_json:
             # too bad
-            print(f'Invalid Pixiv id #{post_id}')
+            print(f"Invalid Pixiv id #{post_id}")
             return
 
-        print(f'Pixiv auth passed! (for #{post_id})')
+        print(f"Pixiv auth passed! (for #{post_id})")
 
         illust = illust_json.illust
         # bot_cog: BotStatus = self.bot.get_cog('BotStatus')
@@ -519,10 +519,10 @@ class Gallery(commands.Cog):
 
         deviation = api_result['deviation']
 
-        if deviation['type'] in ['image', 'literature']:
+        if (deviation_type := deviation['type']) in ['image', 'literature']:
             embed = self.build_deviantart_embed(url, deviation)
         else:
-            print(f"Incapable of handling DeviantArt url (type: {deviation['type']}):\n{url}")
+            print(f"Incapable of handling DeviantArt url (type: {deviation_type}):\n{url}")
             return
 
         await msg.reply(embed=embed, mention_author=False)
@@ -551,7 +551,7 @@ class Gallery(commands.Cog):
         if similarity_ratio < 90:
             return
 
-        deviation_type = None
+        base_type: str = None
         api_results = []
         for url in urls:
             if not (post_id := post_utils.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')):
@@ -562,27 +562,27 @@ class Gallery(commands.Cog):
 
             deviation = api_result['deviation']
 
-            if deviation_type is None:
-                deviation_type = deviation['type']
+            if base_type is None:
+                base_type = deviation['type']
 
-            if deviation['type'] != deviation_type:
+            if deviation['type'] != base_type:
                 print("Preview not available. Deviation types differ.")
                 return
 
             api_results.append(api_result)
 
-        embeds = []
+        embeds: List[discord.Embed] = []
         total_da_count = len(api_results)
         last_embed_index = min(4, total_da_count - 1)
-        for i, api_result in enumerate(api_results[:5]):
+        for i, deviation in enumerate([d['deviation'] for d in api_results[:5]]):
             if i != last_embed_index:
                 if i == 0:
-                    embed = self.build_deviantart_embed(urls[i], api_result['deviation'])
+                    embed = self.build_deviantart_embed(urls[i], deviation)
                     embed.remove_footer()
                 else:
-                    embed = self.build_deviantart_embed(urls[i], api_result['deviation'], image_only=True)
+                    embed = self.build_deviantart_embed(urls[i], deviation, image_only=True)
             if i == last_embed_index:
-                embed = self.build_deviantart_embed(urls[i], api_result['deviation'])
+                embed = self.build_deviantart_embed(urls[i], deviation)
                 embed.description = ""
                 embed.remove_author()
                 embed.clear_fields()
@@ -617,11 +617,12 @@ class Gallery(commands.Cog):
                 icon_url=deviation['author']['usericon'])
 
         if (deviation_type := deviation['type']) == 'image':
-            token = deviation['media']['token'][0]
-            base_uri = deviation['media']['baseUri']
-            pretty_name = deviation['media']['prettyName']
+            deviation_media = deviation['media']
+            token = deviation_media['token'][0]
+            base_uri = deviation_media['baseUri']
+            pretty_name = deviation_media['prettyName']
 
-            for media_type in deviation['media']['types']:
+            for media_type in deviation_media['types']:
                 if media_type['t'] == 'preview':
                     preview_url = media_type['c'].replace('<prettyName>', pretty_name)
                     preview_url = preview_url.replace(',q_80', ',q_100')

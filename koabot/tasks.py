@@ -104,7 +104,7 @@ async def change_presence_periodically() -> None:
 
     await koakuma.bot.wait_until_ready()
     bot_cog: BotStatus = koakuma.bot.get_cog('BotStatus')
-    day = datetime.utcnow().day
+    day: int = datetime.utcnow().day
 
     while not koakuma.bot.is_closed():
         time = datetime.utcnow()
@@ -123,6 +123,7 @@ async def lookup_pending_posts() -> None:
 
     await koakuma.bot.wait_until_ready()
 
+    guide = koakuma.bot.guides['gallery']['danbooru-default']
     bot_cog: BotStatus = koakuma.bot.get_cog('BotStatus')
     board_cog: Board = koakuma.bot.get_cog('Board')
     pending_posts = []
@@ -134,7 +135,6 @@ async def lookup_pending_posts() -> None:
             channel_categories[channel_category].append(koakuma.bot.get_channel(int(channel)))
 
     while not koakuma.bot.is_closed():
-        guide = koakuma.bot.guides['gallery']['danbooru-default']
         posts = (await board_cog.search_query(tags=koakuma.bot.tasks['danbooru']['tag_list'], guide=guide, limit=5, random=True)).json
 
         safe_posts = []
@@ -142,12 +142,12 @@ async def lookup_pending_posts() -> None:
         for post in posts:
             if not (post_id := post['id']) in pending_posts:
                 pending_posts.append(post_id)
-                url_to_append = guide['post']['url'].format(post_id)
+                post_url = guide['post']['url'].format(post_id)
 
                 if post['rating'] == 's':
-                    safe_posts.append(url_to_append)
+                    safe_posts.append(post_url)
                 else:
-                    nsfw_posts.append(url_to_append)
+                    nsfw_posts.append(post_url)
 
         safe_posts = '\n'.join(safe_posts)
         nsfw_posts = '\n'.join(nsfw_posts)

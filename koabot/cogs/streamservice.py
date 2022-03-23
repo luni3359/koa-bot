@@ -22,6 +22,8 @@ class StreamService(commands.Cog):
     @commands.command(name='twitch')
     async def search_twitch(self, ctx: commands.Context, *args):
         """Search on Twitch"""
+        guide = self.bot.assets['twitch']
+
         if len(args) < 1:
             print('well it worked...')
             return
@@ -31,9 +33,7 @@ class StreamService(commands.Cog):
         if action == 'get':
             embed = discord.Embed()
             embed.description = ''
-            embed.set_footer(
-                text=self.bot.assets['twitch']['name'],
-                icon_url=self.bot.assets['twitch']['favicon'])
+            embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
 
             # !twitch get <NAME> or !twich get <ID>
             if len(args) == 2:
@@ -74,7 +74,7 @@ class StreamService(commands.Cog):
         Returns:
             preview_was_successfuly_sent::bool
         """
-
+        guide = self.bot.assets['picarto']
         channel: discord.TextChannel = msg.channel
         channel_name = post_utils.get_name_or_id(url, start='.tv/')
 
@@ -83,7 +83,7 @@ class StreamService(commands.Cog):
         if not channel_name:
             return False
 
-        channel_url = f'https://api.picarto.tv/api/v1/channel/name/{channel_name}'
+        channel_url = f"https://api.picarto.tv/api/v1/channel/name/{channel_name}"
         picarto_request = (await net_utils.http_request(channel_url, json=True)).json
 
         if not picarto_request:
@@ -95,7 +95,7 @@ class StreamService(commands.Cog):
             return False
 
         image = await net_utils.fetch_image(picarto_request['thumbnails']['web'])
-        filename = net_utils.get_url_filename(picarto_request['thumbnails']['web'])
+        filename: str = net_utils.get_url_filename(picarto_request['thumbnails']['web'])
 
         embed = discord.Embed()
         embed.set_author(
@@ -104,9 +104,7 @@ class StreamService(commands.Cog):
             icon_url=picarto_request['avatar'])
         embed.description = f"**{picarto_request['title']}**"
         embed.set_image(url=f'attachment://{filename}')
-        embed.set_footer(
-            text=self.bot.assets['picarto']['name'],
-            icon_url=self.bot.assets['picarto']['favicon'])
+        embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
 
         if orig_to_be_deleted:
             await channel.send(file=discord.File(fp=image, filename=filename), embed=embed)

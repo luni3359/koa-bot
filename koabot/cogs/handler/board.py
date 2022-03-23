@@ -138,7 +138,7 @@ class Board(commands.Cog):
         Arguments:
             ctx
                 The context to interact with the discord API
-            posts::list or json object
+            posts::list | dict (json)
                 The post(s) to be sent to a channel
 
         Keywords:
@@ -161,7 +161,7 @@ class Board(commands.Cog):
         posts_processed = 0
         last_post = False
 
-        if max_posts != 0:
+        if max_posts > 0:
             posts = posts[:max_posts]
 
         print(f'Sending {board} posts')
@@ -169,7 +169,7 @@ class Board(commands.Cog):
         for post in posts:
             posts_processed += 1
             post_id = post['id']
-            print(f'Parsing post #{post_id} ({posts_processed}/{min(total_posts, max_posts)})...')
+            print(f"Parsing post #{post_id} ({posts_processed}/{min(total_posts, max_posts)})...")
 
             embed = self.generate_embed(post, board=board, guide=guide)
 
@@ -178,7 +178,7 @@ class Board(commands.Cog):
                 await ctx.send(embed.url)
                 continue
 
-            if max_posts != 0:
+            if max_posts > 0:
                 if posts_processed >= min(max_posts, total_posts):
                     last_post = True
 
@@ -204,7 +204,7 @@ class Board(commands.Cog):
                         await ctx.send(f'<{embed.url}>', embed=embed)
                     else:
                         await ctx.send(embed.url)
-                elif board == 'e621' or board == 'sankaku':
+                elif board in ['e621', 'sankaku']:
                     await ctx.send(f'<{embed.url}>', embed=embed)
                 else:
                     raise ValueError('Board embed send not configured.')
@@ -278,8 +278,7 @@ class Board(commands.Cog):
                     fileurl = url_candidate
                     break
 
-        embed.set_image(url=fileurl)
-        return embed
+        return embed.set_image(url=fileurl)
 
 
 def setup(bot: commands.Bot):

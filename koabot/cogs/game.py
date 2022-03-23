@@ -2,6 +2,7 @@
 import random
 import re
 from heapq import nlargest, nsmallest
+from typing import List, Literal
 
 from discord.ext import commands
 from num2words import num2words
@@ -10,16 +11,35 @@ from koabot.patterns import DICE_PATTERN
 
 
 class RollMatch:
-    """Roll object helper"""
+    """Roll object helper
+    -----------------------
+    type::
+    sign::
+    quantity::
+    pips::
+    keep::
+    raw_points::
+    limited_quantity::
+    keep_type::'h' | 'l'
+        Whether the kept rolled dice should be of the highest or the lowest values.
+    keep_type_full::'highest' | 'lowest'
+        The full notation of `keep_type`.
+    keep_quantity::int
+        The amount of dice to keep.
+    """
 
     def __init__(self, dice_match: re.Match):
-        self.type: str = None
-        self.sign: str = dice_match.group(1)
-        self.quantity: int = dice_match.group(2)
-        self.pips: int = dice_match.group(3)
-        self.keep = dice_match.group(4)
+        self.type: str = None                       # points, roll
+        self.sign: str = dice_match.group(1)        # +, -
+        self.quantity: int = dice_match.group(2)    # 0, 1, 20
+        self.pips: int = dice_match.group(3)        # 0, 1, 6, 32
+        self.keep: str = dice_match.group(4)        # kh3, kl2
         self.raw_points: int = dice_match.group(5)
         self.limited_quantity = False
+
+        if self.keep:
+            self._keep_type = self.keep[1]
+            self._keep_quantity = int(self.keep[2:])
 
         if not self.quantity:
             self.quantity = 1
@@ -48,6 +68,24 @@ class RollMatch:
         else:
             self.raw_points = -int(self.raw_points)
 
+    @property
+    def keep_type(self) -> Literal['h', 'l']:
+        return self._keep_type
+
+    @property
+    def keep_type_full(self) -> Literal['highest', 'lowest']:
+        return 'highest' if self._keep_type == 'h' else 'lowest'
+
+    @property
+    def keep_quantity(self) -> int:
+        return self._keep_quantity
+
+    @keep_quantity.setter
+    def keep_quantity(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError("`keep_quantity can only receive `int` type.`")
+        self._keep_quantity = value
+
 
 class Game(commands.Cog):
     """Commands to play with"""
@@ -58,7 +96,7 @@ class Game(commands.Cog):
     @commands.command(aliases=['r'])
     async def roll(self, ctx: commands.Context, *, roll_string: str):
         """Rolls one or many dice"""
-        matches_found = []
+        matches_found: List[RollMatch] = []
         roll_count = 0
         i = 0
         while i < len(roll_string):
@@ -93,8 +131,6 @@ class Game(commands.Cog):
         message = ">>> "
 
         for i, match in enumerate(matches_found):
-            match: RollMatch = match
-
             if match.type == "points":
                 if match.sign == '+':
                     message += "Add "
@@ -104,11 +140,7 @@ class Game(commands.Cog):
                 s_or_no_s = (abs(match.raw_points) > 1 or match.raw_points == 0) and 's' or ''
 
                 message += f"{abs(match.raw_points)} point{s_or_no_s}.\n"
-                if i == 0 and match.sign == '+':
-                    logic_string += f"__{match.raw_points}__ "
-                else:
-                    logic_string += f"{match.sign} __{abs(match.raw_points)}__ "
-
+                logic_string += f"{match.sign} __{abs(match.raw_points)}__ "
                 total_sum += match.raw_points
                 continue
 
@@ -121,18 +153,14 @@ class Game(commands.Cog):
                 message += f"{num2words(match.quantity).capitalize()} {match.pips}-sided {dice_or_die}. Nothing to roll.  **0.**\n"
                 continue
 
-            roll_list = []
+            roll_list: List[int] = []
 
             if match.keep:
-                if int(match.keep[2:]) != 0:
-                    keep_type = match.keep[1]
-                    keep_length = int(match.keep[2:])
-                    keep_list = []
-                    overkeep = False
+                if match.keep_quantity != 0:
+                    keep_list: List[int] = []
 
-                    if keep_length > match.quantity:
-                        keep_length = match.quantity
-                        overkeep = True
+                    if (overkeep := match.keep_quantity > match.quantity):
+                        match.keep_quantity = match.quantity
                 else:
                     match.keep = ''
 
@@ -150,11 +178,11 @@ class Game(commands.Cog):
                 if match.keep:
                     keep_list.append(die_roll)
 
-                    if len(keep_list) >= keep_length:
-                        if keep_type == 'l':
-                            keep_list = nsmallest(keep_length, keep_list)
-                        elif keep_type == 'h':
-                            keep_list = nlargest(keep_length, keep_list)
+                    if len(keep_list) >= match.keep_quantity:
+                        if match.keep_type == 'l':
+                            keep_list = nsmallest(match.keep_quantity, keep_list)
+                        elif match.keep_type == 'h':
+                            keep_list = nlargest(match.keep_quantity, keep_list)
 
                 # Final die in group throw
                 if j == match.quantity - 1:
@@ -164,15 +192,11 @@ class Game(commands.Cog):
                         message += f'and a {die_roll}.'
 
                     if match.keep:
-                        if keep_type == 'l':
-                            keep_type = 'lowest'
-                        elif keep_type == 'h':
-                            keep_type = 'highest'
-                        message += f'\nKeep the {keep_type} '
+                        message += f'\nKeep the {match.keep_type_full} '
 
-                        if keep_length > 1:
-                            message += f'{num2words(keep_length)}' + (overkeep and '*' or '') + ': ' + ', '.join(
-                                map(str, keep_list[0:keep_length-1])) + f' and a {keep_list[keep_length-1]}.'
+                        if match.keep_quantity > 1:
+                            message += f'{num2words(match.keep_quantity)}' + (overkeep and '*' or '') + ': ' + ', '.join(
+                                map(str, keep_list[:match.keep_quantity-1])) + f' and a {keep_list[match.keep_quantity-1]}.'
                         else:
                             message += f'number: {keep_list[0]}.'
 
@@ -210,8 +234,8 @@ class Game(commands.Cog):
                 else:
                     logic_string += f"__{' + '.join(map(str, roll_list))}__ "
 
-        # if logic_string:
-            # message += f"{logic_string}\n"
+        if logic_string:
+            message += f"{logic_string}\n"
 
         message += f"For a total of **{total_sum}.**"
 

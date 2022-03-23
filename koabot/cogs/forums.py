@@ -1,6 +1,7 @@
 """Handle looking at posts from forum sites"""
 import html
 import itertools
+from typing import List
 
 import basc_py4chan
 import discord
@@ -61,7 +62,7 @@ class Forums(commands.Cog):
             for post in posts_ready:
                 await ctx.send(embed=post)
         else:
-            threads = board.get_threads()
+            threads: List[basc_py4chan.Thread] = board.get_threads()
             max_threads = 2
             max_posts_per_thread = 2
 
@@ -70,8 +71,8 @@ class Forums(commands.Cog):
                 if thread.sticky:
                     continue
 
-                posts_ready = []
-                fallback_post = None
+                posts_ready: List[basc_py4chan.Post] = []
+                fallback_post: basc_py4chan.Post = None
                 for post in thread.posts:
                     if post.has_file:
                         embed = discord.Embed()
@@ -80,14 +81,14 @@ class Forums(commands.Cog):
                             if thread.topic.subject:
                                 embed.title = html.unescape(thread.topic.subject)
                             else:
-                                embed.title = f'/{user_board}/ thread'
+                                embed.title = f"/{user_board}/ thread"
 
                             embed.url = thread.topic.url
 
                         embed.set_author(
-                            name=f'{post.name} @ {post.datetime}',
+                            name=f"{post.name} @ {post.datetime}",
                             url=post.semantic_url)
-                        embed.add_field(name=f'No.{post.post_id}', value='\u200b')
+                        embed.add_field(name=f"No.{post.post_id}", value='\u200b')
                         embed.description = post.text_comment
                         embed.set_image(url=post.file_url)
                         posts_ready.append(embed)
@@ -101,9 +102,9 @@ class Forums(commands.Cog):
                     if len(posts_ready) < max_posts_per_thread and fallback_post:
                         embed = discord.Embed()
                         embed.set_author(
-                            name=f'{fallback_post.name} @ {fallback_post.datetime}',
+                            name=f"{fallback_post.name} @ {fallback_post.datetime}",
                             url=fallback_post.semantic_url)
-                        embed.add_field(name=f'No.{fallback_post.post_id}', value='\u200b')
+                        embed.add_field(name=f"No.{fallback_post.post_id}", value='\u200b')
                         embed.description = fallback_post.text_comment
                         posts_ready.append(embed)
 
@@ -115,13 +116,13 @@ class Forums(commands.Cog):
                 if len(threads_ready) >= max_threads:
                     break
 
-            for post in list(itertools.chain.from_iterable(threads_ready)):
-                if post.image.url:
-                    print(post.author.url + '\n' + post.image.url + '\n\n')
+            for post_embed in list(itertools.chain.from_iterable(threads_ready)):
+                if post_embed.image.url:
+                    print(f"{post_embed.author.url}\n{post_embed.image.url}\n\n")
                 else:
-                    print(post.author.url + '\nNo image\n\n')
+                    print(f"{post_embed.author.url}\nNo image\n\n")
 
-                await ctx.send(embed=post)
+                await ctx.send(embed=post_embed)
 
 
 def setup(bot: commands.Bot):

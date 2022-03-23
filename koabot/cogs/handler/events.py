@@ -3,6 +3,7 @@ import re
 import sys
 import traceback
 from datetime import datetime
+from typing import List
 
 import discord
 import tldextract
@@ -28,7 +29,7 @@ class BotEvents(commands.Cog):
         self.bot.last_channel_warned = False
 
         # guides stuff
-        self.valid_urls = []
+        self.valid_urls: List[dict] = []
         for group, contents in self.bot.match_groups.items():
             for match in contents:
                 url_pattern = match['url']
@@ -178,9 +179,10 @@ class BotEvents(commands.Cog):
                     return
 
         channel: discord.TextChannel = msg.channel
+        prefix_start = content[0] == '!'
 
         # Reference channels together
-        if len(content) and content[0] == '!' and msg.channel_mentions:  # only if explicitly asked for
+        if len(content) and prefix_start and msg.channel_mentions:  # only if explicitly asked for
             bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
             for mentioned_channel in msg.channel_mentions:
@@ -250,9 +252,9 @@ class BotEvents(commands.Cog):
                         gallery.append({'url': full_url, 'board': group, 'guide': guide_content})
                     elif guide_type == 'stream' and group == 'picarto':
                         streams_cog: StreamService = self.bot.get_cog('StreamService')
-                        picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=content[0] == '!')
+                        picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=prefix_start)
 
-                        if picarto_preview_shown and content[0] == '!':
+                        if picarto_preview_shown and prefix_start:
                             await msg.delete()
 
                 # done with this url
@@ -264,14 +266,8 @@ class BotEvents(commands.Cog):
 
             gallery = gallery[0]
             gallery_board = gallery['board']
-            requested_by_user = content[0] != '!'
+            await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery_board, guide=gallery['guide'], only_missing_preview=not prefix_start)
 
-            # ...only if it was asked for by starting their message with '!', for booru galleries
-            if gallery_board in ['danbooru', 'e621', 'sankaku']:
-                await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery_board, guide=gallery['guide'], only_missing_preview=requested_by_user)
-            # or if it's anything else
-            else:
-                await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery_board, guide=gallery['guide'])
         elif len(gallery) > 1:
             common_domain = gallery[0]['board']
             for gallery_element in gallery:
@@ -282,11 +278,11 @@ class BotEvents(commands.Cog):
 
             if common_domain:
                 imageboard_cog: ImageBoard = self.bot.get_cog('ImageBoard')
-                await imageboard_cog.show_combined_gallery(msg, [e['url'] for e in gallery], board=common_domain, guide=gallery[0]['guide'])
+                await imageboard_cog.show_combined_gallery(msg, [e['url'] for e in gallery], board=common_domain, guide=gallery[0]['guide'], only_missing_preview=not prefix_start)
 
         # checking if a command has been issued
         command_issued = False
-        if len(content) and content[0] == '!':
+        if len(content) and prefix_start:
             command_name_regex = re.search(r'^!([a-zA-Z0-9]+)', content)
             if command_name_regex:
                 cmd = self.bot.get_command(command_name_regex.group(1))

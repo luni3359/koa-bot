@@ -2,6 +2,7 @@
 import math
 import re
 import urllib
+from typing import List
 
 import discord
 from discord.ext import commands
@@ -23,6 +24,9 @@ class InfoLookup(commands.Cog):
     @commands.command(name='wikipedia', aliases=['wk', 'wp'])
     async def search_wikipedia(self, ctx: commands.Context, *, search_term: str):
         """Search for articles in Wikipedia"""
+        MAX_SUMMARY_LENGTH = 2000
+        guide = self.bot.guides['explanation']['wikipedia-default']
+
         page_results = self.wikipedia.search(search_term)
         page_title = []
 
@@ -39,9 +43,9 @@ class InfoLookup(commands.Cog):
             embed = discord.Embed()
             embed.title = page.title
             embed.url = page.url
-            if len(summary) > 2000:
-                summary = summary[:2000]
-                for i in range(2000):
+            if len(summary) > MAX_SUMMARY_LENGTH:
+                summary = summary[:MAX_SUMMARY_LENGTH]
+                for i in range(MAX_SUMMARY_LENGTH):
                     if summary[len(summary) - i - 1] != ' ':
                         continue
 
@@ -53,13 +57,12 @@ class InfoLookup(commands.Cog):
                 embed.set_image(url=js['thumbnail']['source'])
 
             embed.description = summary
-            embed.set_footer(text=self.bot.guides['explanation']['wikipedia-default']['embed']['footer_text'],
-                             icon_url=self.bot.guides['explanation']['wikipedia-default']['embed']['favicon']['size16'])
+            embed.set_footer(text=guide['embed']['footer_text'], icon_url=guide['embed']['favicon']['size16'])
             await ctx.send(embed=embed)
         except MediaExceptions.DisambiguationError as e:
             bot_msg = 'There are many definitions for that... do you see anything that matches?\n'
 
-            for suggestion in e.options[0:3]:
+            for suggestion in e.options[:3]:
                 bot_msg += f'* {suggestion}\n'
 
             await ctx.send(bot_msg)
@@ -75,10 +78,11 @@ class InfoLookup(commands.Cog):
     @commands.command(name='jisho', aliases=['j'])
     async def search_jisho(self, ctx: commands.Context, *, search_term: str):
         """Search a term in the japanese dictionary jisho"""
-
+        MAX_DEFINITION_LENGTH = 2048
+        guide = self.bot.assets['jisho']
         search_term = search_term.lower()
         word_encoded = urllib.parse.quote_plus(search_term)
-        user_search = self.bot.assets['jisho']['search_url'] + word_encoded
+        user_search = guide['search_url'] + word_encoded
 
         js = (await net_utils.http_request(user_search, json=True)).json
 
@@ -93,28 +97,26 @@ class InfoLookup(commands.Cog):
 
         embed = discord.Embed()
         embed.title = search_term
-        embed.url = self.bot.assets['jisho']['dictionary_url'] + urllib.parse.quote(search_term)
-        embed.description = ''
+        embed.url = guide['dictionary_url'] + urllib.parse.quote(search_term)
+        embed.description = ""
 
         for word in js['data'][:4]:
             japanese_info = word['japanese'][0]
             senses_info = word['senses'][0]
 
             kanji = japanese_info.get('word', japanese_info.get('reading'))
-            primary_reading = japanese_info.get('reading', None)
             jlpt_level = ', '.join(word['jlpt'])
             definitions = '; '.join(senses_info['english_definitions'])
             what_it_is = '; '.join(senses_info['parts_of_speech'])
-            tags = '; '.join(senses_info['tags'])
-
-            definition_clarification = 'info' in senses_info and ', '.join(senses_info['info']) or None
 
             embed.description += f'►{kanji}'
 
-            if primary_reading and primary_reading != kanji:
+            # The primary kana reading for this word
+            if (primary_reading := japanese_info.get('reading', None)) and primary_reading != kanji:
                 embed.description += f'【{primary_reading}】'
 
-            if tags:
+            # The tags attached to the word i.e. Computing, Medicine, Biology
+            if (tags := '; '.join(senses_info['tags'])):
                 embed.description += f'\n*{tags}*'
 
             embed.description += f'\n{what_it_is}'
@@ -125,27 +127,26 @@ class InfoLookup(commands.Cog):
 
             embed.description += f': {definitions}'
 
-            if definition_clarification:
+            if 'info' in senses_info and (definition_clarification := ', '.join(senses_info['info'])):
                 embed.description += f'\n*{definition_clarification}*'
 
             embed.description += '\n\n'
 
-        if len(embed.description) > 2048:
-            embed.description = embed.description[:2048]
+        if len(embed.description) > MAX_DEFINITION_LENGTH:
+            embed.description = embed.description[:MAX_DEFINITION_LENGTH]
 
-        embed.set_footer(
-            text=self.bot.assets['jisho']['name'],
-            icon_url=self.bot.assets['jisho']['favicon']['size16'])
+        embed.set_footer(text=guide['name'], icon_url=guide['favicon']['size16'])
 
         await ctx.send(embed=embed)
 
     @commands.command(name='urbandictionary', aliases=['wu', 'udictionary', 'ud'])
     async def search_urbandictionary(self, ctx: commands.Context, *, search_term: str):
         """Search a term in urbandictionary"""
-
+        MAX_DEFINITION_LENGTH = 2048
+        guide = self.bot.assets['urban_dictionary']
         search_term = search_term.lower()
         search_encoded = urllib.parse.quote_plus(search_term)
-        user_search = self.bot.assets['urban_dictionary']['search_url'] + search_encoded
+        user_search = guide['search_url'] + search_encoded
 
         js = (await net_utils.http_request(user_search, json=True)).json
 
@@ -158,10 +159,10 @@ class InfoLookup(commands.Cog):
             bot_cog: BotStatus = self.bot.get_cog('BotStatus')
             return await ctx.send(bot_cog.get_quote('dictionary_no_results'))
 
-        definition_embeds = []
+        definition_embeds: List[discord.Embed] = []
         embed = discord.Embed()
         embed.title = search_term
-        embed.url = self.bot.assets['urban_dictionary']['dictionary_url'] + search_encoded
+        embed.url = guide['dictionary_url'] + search_encoded
         embed.description = ''
         definition_embeds.append(embed)
         index_placeholder = '<<INDEX>>'
@@ -173,20 +174,19 @@ class InfoLookup(commands.Cog):
             string_to_add = f"**{index_placeholder}. {strip_dictionary_oddities(definition, 'urban')}**\n\n"
             string_to_add += strip_dictionary_oddities(example, 'urban') + '\n\n'
 
-            if len(string_to_add) - len(index_placeholder) + 1 > 2048:
-                string_to_add = string_to_add[:2048]
+            if len(string_to_add) - len(index_placeholder) + 1 > MAX_DEFINITION_LENGTH:
+                string_to_add = string_to_add[:MAX_DEFINITION_LENGTH]
                 await ctx.send('What a massive definition...')
 
-            if i > 0 and len(embed.description) + len(string_to_add) - len(index_placeholder) + 1 > 2048:
+            if i > 0 and len(embed.description) + len(string_to_add) - len(index_placeholder) + 1 > MAX_DEFINITION_LENGTH:
                 extra_embed = discord.Embed()
                 extra_embed.description = string_to_add
                 definition_embeds.append(extra_embed)
             else:
                 embed.description += string_to_add
 
-        definition_embeds[len(definition_embeds) - 1].set_footer(
-            text=self.bot.assets['urban_dictionary']['name'],
-            icon_url=self.bot.assets['urban_dictionary']['favicon']['size16'])
+        definition_embeds[len(definition_embeds) - 1].set_footer(text=guide['name'],
+                                                                 icon_url=guide['favicon']['size16'])
 
         i = 0
         for embed in definition_embeds:
@@ -203,10 +203,11 @@ class InfoLookup(commands.Cog):
     @commands.command(name='dictionary', aliases=['d', 'word', 'w'])
     async def search_english_word(self, ctx: commands.Context, *, search_term: str):
         """Search a term in merriam-webster's dictionary"""
-
+        MAX_DEFINITION_LENGTH = 2048
+        guide = self.bot.assets['merriam-webster']
         search_term = search_term.lower()
         search_encoded = urllib.parse.quote(search_term)
-        user_search = f"{self.bot.assets['merriam-webster']['search_url']}/{search_encoded}?key={self.bot.auth_keys['merriam-webster']['key']}"
+        user_search = f"{guide['search_url']}/{search_encoded}?key={self.bot.auth_keys['merriam-webster']['key']}"
 
         js = (await net_utils.http_request(user_search, json=True)).json
 
@@ -219,17 +220,11 @@ class InfoLookup(commands.Cog):
         # (if there's no dicts, it's safe to assume they're strings)
         if not isinstance(js[0], dict):
             bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-            suggestions = js[:5]
-
-            for i, suggestion in enumerate(suggestions):
-                suggestions[i] = f'• {suggestion}'
+            suggestion_list = '\n\n'.join([f"• {suggestion}" for suggestion in js[:5]])
 
             embed = discord.Embed()
-            suggestion_list = '\n\n'.join(suggestions)
             embed.description = f"*{suggestion_list}*"
-            embed.set_footer(
-                text=self.bot.assets['merriam-webster']['name'],
-                icon_url=self.bot.assets['merriam-webster']['favicon'])
+            embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
             return await ctx.send(bot_cog.get_quote('dictionary_try_this'), embed=embed)
         # If there's suggestions to a different grammatical tense
         elif 'def' not in js[0]:
@@ -242,8 +237,8 @@ class InfoLookup(commands.Cog):
 
         embed = discord.Embed()
         embed.title = search_term
-        embed.url = f"{self.bot.assets['merriam-webster']['dictionary_url']}/{search_encoded}"
-        embed.description = ''
+        embed.url = f"{guide['dictionary_url']}/{search_encoded}"
+        embed.description = ""
 
         for category in js[:2]:
             if not 'def' in category or not 'hwi' in category:
@@ -258,7 +253,7 @@ class InfoLookup(commands.Cog):
                 embed.description = f"{embed.description}\n\n__**{category['fl'].upper()}**__"
 
             for subcategory in definitions:
-                similar_meaning_string = ''
+                similar_meaning_string = ""
                 for similar_meanings in subcategory['sseq']:
                     for meaning in similar_meanings:
                         meaning_item = meaning[1]
@@ -313,14 +308,14 @@ class InfoLookup(commands.Cog):
             else:
                 embed.description = f"{embed.description}\n\n"
 
-        # Embed descriptions longer than 2048 characters error out.
-        if len(embed.description) > 2048:
-            print("Definition over 2048 characters")
-            embeds_to_send = math.ceil(len(embed.description) / 2048) - 1
+        # Embed descriptions longer than 4096 characters error out.
+        if len(embed.description) > MAX_DEFINITION_LENGTH:
+            print(f"Definition over {MAX_DEFINITION_LENGTH} characters")
+            embeds_to_send = math.ceil(len(embed.description) / MAX_DEFINITION_LENGTH) - 1
             embeds_sent = 0
 
             dictionary_definitions = embed.description
-            embed.description = dictionary_definitions[:2048]
+            embed.description = dictionary_definitions[:MAX_DEFINITION_LENGTH]
 
             await ctx.send(embed=embed)
 
@@ -329,18 +324,15 @@ class InfoLookup(commands.Cog):
                 embeds_sent += 1
 
                 embed = discord.Embed()
-                embed.description = dictionary_definitions[2048 * embeds_sent:2048 * (embeds_sent + 1)]
+                embed.description = dictionary_definitions[MAX_DEFINITION_LENGTH *
+                                                           embeds_sent:MAX_DEFINITION_LENGTH * (embeds_sent + 1)]
 
                 if embeds_sent == embeds_to_send:
-                    embed.set_footer(
-                        text=self.bot.assets['merriam-webster']['name'],
-                        icon_url=self.bot.assets['merriam-webster']['favicon'])
+                    embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
 
                 await ctx.send(embed=embed)
         else:
-            embed.set_footer(
-                text=self.bot.assets['merriam-webster']['name'],
-                icon_url=self.bot.assets['merriam-webster']['favicon'])
+            embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
             await ctx.send(embed=embed)
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
@@ -367,6 +359,7 @@ def strip_dictionary_oddities(txt: str, which: str):
                 print(txt)
                 return txt
 
+            # TODO: Is this a bug? There's no return
             for match in matches:
                 txt = txt.replace(match[0], f"*{match[1].upper()}*")
     elif which == 'urban':

@@ -57,7 +57,7 @@ class ImageBoard(commands.Cog):
         else:
             raise ValueError(f'Board "{board}" has no gallery entry.')
 
-    async def show_combined_gallery(self, msg: discord.Message, urls: List[str], /, *, board: str, guide: dict):
+    async def show_combined_gallery(self, msg: discord.Message, urls: List[str], /, *, board: str, guide: dict, only_missing_preview: bool = False):
         """Show multiple galleries that share one common element as one"""
         gallery_cog: Gallery = self.bot.get_cog('Gallery')
 

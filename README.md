@@ -69,7 +69,7 @@ For example, at first Twitter previews used to show only one image regardless of
 
 ## How to setup
 
-1. Make sure you've got python 3.8 or above installed.
+1. Make sure you've got python 3.10 or above installed.
 2. Install the dependencies from `requirements.txt`.
 3. Create a file named `auth.jsonc` under `~/.config/koa-bot` and fill in your secrets as shown below. Replace `site_name` with the name of the website you want the bot to authenticate with, `token_name` with the name of the field (i.e. `token`), and put your secret as the `token_value`.
 
@@ -83,7 +83,11 @@ For example, at first Twitter previews used to show only one image regardless of
 }
 ```
 
-You might need to install additional dependencies either via pip or through your package manager to make use of ImageHash. If you have problems getting the right Python version check out [pyenv](https://github.com/pyenv/pyenv).
+You might need to install additional dependencies either via pip or through your package manager to make use of ImageHash.
+
+Please check out this [link](https://stackoverflow.com/a/59515996/7688278) if you're encountering errors related to the scipy dependency.
+
+If you have problems getting the right Python version check out [pyenv](https://github.com/pyenv/pyenv).
 
 ## How to run
 

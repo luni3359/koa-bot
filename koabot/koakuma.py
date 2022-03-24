@@ -4,7 +4,6 @@ import sqlite3
 import timeit
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 import appdirs
 import commentjson
@@ -53,7 +52,7 @@ def load_all_extensions(path: str) -> None:
 
     start_load_time = timeit.default_timer()
     cog_prefix = "koabot.cogs"
-    cog_paths: List[str] = []
+    cog_paths: list[str] = []
 
     for p, _, f in os.walk(path):
         for file in f:

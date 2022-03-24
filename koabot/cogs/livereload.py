@@ -3,13 +3,12 @@ https://gist.github.com/AXVin/08ed554a458fc7aee4da162f4c53d086"""
 # pylint: disable=no-member
 import os
 import pathlib
-from typing import List
 
 from discord.ext import commands, tasks
 
 # put your extension names in this list
 # if you don't want them to be reloaded
-IGNORE_EXTENSIONS: List[str] = []
+IGNORE_EXTENSIONS: list[str] = []
 
 
 def path_from_extension(extension: str) -> pathlib.Path:

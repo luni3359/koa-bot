@@ -1,7 +1,6 @@
 """Handle looking at posts from forum sites"""
 import html
 import itertools
-from typing import List
 
 import basc_py4chan
 import discord
@@ -62,7 +61,7 @@ class Forums(commands.Cog):
             for post in posts_ready:
                 await ctx.send(embed=post)
         else:
-            threads: List[basc_py4chan.Thread] = board.get_threads()
+            threads: list[basc_py4chan.Thread] = board.get_threads()
             max_threads = 2
             max_posts_per_thread = 2
 
@@ -71,7 +70,7 @@ class Forums(commands.Cog):
                 if thread.sticky:
                     continue
 
-                posts_ready: List[basc_py4chan.Post] = []
+                posts_ready: list[basc_py4chan.Post] = []
                 fallback_post: basc_py4chan.Post = None
                 for post in thread.posts:
                     if post.has_file:

@@ -1,12 +1,11 @@
 """Post utilities"""
 import re
-from typing import Union
 
 from koabot import koakuma
 from koabot.utils.base import list_contains
 
 
-def get_name_or_id(url: str, /, *, start: Union[str, list] = None, end: Union[str, list] = None, pattern: str = "") -> str:
+def get_name_or_id(url: str, /, *, start: str | list = None, end: str | list = None, pattern: str = "") -> str:
     """Get a name or an id from an url
     Arguments:
         url::str
@@ -66,7 +65,7 @@ def get_name_or_id(url: str, /, *, start: Union[str, list] = None, end: Union[st
     return url
 
 
-def combine_tags(tags: Union[str, list], /,  *, maximum: int = 5) -> str:
+def combine_tags(tags: str | list, /,  *, maximum: int = 5) -> str:
     """Combine tags and give them a readable format
     Arguments:
         tags::str | list
@@ -106,9 +105,10 @@ def post_is_missing_preview(post, /, *, board: str = 'danbooru') -> bool:
         board::str
             The board to check the rules with. Default is 'danbooru'
     """
-    if board == 'e621':
-        return list_contains(post['tags']['general'], koakuma.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
-    if board == 'sankaku':
-        return True
-
-    return list_contains(post['tag_string_general'].split(), koakuma.bot.rules['no_preview_tags'][board]) or post['is_banned']
+    match board:
+        case 'e621':
+            return list_contains(post['tags']['general'], koakuma.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
+        case 'sankaku':
+            return True
+        case _:
+            return list_contains(post['tag_string_general'].split(), koakuma.bot.rules['no_preview_tags'][board]) or post['is_banned']

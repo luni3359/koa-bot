@@ -2,7 +2,6 @@
 import math
 import re
 import urllib
-from typing import List
 
 import discord
 from discord.ext import commands
@@ -159,7 +158,7 @@ class InfoLookup(commands.Cog):
             bot_cog: BotStatus = self.bot.get_cog('BotStatus')
             return await ctx.send(bot_cog.get_quote('dictionary_no_results'))
 
-        definition_embeds: List[discord.Embed] = []
+        definition_embeds: list[discord.Embed] = []
         embed = discord.Embed()
         embed.title = search_term
         embed.url = guide['dictionary_url'] + search_encoded
@@ -341,36 +340,37 @@ class InfoLookup(commands.Cog):
             return await ctx.send(bot_cog.get_quote('dictionary_blank_search'))
 
 
-def strip_dictionary_oddities(txt: str, which: str):
+def strip_dictionary_oddities(txt: str, service: str):
     """Trim weird markup from dictionary entries"""
 
-    if which == 'merriam':
-        # Properly format words encased in weird characters
+    match service:
+        case 'merriam':
+            # Properly format words encased in weird characters
 
-        # Remove all filler
-        txt = re.sub(r'\{bc\}|\*', '', txt)
+            # Remove all filler
+            txt = re.sub(r'\{bc\}|\*', '', txt)
 
-        while True:
-            matches = re.findall(
-                r'({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', txt, re.IGNORECASE)
+            while True:
+                matches = re.findall(
+                    r'({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', txt, re.IGNORECASE)
 
-            if not matches:
-                txt = re.sub(r'\{\/?[a-z\ _\-]+\}', '', txt)
-                print(txt)
-                return txt
+                if not matches:
+                    txt = re.sub(r'\{\/?[a-z\ _\-]+\}', '', txt)
+                    print(txt)
+                    return txt
 
-            # TODO: Is this a bug? There's no return
+                # TODO: Is this a bug? There's no return
+                for match in matches:
+                    txt = txt.replace(match[0], f"*{match[1].upper()}*")
+        case 'urban':
+            txt = txt.replace('*', '\\*')
+
+            matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
             for match in matches:
-                txt = txt.replace(match[0], f"*{match[1].upper()}*")
-    elif which == 'urban':
-        txt = txt.replace('*', '\\*')
+                txt = txt.replace(
+                    match[0], f"[{match[1]}]({koakuma.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
 
-        matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
-        for match in matches:
-            txt = txt.replace(
-                match[0], f"[{match[1]}]({koakuma.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
-
-        return txt
+            return txt
 
 
 def setup(bot: commands.Bot):

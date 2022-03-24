@@ -3,7 +3,6 @@ import re
 import sys
 import traceback
 from datetime import datetime
-from typing import List
 
 import discord
 import tldextract
@@ -29,7 +28,7 @@ class BotEvents(commands.Cog):
         self.bot.last_channel_warned = False
 
         # guides stuff
-        self.valid_urls: List[dict] = []
+        self.valid_urls: list[dict] = []
         for group, contents in self.bot.match_groups.items():
             for match in contents:
                 url_pattern = match['url']
@@ -248,14 +247,15 @@ class BotEvents(commands.Cog):
 
                     full_url = url_match['full_url']
 
-                    if guide_type == 'gallery':
-                        gallery.append({'url': full_url, 'board': group, 'guide': guide_content})
-                    elif guide_type == 'stream' and group == 'picarto':
-                        streams_cog: StreamService = self.bot.get_cog('StreamService')
-                        picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=prefix_start)
+                    match guide_type:
+                        case 'gallery':
+                            gallery.append({'url': full_url, 'board': group, 'guide': guide_content})
+                        case 'stream' if group == 'picarto':
+                            streams_cog: StreamService = self.bot.get_cog('StreamService')
+                            picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=prefix_start)
 
-                        if picarto_preview_shown and prefix_start:
-                            await msg.delete()
+                            if picarto_preview_shown and prefix_start:
+                                await msg.delete()
 
                 # done with this url
                 break

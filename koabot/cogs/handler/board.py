@@ -96,42 +96,43 @@ class Board(commands.Cog):
         if limit and limit > 0:
             data_arg['limit'] = limit
 
-        if board == 'danbooru':
-            if post_id:
-                url = guide['api']['id_search_url'].format(post_id)
-                return await net_utils.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
-            elif tags:
-                if include_nsfw:
-                    url = 'https://danbooru.donmai.us'
-                else:
-                    url = 'https://safebooru.donmai.us'
+        match board:
+            case 'danbooru':
+                if post_id:
+                    url = guide['api']['id_search_url'].format(post_id)
+                    return await net_utils.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
+                elif tags:
+                    if include_nsfw:
+                        url = 'https://danbooru.donmai.us'
+                    else:
+                        url = 'https://safebooru.donmai.us'
 
-                return await net_utils.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
-        elif board == 'e621':
-            # e621 requires to know the User-Agent
-            headers = guide['api']['headers']
+                    return await net_utils.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
+            case 'e621':
+                # e621 requires to know the User-Agent
+                headers = guide['api']['headers']
 
-            if post_id:
-                url = guide['api']['id_search_url'].format(post_id)
-                return await net_utils.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
-            elif tags:
-                if include_nsfw:
-                    url = 'https://e621.net'
-                else:
-                    url = 'https://e926.net'
+                if post_id:
+                    url = guide['api']['id_search_url'].format(post_id)
+                    return await net_utils.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
+                elif tags:
+                    if include_nsfw:
+                        url = 'https://e621.net'
+                    else:
+                        url = 'https://e926.net'
 
-                headers['Content-Type'] = 'application/json'
-                return await net_utils.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
-        elif board == 'sankaku':
-            if post_id:
-                url = guide['api']['id_search_url'].format(post_id)
-                return await net_utils.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
-            elif tags:
-                search_query = '+'.join(tags.split(' '))
-                url = guide['api']['tag_search_url'].format(search_query)
-                return await net_utils.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
-        else:
-            raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
+                    headers['Content-Type'] = 'application/json'
+                    return await net_utils.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
+            case 'sankaku':
+                if post_id:
+                    url = guide['api']['id_search_url'].format(post_id)
+                    return await net_utils.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
+                elif tags:
+                    search_query = '+'.join(tags.split(' '))
+                    url = guide['api']['tag_search_url'].format(search_query)
+                    return await net_utils.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
+            case _:
+                raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
 
     async def send_posts(self, ctx: commands.Context, posts, /, *, board: str = 'danbooru', guide: dict, show_nsfw: bool = True, max_posts: int = 4, hide_posts_remaining: bool = False) -> None:
         """Handle sending posts retrieved from image boards
@@ -199,15 +200,16 @@ class Board(commands.Cog):
 
                 await ctx.send(f'<{embed.url}>', embed=embed)
             else:
-                if board == 'danbooru':
-                    if post_utils.post_is_missing_preview(post, board=board) or last_post:
+                match board:
+                    case 'danbooru':
+                        if post_utils.post_is_missing_preview(post, board=board) or last_post:
+                            await ctx.send(f'<{embed.url}>', embed=embed)
+                        else:
+                            await ctx.send(embed.url)
+                    case 'e621' | 'sankaku':
                         await ctx.send(f'<{embed.url}>', embed=embed)
-                    else:
-                        await ctx.send(embed.url)
-                elif board in ['e621', 'sankaku']:
-                    await ctx.send(f'<{embed.url}>', embed=embed)
-                else:
-                    raise ValueError('Board embed send not configured.')
+                    case _:
+                        raise ValueError('Board embed send not configured.')
 
             print(f'Post #{post_id} complete')
 
@@ -227,38 +229,40 @@ class Board(commands.Cog):
 
         post_id = post['id']
 
-        if board == 'danbooru':
-            post_char = re.sub(r' \(.*?\)', '', post_utils.combine_tags(post['tag_string_character']))
-            post_copy = post_utils.combine_tags(post['tag_string_copyright'], maximum=1)
-            post_artist = post_utils.combine_tags(post['tag_string_artist'])
-            embed_post_title = ''
+        match board:
+            case 'danbooru':
+                post_char = re.sub(r' \(.*?\)', '', post_utils.combine_tags(post['tag_string_character']))
+                post_copy = post_utils.combine_tags(post['tag_string_copyright'], maximum=1)
+                post_artist = post_utils.combine_tags(post['tag_string_artist'])
+                embed_post_title = ''
 
-            if post_char:
-                embed_post_title += post_char
+                if post_char:
+                    embed_post_title += post_char
 
-            if post_copy:
-                if not post_char:
-                    embed_post_title += post_copy
-                else:
-                    embed_post_title += f' ({post_copy})'
+                if post_copy:
+                    if not post_char:
+                        embed_post_title += post_copy
+                    else:
+                        embed_post_title += f' ({post_copy})'
 
-            if post_artist:
-                embed_post_title += f' drawn by {post_artist}'
+                if post_artist:
+                    embed_post_title += f' drawn by {post_artist}'
 
-            if not post_char and not post_copy and not post_artist:
-                embed_post_title += f"#{post_id}"
+                if not post_char and not post_copy and not post_artist:
+                    embed_post_title += f"#{post_id}"
 
-            embed_post_title += ' | Danbooru'
-            if len(embed_post_title) >= self.bot.assets['danbooru']['max_embed_title_length']:
-                embed_post_title = embed_post_title[:self.bot.assets['danbooru']['max_embed_title_length'] - 3] + '...'
+                embed_post_title += ' | Danbooru'
+                if len(embed_post_title) >= self.bot.assets['danbooru']['max_embed_title_length']:
+                    embed_post_title = embed_post_title[:self.bot.assets['danbooru']
+                                                        ['max_embed_title_length'] - 3] + '...'
 
-            embed.title = embed_post_title
-        elif board == 'e621':
-            embed.title = f"#{post_id}: {post_utils.combine_tags(post['tags']['artist'])} - e621"
-        elif board == 'sankaku':
-            embed.title = f"Post {post_id}"
-        else:
-            raise ValueError('Board embed title not configured.')
+                embed.title = embed_post_title
+            case 'e621':
+                embed.title = f"#{post_id}: {post_utils.combine_tags(post['tags']['artist'])} - e621"
+            case 'sankaku':
+                embed.title = f"Post {post_id}"
+            case _:
+                raise ValueError('Board embed title not configured.')
 
         embed.url = guide['post']['url'].format(post_id)
 

@@ -2,7 +2,7 @@
 import random
 import re
 from heapq import nlargest, nsmallest
-from typing import List, Literal
+from typing import Literal
 
 from discord.ext import commands
 from num2words import num2words
@@ -96,7 +96,7 @@ class Game(commands.Cog):
     @commands.command(aliases=['r'])
     async def roll(self, ctx: commands.Context, *, roll_string: str):
         """Rolls one or many dice"""
-        matches_found: List[RollMatch] = []
+        matches_found: list[RollMatch] = []
         roll_count = 0
         i = 0
         while i < len(roll_string):
@@ -153,11 +153,11 @@ class Game(commands.Cog):
                 message += f"{num2words(match.quantity).capitalize()} {match.pips}-sided {dice_or_die}. Nothing to roll.  **0.**\n"
                 continue
 
-            roll_list: List[int] = []
+            roll_list: list[int] = []
 
             if match.keep:
                 if match.keep_quantity != 0:
-                    keep_list: List[int] = []
+                    keep_list: list[int] = []
 
                     if (overkeep := match.keep_quantity > match.quantity):
                         match.keep_quantity = match.quantity

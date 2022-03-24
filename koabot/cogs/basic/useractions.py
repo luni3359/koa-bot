@@ -1,7 +1,4 @@
 """Get user information"""
-
-from typing import List
-
 import discord
 from discord.ext import commands
 from discord.ext.commands.errors import (ExtensionAlreadyLoaded,
@@ -19,7 +16,7 @@ class UserActions(commands.Cog):
         """Display an user's avatar"""
 
         if ctx.message.mentions:
-            embeds: List[discord.Embed] = []
+            embeds: list[discord.Embed] = []
             for mention in ctx.message.mentions:
                 embed = discord.Embed()
                 embed.set_image(url=mention.avatar.url)

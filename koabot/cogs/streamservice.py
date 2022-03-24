@@ -28,38 +28,39 @@ class StreamService(commands.Cog):
             print('well it worked...')
             return
 
-        action = args[0]
+        # action = args[0]
+        
+        match args[0]:
+            case 'get':
+                embed = discord.Embed()
+                embed.description = ''
+                embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
 
-        if action == 'get':
-            embed = discord.Embed()
-            embed.description = ''
-            embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
+                # !twitch get <NAME> or !twich get <ID>
+                if len(args) == 2:
+                    item = args[1]
+                    if re.findall(r'(^[0-9]+$)', item):
+                        # is searching an id
+                        search_type = 'user_id'
+                    else:
+                        # searching an username
+                        search_type = 'user_login'
 
-            # !twitch get <NAME> or !twich get <ID>
-            if len(args) == 2:
-                item = args[1]
-                if re.findall(r'(^[0-9]+$)', item):
-                    # is searching an id
-                    search_type = 'user_id'
+                    response = await net_utils.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
+                    streams = response.json
+
+                    for stream in streams['data'][:3]:
+                        await ctx.send(f"{stream['user_login']} ({stream['user_id']})\nhttps://twitch.tv/{stream['user_name']}")
+
+                # fetch list from twitch
                 else:
-                    # searching an username
-                    search_type = 'user_login'
+                    response = await net_utils.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
+                    streams = response.json
 
-                response = await net_utils.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
-                streams = response.json
+                    for stream in streams['data'][:5]:
+                        embed.description += f"stream \"{stream['title']}\"\nstreamer {stream['user_name']} ({stream['user_id']})\n\n"
 
-                for stream in streams['data'][:3]:
-                    await ctx.send(f"{stream['user_login']} ({stream['user_id']})\nhttps://twitch.tv/{stream['user_name']}")
-
-            # fetch list from twitch
-            else:
-                response = await net_utils.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
-                streams = response.json
-
-                for stream in streams['data'][:5]:
-                    embed.description += f"stream \"{stream['title']}\"\nstreamer {stream['user_name']} ({stream['user_id']})\n\n"
-
-                await ctx.send(embed=embed)
+                    await ctx.send(embed=embed)
 
     async def get_picarto_stream_preview(self, msg: discord.Message, url: str, /, *, orig_to_be_deleted: bool = False) -> bool:
         """Automatically fetch a preview of the running stream
@@ -113,10 +114,11 @@ class StreamService(commands.Cog):
                 await msg.edit(suppress=True)
             except discord.errors.Forbidden as e:
                 # Missing Permissions
-                if e.code == 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                else:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
+                match e.code:
+                    case 50013:
+                        print("Missing Permissions: Cannot suppress embed from sender's message")
+                    case _:
+                        print(f"Forbidden: Status {e.status} (code {e.code}")
             await msg.reply(file=discord.File(fp=image, filename=filename), embed=embed, mention_author=False)
 
         return True

@@ -3,7 +3,6 @@ import json
 import os
 import re
 import timeit
-from typing import Set
 
 import discord
 import emoji
@@ -52,7 +51,7 @@ class ReactionRoles(commands.Cog):
         message = await channel.fetch_message(message_id)
         user_id = user.id
 
-        message_reactions: Set[str] = set()
+        message_reactions: set[str] = set()
         for em in message.reactions:
             if not isinstance(em, str):
                 em = str(em)
@@ -261,10 +260,11 @@ class ReactionRoles(commands.Cog):
             await ctx.send(bot_cog.get_quote('rr_message_target_missing'))
             return
 
-        if call_type == 'last':
-            self.rr_temporary_list[bind_tag]['links'].pop()
-        elif call_type == 'all':
-            self.rr_temporary_list[bind_tag]['links'] = []
+        match call_type:
+            case 'last':
+                self.rr_temporary_list[bind_tag]['links'].pop()
+            case 'all':
+                self.rr_temporary_list[bind_tag]['links'] = []
 
     @reaction_roles.command()
     async def save(self, ctx: commands.Context) -> None:

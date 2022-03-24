@@ -2,7 +2,7 @@
 # This script is run automatically when the pi runs, directly from /etc/xdg/autostart/koa-bot.desktop
 # You can define the environmental variables either in ./.env or at ~/.profile
 
-MIN_PYTHON_VERSION="3.8"
+MIN_PYTHON_VERSION="3.10"
 
 # Checking XDG variables
 # https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts

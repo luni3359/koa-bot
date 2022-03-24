@@ -4,7 +4,6 @@ import random
 import re
 import subprocess
 from datetime import datetime, timedelta
-from typing import Union
 
 import discord
 from discord.ext import commands
@@ -36,30 +35,31 @@ class BotStatus(commands.Cog):
                 print(f'"{temperature_cmd}" is missing in system.')
 
         try:
-            if temperature_cmd == 'vcgencmd':
-                cpu_temp = re.findall(r'([0-9]+\.[0-9]?)\'C', current_temp.stdout)[0]
-            elif temperature_cmd == 'sensors':
-                cpu_found = False
-                adapter_found = False
+            match temperature_cmd:
+                case 'vcgencmd':
+                    cpu_temp = re.findall(r'([0-9]+\.[0-9]?)\'C', current_temp.stdout)[0]
+                case 'sensors':
+                    cpu_found = False
+                    adapter_found = False
 
-                for line in current_temp.stdout.splitlines():
-                    if re.search(r'coretemp', line):
-                        cpu_found = True
-                        continue
-
-                    if re.search(r'Adapter', line):
-                        if not cpu_found:
+                    for line in current_temp.stdout.splitlines():
+                        if re.search(r'coretemp', line):
+                            cpu_found = True
                             continue
 
-                        adapter_found = True
-                        continue
+                        if re.search(r'Adapter', line):
+                            if not cpu_found:
+                                continue
 
-                    if re.search(r'Package id|Core 0', line):
-                        if not cpu_found or not adapter_found:
+                            adapter_found = True
                             continue
 
-                        cpu_temp = re.findall(r'([0-9]+\.[0-9]?)°C', line)[0]
-                        break
+                        if re.search(r'Package id|Core 0', line):
+                            if not cpu_found or not adapter_found:
+                                continue
+
+                            cpu_temp = re.findall(r'([0-9]+\.[0-9]?)°C', line)[0]
+                            break
 
             cpu_temp = float(cpu_temp)
 
@@ -107,7 +107,7 @@ class BotStatus(commands.Cog):
 
         content: str = kwargs.get('content')
         embed: discord.Embed = kwargs.get('embed')
-        rnd_duration: Union[list, int] = kwargs.get('rnd_duration')
+        rnd_duration: list | int = kwargs.get('rnd_duration')
         min_duration: int = kwargs.get('min_duration', 0)
 
         if isinstance(rnd_duration, int):

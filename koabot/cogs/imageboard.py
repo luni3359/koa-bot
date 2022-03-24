@@ -1,6 +1,4 @@
 """Search and gallery operations for art websites"""
-from typing import List
-
 import discord
 from discord.ext import commands
 
@@ -38,31 +36,33 @@ class ImageBoard(commands.Cog):
         """Show a gallery"""
         gallery_cog: Gallery = self.bot.get_cog('Gallery')
 
-        if board == 'danbooru':
-            await gallery_cog.display_static(msg.channel, url, guide=guide, only_missing_preview=only_missing_preview)
-        elif board == 'e621':
-            await gallery_cog.display_static(msg.channel, url, board='e621', guide=guide, only_missing_preview=only_missing_preview)
-        elif board == 'twitter':
-            await gallery_cog.get_twitter_gallery(msg, url, guide=guide)
-        elif board == 'pixiv':
-            await gallery_cog.get_pixiv_gallery(msg, url)
-        elif board == 'sankaku':
-            await gallery_cog.display_static(msg.channel, url, board='sankaku', guide=guide, only_missing_preview=only_missing_preview)
-        elif board == 'deviantart':
-            await gallery_cog.get_deviantart_post(msg, url)
-        elif board == 'imgur':
-            await gallery_cog.get_imgur_gallery(msg, url)
-        elif board == 'reddit':
-            await gallery_cog.get_reddit_gallery(msg, url, guide=guide)
-        else:
-            raise ValueError(f'Board "{board}" has no gallery entry.')
+        match board:
+            case 'danbooru':
+                await gallery_cog.display_static(msg.channel, url, guide=guide, only_missing_preview=only_missing_preview)
+            case 'e621':
+                await gallery_cog.display_static(msg.channel, url, board='e621', guide=guide, only_missing_preview=only_missing_preview)
+            case 'twitter':
+                await gallery_cog.get_twitter_gallery(msg, url, guide=guide)
+            case 'pixiv':
+                await gallery_cog.get_pixiv_gallery(msg, url)
+            case 'sankaku':
+                await gallery_cog.display_static(msg.channel, url, board='sankaku', guide=guide, only_missing_preview=only_missing_preview)
+            case 'deviantart':
+                await gallery_cog.get_deviantart_post(msg, url)
+            case 'imgur':
+                await gallery_cog.get_imgur_gallery(msg, url)
+            case 'reddit':
+                await gallery_cog.get_reddit_gallery(msg, url, guide=guide)
+            case _:
+                raise ValueError(f'Board "{board}" has no gallery entry.')
 
-    async def show_combined_gallery(self, msg: discord.Message, urls: List[str], /, *, board: str, guide: dict, only_missing_preview: bool = False):
+    async def show_combined_gallery(self, msg: discord.Message, urls: list[str], /, *, board: str, guide: dict, only_missing_preview: bool = False):
         """Show multiple galleries that share one common element as one"""
         gallery_cog: Gallery = self.bot.get_cog('Gallery')
 
-        if board == 'deviantart':
-            await gallery_cog.get_deviantart_posts(msg, urls)
+        match board:
+            case 'deviantart':
+                await gallery_cog.get_deviantart_posts(msg, urls)
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         if isinstance(error, commands.MissingRequiredArgument):

@@ -1,7 +1,6 @@
 """Handle network requests"""
 import io
 from datetime import datetime
-from typing import List
 
 import aiohttp
 
@@ -104,7 +103,7 @@ def get_domain(url: str, /) -> str:
     return url.split('//')[-1].split('/')[0].split('?')[0]
 
 
-def get_domains(lst: List[str], /) -> List[str]:
+def get_domains(lst: list[str], /) -> list[str]:
     """Get domains from a list of urls
     https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868
     """

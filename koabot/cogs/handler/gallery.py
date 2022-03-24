@@ -3,7 +3,6 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import List
 
 import asyncpraw
 import discord
@@ -270,22 +269,24 @@ class Gallery(commands.Cog):
             return print("Twitter preview not applicable. (No extended entities)")
 
         if len((tweet_ee_media := tweet.extended_entities['media'])) == 1:
-            if tweet_ee_media[0]['type'] == 'photo':
-                if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
-                    return print("Twitter preview not applicable. (Media photo is sfw)")
+            match tweet_ee_media[0]['type']:
+                case 'photo':
+                    if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
+                        return print("Twitter preview not applicable. (Media photo is sfw)")
 
-                # TODO: There's got to be a better way...
-                if guide['embed']['footer_text'] == "TwitFix":
-                    return print("Twitter preview not applicable. (Handled by TwitFix)")
-            else:   # 'video' or 'animated_gif'
-                if guide['embed']['footer_text'] == "TwitFix":
-                    return print("Twitter preview not applicable. (Handled by TwitFix)")
+                    # TODO: There's got to be a better way...
+                    if guide['embed']['footer_text'] == "TwitFix":
+                        return print("Twitter preview not applicable. (Handled by TwitFix)")
 
-                if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
-                    fixed_url = url.replace("twitter", "fxtwitter", 1)
-                    await msg.reply(content=f"Sorry! Due to Discord's API limitations I cannot embed videos. (Twitter disallows NSFW previews)\n{fixed_url}", mention_author=False)
+                case _:  # 'video' or 'animated_gif'
+                    if guide['embed']['footer_text'] == "TwitFix":
+                        return print("Twitter preview not applicable. (Handled by TwitFix)")
 
-                return
+                    if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
+                        fixed_url = url.replace("twitter", "fxtwitter", 1)
+                        await msg.reply(content=f"Sorry! Due to Discord's API limitations I cannot embed videos. (Twitter disallows NSFW previews)\n{fixed_url}", mention_author=False)
+
+                    return
 
         gallery_pics = []
         for picture in tweet_ee_media:
@@ -330,10 +331,11 @@ class Gallery(commands.Cog):
             await msg.edit(suppress=True)
         except discord.errors.Forbidden as e:
             # Missing Permissions
-            if e.code == 50013:
-                print("Missing Permissions: Cannot suppress embed from sender's message")
-            else:
-                print(f"Forbidden: Status {e.status} (code {e.code}")
+            match e.code:
+                case 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                case _:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
 
     async def get_pixiv_gallery(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch and post any image galleries from pixiv
@@ -479,10 +481,11 @@ class Gallery(commands.Cog):
             await msg.edit(suppress=True)
         except discord.errors.Forbidden as e:
             # Missing Permissions
-            if e.code == 50013:
-                print("Missing Permissions: Cannot suppress embed from sender's message")
-            else:
-                print(f"Forbidden: Status {e.status} (code {e.code}")
+            match e.code:
+                case 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                case _:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
 
         print('DONE PIXIV!')
 
@@ -519,11 +522,12 @@ class Gallery(commands.Cog):
 
         deviation = api_result['deviation']
 
-        if (deviation_type := deviation['type']) in ['image', 'literature']:
-            embed = self.build_deviantart_embed(url, deviation)
-        else:
-            print(f"Incapable of handling DeviantArt url (type: {deviation_type}):\n{url}")
-            return
+        match (deviation_type := deviation['type']):
+            case 'image' | 'literature':
+                embed = self.build_deviantart_embed(url, deviation)
+            case _:
+                print(f"Incapable of handling DeviantArt url (type: {deviation_type}):\n{url}")
+                return
 
         await msg.reply(embed=embed, mention_author=False)
 
@@ -531,12 +535,13 @@ class Gallery(commands.Cog):
             await msg.edit(suppress=True)
         except discord.errors.Forbidden as e:
             # Missing Permissions
-            if e.code == 50013:
-                print("Missing Permissions: Cannot suppress embed from sender's message")
-            else:
-                print(f"Forbidden: Status {e.status} (code {e.code}")
+            match e.code:
+                case 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                case _:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
 
-    async def get_deviantart_posts(self, msg: discord.Message, urls: List[str]):
+    async def get_deviantart_posts(self, msg: discord.Message, urls: list[str]):
         """Automatically fetch multiple posts from deviantart"""
 
         title_to_test_against = urls[0].split('/')[-1].rsplit('-', maxsplit=1)[0]
@@ -571,7 +576,7 @@ class Gallery(commands.Cog):
 
             api_results.append(api_result)
 
-        embeds: List[discord.Embed] = []
+        embeds: list[discord.Embed] = []
         total_da_count = len(api_results)
         last_embed_index = min(4, total_da_count - 1)
         for i, deviation in enumerate([d['deviation'] for d in api_results[:5]]):
@@ -597,10 +602,11 @@ class Gallery(commands.Cog):
             await msg.edit(suppress=True)
         except discord.errors.Forbidden as e:
             # Missing Permissions
-            if e.code == 50013:
-                print("Missing Permissions: Cannot suppress embed from sender's message")
-            else:
-                print(f"Forbidden: Status {e.status} (code {e.code}")
+            match e.code:
+                case 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                case _:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
 
     def build_deviantart_embed(self, url: str, deviation: dict, *, image_only=False) -> discord.Embed:
         """DeviantArt embed builder"""
@@ -616,33 +622,34 @@ class Gallery(commands.Cog):
                 url=f"https://www.deviantart.com/{deviation['author']['username']}",
                 icon_url=deviation['author']['usericon'])
 
-        if (deviation_type := deviation['type']) == 'image':
-            deviation_media = deviation['media']
-            token = deviation_media['token'][0]
-            base_uri = deviation_media['baseUri']
-            pretty_name = deviation_media['prettyName']
+        match deviation['type']:
+            case 'image':
+                deviation_media = deviation['media']
+                token = deviation_media['token'][0]
+                base_uri = deviation_media['baseUri']
+                pretty_name = deviation_media['prettyName']
 
-            for media_type in deviation_media['types']:
-                if media_type['t'] == 'preview':
-                    preview_url = media_type['c'].replace('<prettyName>', pretty_name)
-                    preview_url = preview_url.replace(',q_80', ',q_100')
-                    break
+                for media_type in deviation_media['types']:
+                    if media_type['t'] == 'preview':
+                        preview_url = media_type['c'].replace('<prettyName>', pretty_name)
+                        preview_url = preview_url.replace(',q_80', ',q_100')
+                        break
 
-            image_url = f'{base_uri}/{preview_url}?token={token}'
-            print(image_url)
+                image_url = f'{base_uri}/{preview_url}?token={token}'
+                print(image_url)
 
-            if 'description' in deviation['extended'] and not image_only:
-                embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
-                                           deviation['extended']['description']).strip()
+                if 'description' in deviation['extended'] and not image_only:
+                    embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
+                                               deviation['extended']['description']).strip()
 
-            if len(embed.description) > 200:
-                embed.description = embed.description[:200] + "..."
+                if len(embed.description) > 200:
+                    embed.description = embed.description[:200] + "..."
 
-            embed.set_image(url=image_url)
-        elif deviation_type == 'literature':
-            embed.description = deviation['textContent']['excerpt'] + "..."
-        else:
-            raise ValueError("Unknown DeviantArt embed type!")
+                embed.set_image(url=image_url)
+            case 'literature':
+                embed.description = deviation['textContent']['excerpt'] + "..."
+            case _:
+                raise ValueError("Unknown DeviantArt embed type!")
 
         if not image_only:
             if (da_favorites := deviation['stats']['favourites']) > 0:
@@ -775,10 +782,11 @@ class Gallery(commands.Cog):
             await msg.edit(suppress=True)
         except discord.errors.Forbidden as e:
             # Missing Permissions
-            if e.code == 50013:
-                print("Missing Permissions: Cannot suppress embed from sender's message")
-            else:
-                print(f"Forbidden: Status {e.status} (code {e.code}")
+            match e.code:
+                case 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                case _:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
         await msg.reply(embeds=embeds, mention_author=False)
 
 

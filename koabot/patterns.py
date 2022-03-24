@@ -38,3 +38,5 @@ CHANNEL_URL_PATTERN = re.compile(r'https:\/\/(?:ptb\.)?discord(?:app)?\.com\/cha
 DISCORD_EMOJI_PATTERN = re.compile(r'(<:[\w_]{1,32}:\d{18}>)')
 
 HTML_TAG_OR_ENTITY_PATTERN = re.compile(r'<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+
+COMMAND_PATTERN = re.compile(r'^!([a-zA-Z0-9]+)')

@@ -15,10 +15,25 @@ class Board(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.danbooru_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['danbooru']['username'],
-                                               password=self.bot.auth_keys['danbooru']['key'])
-        self.e621_auth = aiohttp.BasicAuth(login=self.bot.auth_keys['e621']['username'],
-                                           password=self.bot.auth_keys['e621']['key'])
+        
+        self._danbooru_auth: aiohttp.BasicAuth = None
+        self._e621_auth: aiohttp.BasicAuth = None
+
+    @property
+    def danbooru_auth(self) -> aiohttp.BasicAuth:
+        if not self._danbooru_auth:
+            dan_keys = self.bot.auth_keys['danbooru']
+            self._danbooru_auth = aiohttp.BasicAuth(login=dan_keys['username'], password=dan_keys['key'])
+
+        return self._danbooru_auth
+
+    @property
+    def e621_auth(self) -> aiohttp.BasicAuth:
+        if not self._e621_auth:
+            e6_keys = self.bot.auth_keys['e621']
+            self._e621_auth = aiohttp.BasicAuth(login=e6_keys['username'], password=e6_keys['key'])
+
+        return self._e621_auth
 
     async def search_board(self, ctx: commands.Context, tags: str, /,  *, board: str = 'danbooru', guide: dict, hide_posts_remaining: bool = False) -> None:
         """Search on image boards!
@@ -39,12 +54,12 @@ class Board(commands.Cog):
 
         print(f'User searching for: {tags}')
 
+        posts = None
         async with ctx.typing():
             try:
                 posts = (await self.search_query(board=board, guide=guide, tags=tags, random=True, include_nsfw=on_nsfw_channel)).json
-            except AttributeError:
-                # query errored out
-                posts = None
+            except aiohttp.TooManyRedirects as e:
+                return print("There's too many redirects: ", e)
 
         if not posts:
             return await ctx.send('Sorry, nothing found!')

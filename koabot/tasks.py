@@ -37,10 +37,11 @@ async def check_live_streamers() -> None:
         twitch_query = await net_utils.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
         # Token is invalid/expired, acquire a new token
-        if twitch_query.status == 401:
-            await streamservice_cog.fetch_twitch_access_token(force=True)
+        match twitch_query.status:
+            case 401:
+                await streamservice_cog.fetch_twitch_access_token(force=True)
 
-            twitch_query = await net_utils.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
+                twitch_query = await net_utils.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
         for streamer in twitch_query.json['data']:
             already_online = False

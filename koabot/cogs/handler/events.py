@@ -13,7 +13,7 @@ from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.imageboard import ImageBoard
 from koabot.cogs.reactionroles import ReactionRoles
 from koabot.cogs.streamservice import StreamService
-from koabot.patterns import URL_PATTERN
+from koabot.patterns import COMMAND_PATTERN, URL_PATTERN
 
 
 class BotEvents(commands.Cog):
@@ -283,9 +283,8 @@ class BotEvents(commands.Cog):
         # checking if a command has been issued
         command_issued = False
         if len(content) and prefix_start:
-            command_name_regex = re.search(r'^!([a-zA-Z0-9]+)', content)
-            if command_name_regex:
-                cmd = self.bot.get_command(command_name_regex.group(1))
+            if (command_name_regex := COMMAND_PATTERN.search(content)):
+                cmd: commands.Command = self.bot.get_command(command_name_regex.group(1))
                 command_issued = bool(cmd)
 
         if self.bot.last_channel != channel.id or url_matches_found or msg.attachments or command_issued:

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "koa-bot"
-version = "0.15.0"
+version = "0.15.1"
 description = ""
 authors = []
 readme = "README.md"
@@ -72,9 +72,12 @@ disable = [
 #    "anomalous-backslash-in-string",   # W1401
 #    "line-too-long",                   # C0301
 #    "invalid-name",                    # C0103
-#     "wildcard-import",                # W0401
     "assigning-non-slot",               # E0237
+    "no-self-use",                      # R0201
 ]
+
+[tool.pylint.basic]
+docstring-min-length=10
 
 [tool.pylint.typecheck]
 ignored-classes = "Bot"

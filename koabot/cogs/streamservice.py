@@ -16,8 +16,59 @@ class StreamService(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
         self._twitch_access_token: str = None
-        self._twitch_headers = None
+        self._twitch_headers: dict = None
+
+    @property
+    async def twitch_headers(self) -> dict:
+        """The headers needed to make requests to Twitch"""
+        if not self._twitch_headers:
+            client_id = self.bot.auth_keys['twitch']['client_id']
+            self._twitch_headers = {'Client-ID': client_id, 'Authorization': f'Bearer {await self.twitch_access_token}'}
+
+        return self._twitch_headers
+
+    @property
+    async def twitch_access_token(self) -> str:
+        """The access token needed to become authorized to make requests to Twitch"""
+        if not self._twitch_access_token:
+            self._twitch_access_token = await self.fetch_twitch_access_token()
+
+        return self._twitch_access_token
+
+    async def fetch_twitch_access_token(self, force=False) -> str:
+        """Get access token saved locally or from Twitch
+        Arguments:
+            force::bool
+                Ignore the cached key and fetch a new one from Twitch
+        """
+        twitch_access_token: str = None
+        token_filename = 'access_token'
+        twitch_cache_dir = os.path.join(koakuma.CACHE_DIR, 'twitch')
+        token_path = os.path.join(twitch_cache_dir, token_filename)
+
+        # if the file exists
+        if os.path.exists(token_path) and not force:
+            with open(token_path, encoding="UTF-8") as token_file:
+                twitch_access_token = token_file.readline()
+
+        if not twitch_access_token or force:
+            twitch_keys = self.bot.auth_keys['twitch']
+            url = 'https://id.twitch.tv/oauth2/token'
+            data = {
+                'client_id': twitch_keys['client_id'],
+                'client_secret':  twitch_keys['client_secret'],
+                'grant_type': 'client_credentials'}
+            response = (await net_utils.http_request(url, post=True, data=data, json=True)).json
+
+            os.makedirs(twitch_cache_dir, exist_ok=True)
+
+            with open(token_path, 'w', encoding="UTF-8") as token_file:
+                twitch_access_token = response['access_token']
+                token_file.write(twitch_access_token)
+
+        return twitch_access_token
 
     @commands.command(name='twitch')
     async def search_twitch(self, ctx: commands.Context, *args):
@@ -29,9 +80,10 @@ class StreamService(commands.Cog):
             return
 
         # action = args[0]
-        
+
         match args[0]:
             case 'get':
+                twitch_api_url = "https://api.twitch.tv/helix/streams"
                 embed = discord.Embed()
                 embed.description = ''
                 embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
@@ -46,7 +98,7 @@ class StreamService(commands.Cog):
                         # searching an username
                         search_type = 'user_login'
 
-                    response = await net_utils.http_request(f'https://api.twitch.tv/helix/streams?{search_type}={item}', headers=await self.twitch_headers, json=True)
+                    response = await net_utils.http_request(f"{twitch_api_url}?{search_type}={item}", headers=await self.twitch_headers, json=True)
                     streams = response.json
 
                     for stream in streams['data'][:3]:
@@ -54,7 +106,7 @@ class StreamService(commands.Cog):
 
                 # fetch list from twitch
                 else:
-                    response = await net_utils.http_request('https://api.twitch.tv/helix/streams', headers=await self.twitch_headers, json=True)
+                    response = await net_utils.http_request(twitch_api_url, headers=await self.twitch_headers, json=True)
                     streams = response.json
 
                     for stream in streams['data'][:5]:
@@ -122,51 +174,6 @@ class StreamService(commands.Cog):
             await msg.reply(file=discord.File(fp=image, filename=filename), embed=embed, mention_author=False)
 
         return True
-
-    @property
-    async def twitch_headers(self):
-        """The headers needed to make requests to Twitch"""
-        self._twitch_headers = {'Client-ID': self.bot.auth_keys['twitch']['client_id'], 'Authorization': f'Bearer {await self.twitch_access_token}'}
-        return self._twitch_headers
-
-    @property
-    async def twitch_access_token(self) -> str:
-        """The access token needed to become authorized to make requests to Twitch"""
-        if self._twitch_access_token:
-            return self._twitch_access_token
-
-        return await self.fetch_twitch_access_token()
-
-    async def fetch_twitch_access_token(self, force=False):
-        """Get access token saved locally or from Twitch
-        Arguments:
-            force::bool
-                Ignore the cached key and fetch a new one from Twitch
-        """
-        token_filename = 'access_token'
-        twitch_cache_dir = os.path.join(koakuma.CACHE_DIR, 'twitch')
-        token_path = os.path.join(twitch_cache_dir, token_filename)
-
-        # if the file exists
-        if os.path.exists(token_path) and not force:
-            with open(token_path, encoding="UTF-8") as token_file:
-                self._twitch_access_token = token_file.readline()
-
-        if not self._twitch_access_token or force:
-            url = 'https://id.twitch.tv/oauth2/token'
-            data = {
-                'client_id': self.bot.auth_keys['twitch']['client_id'],
-                'client_secret':  self.bot.auth_keys['twitch']['client_secret'],
-                'grant_type': 'client_credentials'}
-            response = (await net_utils.http_request(url, post=True, data=data, json=True)).json
-
-            os.makedirs(twitch_cache_dir, exist_ok=True)
-
-            with open(token_path, 'w', encoding="UTF-8") as token_file:
-                self._twitch_access_token = response['access_token']
-                token_file.write(self._twitch_access_token)
-
-        return self._twitch_access_token
 
 
 def setup(bot: commands.Bot):

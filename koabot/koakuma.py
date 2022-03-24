@@ -12,6 +12,22 @@ from discord.ext import commands
 
 import koabot.tasks
 
+# Install uvloop in compatible systems
+if os.name == "posix":
+    try:
+        import uvloop
+        uvloop.install()
+    except ModuleNotFoundError as e:
+        print(f"{e.name} is not installed.")
+
+
+class KBot(commands.Bot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.launch_time: datetime = None
+        self.is_beta: bool = None
+
+
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 PROJECT_DIR = Path(SOURCE_DIR).parent
 BOT_DIRNAME = 'koa-bot'
@@ -24,20 +40,13 @@ CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
 for b_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
     os.makedirs(b_dir, exist_ok=True)
 
-# Install uvloop in compatible systems
-if os.name == "posix":
-    try:
-        import uvloop
-        uvloop.install()
-    except ModuleNotFoundError as e:
-        print(f"{e.name} is not installed.")
 
 intents = discord.Intents.default()
 intents.members = True
 intents.presences = True
 intents.message_content = True
 
-bot = commands.Bot(command_prefix='!', description='', intents=intents)
+bot = KBot(command_prefix='!', description='', intents=intents)
 
 
 def run_periodic_tasks() -> None:

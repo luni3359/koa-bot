@@ -28,17 +28,39 @@ class Gallery(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        twit_auth = tweepy.OAuthHandler(bot.auth_keys['twitter']['consumer'],
-                                        bot.auth_keys['twitter']['consumer_secret'])
-        twit_auth.set_access_token(bot.auth_keys['twitter']['token'], bot.auth_keys['twitter']['token_secret'])
-        self.twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
-        self.pixiv_aapi = pixivpy_async.AppPixivAPI()
-        self.pixiv_refresh_token = None
-        self.reddit_api = asyncpraw.Reddit(client_id=bot.auth_keys['reddit']['client_id'],
-                                           client_secret=bot.auth_keys['reddit']['client_secret'],
-                                           username=bot.auth_keys['reddit']['username'],
-                                           password=bot.auth_keys['reddit']['password'],
-                                           user_agent=bot.auth_keys['reddit']['headers']['User-Agent'])
+        self.pixiv_refresh_token: str = None
+
+        self._twitter_api: tweepy.API = None
+        self._pixiv_aapi: pixivpy_async.AppPixivAPI = None
+        self._reddit_api: asyncpraw.Reddit = None
+
+    @property
+    def twitter_api(self) -> tweepy.API:
+        if not self._twitter_api:
+            twit_keys = self.bot.auth_keys['twitter']
+            twit_auth = tweepy.OAuthHandler(twit_keys['consumer'], twit_keys['consumer_secret'])
+            twit_auth.set_access_token(twit_keys['token'], twit_keys['token_secret'])
+            self._twitter_api = tweepy.API(twit_auth, wait_on_rate_limit=True)
+
+        return self._twitter_api
+
+    @property
+    def pixiv_aapi(self) -> pixivpy_async.AppPixivAPI:
+        if not self._pixiv_aapi:
+            self._pixiv_aapi = pixivpy_async.AppPixivAPI()
+
+        return self._pixiv_aapi
+
+    @property
+    def reddit_api(self) -> asyncpraw.Reddit:
+        if not self._reddit_api:
+            rdt_keys = self.bot.auth_keys['reddit']
+            self._reddit_api = asyncpraw.Reddit(client_id=rdt_keys['client_id'],
+                                                client_secret=rdt_keys['client_secret'],
+                                                username=rdt_keys['username'],
+                                                password=rdt_keys['password'],
+                                                user_agent=rdt_keys['headers']['User-Agent'])
+        return self._reddit_api
 
     async def display_static(self, channel: discord.TextChannel, url: str, /, *, board: str = 'danbooru', guide: dict, only_missing_preview: bool = False) -> None:
         """Display posts from a gallery in separate unmodifiable embeds
@@ -500,16 +522,15 @@ class Gallery(commands.Cog):
 
         if os.path.exists(token_path):
             with open(token_path, encoding="UTF-8") as token_file:
-                token = token_file.readline()
-                self.pixiv_refresh_token = token
-                await self.pixiv_aapi.login(refresh_token=token)
+                self.pixiv_refresh_token = token_file.readline()
+                await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
         else:
-            pixiv_auth = self.bot.auth_keys['pixiv']
-            await self.pixiv_aapi.login(pixiv_auth['username'], pixiv_auth['password'])
+            pix_keys = self.bot.auth_keys['pixiv']
+            await self.pixiv_aapi.login(pix_keys['username'], pix_keys['password'])
             self.pixiv_refresh_token = self.pixiv_aapi.refresh_token
             os.makedirs(pixiv_cache_dir, exist_ok=True)
             with open(token_path, 'w', encoding="UTF-8") as token_file:
-                token_file.write(self.pixiv_aapi.refresh_token)
+                token_file.write(self.pixiv_refresh_token)
 
     async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch post from deviantart"""

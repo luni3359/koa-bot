@@ -39,7 +39,7 @@ def get_name_or_id(url: str, /, *, start: str | list = None, end: str | list = N
             starting_match = v
 
     if not starting_match:
-        return
+        return None
 
     # Index 1, because index 0 is everything before the character that matched
     url = url.split(starting_match)[1]

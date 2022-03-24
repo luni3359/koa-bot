@@ -137,14 +137,14 @@ class Game(commands.Cog):
                 else:
                     message += "Subtract "
 
-                s_or_no_s = (abs(match.raw_points) > 1 or match.raw_points == 0) and 's' or ''
+                s_or_no_s = 's' if (abs(match.raw_points) > 1 or match.raw_points == 0) else ''
 
                 message += f"{abs(match.raw_points)} point{s_or_no_s}.\n"
                 logic_string += f"{match.sign} __{abs(match.raw_points)}__ "
                 total_sum += match.raw_points
                 continue
 
-            dice_or_die = match.quantity != 1 and 'dice' or 'die'
+            dice_or_die = 'dice' if match.quantity != 1 else 'die'
 
             if match.limited_quantity:
                 message += '\\*'

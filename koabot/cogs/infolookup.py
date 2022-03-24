@@ -18,7 +18,50 @@ class InfoLookup(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.wikipedia: MediaWiki = MediaWiki()
+
+        self._wikipedia: MediaWiki = None
+        self._merriam_find_pattern: re.Pattern = None
+
+    @property
+    def wikipedia(self) -> MediaWiki:
+        if not self._wikipedia:
+            self._wikipedia = MediaWiki()
+
+        return self._wikipedia
+
+    @property
+    def merriam_find_pattern(self) -> re.Pattern:
+        if not self._merriam_find_pattern:
+            self._merriam_find_pattern = re.compile(
+                r'({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', re.IGNORECASE)
+
+        return self._merriam_find_pattern
+
+    def strip_dictionary_oddities(self, txt: str, service: str):
+        """Trim weird markup from dictionary entries"""
+        match service:
+            case 'merriam':
+                # Properly format words encased in weird characters
+
+                # Remove all filler
+                txt = re.sub(r'\{bc\}|\*', '', txt)
+
+                while (matches := self.merriam_find_pattern.findall(txt)):
+                    for match in matches:
+                        txt = txt.replace(match[0], f"*{match[1].upper()}*")
+
+                txt = re.sub(r'\{\/?[a-z\ _\-]+\}', '', txt)
+                print(txt)
+                return txt
+            case 'urban':
+                txt = txt.replace('*', '\\*')
+
+                matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
+                for match in matches:
+                    txt = txt.replace(
+                        match[0], f"[{match[1]}]({koakuma.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
+
+                return txt
 
     @commands.command(name='wikipedia', aliases=['wk', 'wp'])
     async def search_wikipedia(self, ctx: commands.Context, *, search_term: str):
@@ -170,8 +213,8 @@ class InfoLookup(commands.Cog):
             definition = entry['definition']
             example = entry['example']
 
-            string_to_add = f"**{index_placeholder}. {strip_dictionary_oddities(definition, 'urban')}**\n\n"
-            string_to_add += strip_dictionary_oddities(example, 'urban') + '\n\n'
+            string_to_add = f"**{index_placeholder}. {self.strip_dictionary_oddities(definition, 'urban')}**\n\n"
+            string_to_add += self.strip_dictionary_oddities(example, 'urban') + '\n\n'
 
             if len(string_to_add) - len(index_placeholder) + 1 > MAX_DEFINITION_LENGTH:
                 string_to_add = string_to_add[:MAX_DEFINITION_LENGTH]
@@ -298,12 +341,12 @@ class InfoLookup(commands.Cog):
                         similar_meaning_string += f'{meaning_position}: {definition}\n'
 
                 subcategory_text = subcategory.get('vd', "definition")
-                embed.description = f"{embed.description}\n**{subcategory_text}**\n{strip_dictionary_oddities(similar_meaning_string, 'merriam')}"
+                embed.description = f"{embed.description}\n**{subcategory_text}**\n{self.strip_dictionary_oddities(similar_meaning_string, 'merriam')}"
 
             # Add etymology
             if 'et' in category:
                 etymology = category['et']
-                embed.description = f"{embed.description}\n**etymology**\n{strip_dictionary_oddities(etymology[0][1], 'merriam')}\n\n"
+                embed.description = f"{embed.description}\n**etymology**\n{self.strip_dictionary_oddities(etymology[0][1], 'merriam')}\n\n"
             else:
                 embed.description = f"{embed.description}\n\n"
 
@@ -338,39 +381,6 @@ class InfoLookup(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             bot_cog: BotStatus = self.bot.get_cog('BotStatus')
             return await ctx.send(bot_cog.get_quote('dictionary_blank_search'))
-
-
-def strip_dictionary_oddities(txt: str, service: str):
-    """Trim weird markup from dictionary entries"""
-
-    match service:
-        case 'merriam':
-            # Properly format words encased in weird characters
-
-            # Remove all filler
-            txt = re.sub(r'\{bc\}|\*', '', txt)
-
-            while True:
-                matches = re.findall(
-                    r'({[a-z_]+[\|}]+([a-zÀ-Ž\ \-\,]+)(?:{\/[a-z_]*|[a-z0-9\ \-\|\:\(\)]*)})', txt, re.IGNORECASE)
-
-                if not matches:
-                    txt = re.sub(r'\{\/?[a-z\ _\-]+\}', '', txt)
-                    print(txt)
-                    return txt
-
-                # TODO: Is this a bug? There's no return
-                for match in matches:
-                    txt = txt.replace(match[0], f"*{match[1].upper()}*")
-        case 'urban':
-            txt = txt.replace('*', '\\*')
-
-            matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
-            for match in matches:
-                txt = txt.replace(
-                    match[0], f"[{match[1]}]({koakuma.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
-
-            return txt
 
 
 def setup(bot: commands.Bot):

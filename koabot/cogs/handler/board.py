@@ -8,6 +8,7 @@ from discord.ext import commands
 
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
+from koabot.core.base import list_contains
 from koabot.kbot import KBot
 
 
@@ -218,7 +219,7 @@ class Board(commands.Cog):
             else:
                 match board:
                     case 'danbooru':
-                        if post_core.post_is_missing_preview(post, board=board) or last_post:
+                        if self.post_is_missing_preview(post, board=board) or last_post:
                             await ctx.send(f'<{embed.url}>', embed=embed)
                         else:
                             await ctx.send(embed.url)
@@ -299,6 +300,23 @@ class Board(commands.Cog):
                     break
 
         return embed.set_image(url=fileurl)
+
+    def post_is_missing_preview(self, post, /, *, board: str = 'danbooru') -> bool:
+        """Determine whether or not a post is missing its preview
+        Arguments:
+            post::json object
+
+        Keywords:
+            board::str
+                The board to check the rules with. Default is 'danbooru'
+        """
+        match board:
+            case 'e621':
+                return list_contains(post['tags']['general'], self.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
+            case 'sankaku':
+                return True
+            case _:
+                return list_contains(post['tag_string_general'].split(), self.bot.rules['no_preview_tags'][board]) or post['is_banned']
 
 
 async def setup(bot: KBot):

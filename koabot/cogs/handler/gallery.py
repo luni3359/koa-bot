@@ -29,9 +29,25 @@ class Gallery(commands.Cog):
         self.bot = bot
         self.pixiv_refresh_token: str = None
 
+        self._botstatus: BotStatus = None
+        self._board_cog: Board = None
         self._twitter_api: tweepy.API = None
         self._pixiv_aapi: pixivpy_async.AppPixivAPI = None
         self._reddit_api: asyncpraw.Reddit = None
+
+    @property
+    def botstatus(self) -> BotStatus:
+        if not self._botstatus:
+            self._botstatus = self.bot.get_cog('BotStatus')
+
+        return self._botstatus
+
+    @property
+    def board_cog(self) -> Board:
+        if not self._board_cog:
+            self._board_cog = self.bot.get_cog('Board')
+
+        return self._board_cog
 
     @property
     def twitter_api(self) -> tweepy.API:
@@ -86,9 +102,7 @@ class Gallery(commands.Cog):
         if not (post_id := post_core.get_name_or_id(url, start=id_start, end=id_end, pattern=pattern)):
             return
 
-        board_cog: Board = self.bot.get_cog('Board')
-
-        post = (await board_cog.search_query(board=board, guide=guide, post_id=post_id)).json
+        post = (await self.board_cog.search_query(board=board, guide=guide, post_id=post_id)).json
 
         if not post:
             return
@@ -99,9 +113,8 @@ class Gallery(commands.Cog):
 
         post_id = post['id']
 
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         on_nsfw_channel = channel.is_nsfw()
-        first_post_missing_preview = post_core.post_is_missing_preview(post, board=board)
+        first_post_missing_preview = self.board_cog.post_is_missing_preview(post, board=board)
         posts = []
 
         if post['rating'] != 's' and not on_nsfw_channel:
@@ -113,8 +126,8 @@ class Gallery(commands.Cog):
             # else:
             #     embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-            # content = f"{msg.author.mention} {bot_cog.get_quote('improper_content_reminder')}"
-            # await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+            # content = f"{msg.author.mention} {self.botstatus.get_quote('improper_content_reminder')}"
+            # await self.botstatus.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
         if board == 'e621':
             has_children = post['relationships']['has_active_children']
@@ -132,7 +145,7 @@ class Gallery(commands.Cog):
 
         if only_missing_preview:
             if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
-                await board_cog.send_posts(channel, post, board=board, guide=guide)
+                await self.board_cog.send_posts(channel, post, board=board, guide=guide)
             return
 
         if has_children:
@@ -141,14 +154,14 @@ class Gallery(commands.Cog):
             search = p_search
         else:
             if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
-                await board_cog.send_posts(channel, post, board=board, guide=guide)
+                await self.board_cog.send_posts(channel, post, board=board, guide=guide)
             return
 
         if isinstance(search, str):
             search = [search]
 
         for s in search:
-            results = await board_cog.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)
+            results = await self.board_cog.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)
             results = results.json
 
             # e621 fix for broken API
@@ -241,18 +254,18 @@ class Gallery(commands.Cog):
 
         if posts:
             if first_post_missing_preview:
-                await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel, max_posts=5)
+                await self.board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel, max_posts=5)
             else:
-                await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
+                await self.board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
         else:
             if post['rating'] == 's' and not nsfw_culled or on_nsfw_channel:
                 return print('Removed all duplicates')
             elif post['rating'] == 's':
-                content = bot_cog.get_quote('cannot_show_nsfw_gallery')
+                content = self.botstatus.get_quote('cannot_show_nsfw_gallery')
             else:
-                content = bot_cog.get_quote('rude_cannot_show_nsfw_gallery')
+                content = self.botstatus.get_quote('rude_cannot_show_nsfw_gallery')
 
-            await bot_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
+            await self.botstatus.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
     async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict = None) -> None:
         """Automatically fetch and post any image galleries from twitter
@@ -394,7 +407,6 @@ class Gallery(commands.Cog):
         print(f"Pixiv auth passed! (for #{post_id})")
 
         illust = illust_json.illust
-        # bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         # if illust.x_restrict != 0 and not channel.is_nsfw():
         #     embed = discord.Embed()
 
@@ -403,14 +415,12 @@ class Gallery(commands.Cog):
         #     else:
         #         embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-        #     content = f"{msg.author.mention} {bot_cog.get_quote('improper_content_reminder')}"
+        #     content = f"{msg.author.mention} {self.botstatus.get_quote('improper_content_reminder')}"
 
-        #     bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-
-        #     await bot_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+        #     await self.botstatus.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
         #     return
 
-        # temp_message = await channel.send(f"***{bot_cog.get_quote('processing_long_task')}***")
+        # temp_message = await channel.send(f"***{self.botstatus.get_quote('processing_long_task')}***")
         async with channel.typing():
             total_illust_pictures = illust.page_count
 
@@ -457,7 +467,7 @@ class Gallery(commands.Cog):
                     # image_bytes = None
                     # if not os.path.exists(image_path):
                     #     print('Saving to cache...')
-                    #     image_bytes = await net_utils.fetch_image(avatar_url, headers=self.bot.assets['pixiv']['headers'])
+                    #     image_bytes = await net_core.fetch_image(avatar_url, headers=self.bot.assets['pixiv']['headers'])
 
                     #     with open(os.path.join(avatar_cache_dir, avatar_filename), 'wb') as image_file:
                     #         shutil.copyfileobj(image_bytes, image_file)

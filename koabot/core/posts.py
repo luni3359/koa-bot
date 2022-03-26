@@ -1,8 +1,6 @@
 """Post utilities"""
 import re
 
-from koabot.core.base import list_contains
-
 
 def get_name_or_id(url: str, /, *, start: str | list = None, end: str | list = None, pattern: str = "") -> str:
     """Get a name or an id from an url
@@ -93,21 +91,3 @@ def combine_tags(tags: str | list, /,  *, maximum: int = 5) -> str:
         return joint_tags.strip().replace('_', ' ')
 
     return ''.join(tag_list).strip().replace('_', ' ')
-
-
-def post_is_missing_preview(post, /, *, board: str = 'danbooru') -> bool:
-    """Determine whether or not a post is missing its preview
-    Arguments:
-        post::json object
-
-    Keywords:
-        board::str
-            The board to check the rules with. Default is 'danbooru'
-    """
-    match board:
-        case 'e621':
-            return list_contains(post['tags']['general'], koakuma.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
-        case 'sankaku':
-            return True
-        case _:
-            return list_contains(post['tag_string_general'].split(), koakuma.bot.rules['no_preview_tags'][board]) or post['is_banned']

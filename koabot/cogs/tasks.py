@@ -59,7 +59,7 @@ class Tasks(commands.Cog):
     async def lookup_pending_posts(self) -> None:
         """Every 5 minutes search for danbooru posts"""
 
-        # await koakuma.bot.wait_until_ready()
+        # await self.bot.wait_until_ready()
 
         guide = self.bot.guides['gallery']['danbooru-default']
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
@@ -104,7 +104,7 @@ class Tasks(commands.Cog):
     async def check_live_streamers(self) -> None:
         """Checks every so often for streamers that have gone online"""
 
-        # await koakuma.bot.wait_until_ready()
+        # await self.bot.wait_until_ready()
 
         online_streamers = []
 

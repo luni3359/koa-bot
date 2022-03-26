@@ -4,11 +4,13 @@ from discord.ext import commands
 from discord.ext.commands.errors import (ExtensionAlreadyLoaded,
                                          ExtensionNotLoaded)
 
+from koabot.kbot import KBot
+
 
 class UserActions(commands.Cog):
     """UserActions class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
 
     @commands.command(aliases=['ava'])
@@ -64,6 +66,6 @@ class UserActions(commands.Cog):
             print("Autoreload is already off.")
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(UserActions(bot))
+    await bot.add_cog(UserActions(bot))

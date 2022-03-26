@@ -7,14 +7,14 @@ from discord.ext import commands
 
 import koabot.utils.net as net_utils
 import koabot.utils.posts as post_utils
-from koabot import koakuma
 from koabot.cogs.botstatus import BotStatus
+from koabot.kbot import KBot
 
 
 class StreamService(commands.Cog):
     """Streaming websites definitions"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
 
         self._twitch_access_token: str = None
@@ -45,7 +45,7 @@ class StreamService(commands.Cog):
         """
         twitch_access_token: str = None
         token_filename = 'access_token'
-        twitch_cache_dir = os.path.join(koakuma.CACHE_DIR, 'twitch')
+        twitch_cache_dir = os.path.join(self.bot.CACHE_DIR, 'twitch')
         token_path = os.path.join(twitch_cache_dir, token_filename)
 
         # if the file exists
@@ -176,6 +176,6 @@ class StreamService(commands.Cog):
         return True
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(StreamService(bot))
+    await bot.add_cog(StreamService(bot))

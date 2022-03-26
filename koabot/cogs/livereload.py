@@ -6,6 +6,8 @@ import pathlib
 
 from discord.ext import commands, tasks
 
+from koabot.kbot import KBot
+
 # put your extension names in this list
 # if you don't want them to be reloaded
 IGNORE_EXTENSIONS: list[str] = []
@@ -18,11 +20,11 @@ def path_from_extension(extension: str) -> pathlib.Path:
 class LiveReload(commands.Cog):
     """Cog for reloading extensions as soon as the file is edited"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
         self.live_reload_loop.start()
 
-    def cog_unload(self):
+    async def cog_unload(self):
         self.live_reload_loop.stop()
 
     @tasks.loop(seconds=3)
@@ -40,7 +42,7 @@ class LiveReload(commands.Cog):
                 self.last_modified_time[extension] = time
 
             try:
-                self.bot.reload_extension(extension)
+                await self.bot.reload_extension(extension)
             except commands.ExtensionNotLoaded:
                 continue
             except commands.ExtensionError:
@@ -62,6 +64,6 @@ class LiveReload(commands.Cog):
             self.last_modified_time[extension] = time
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(LiveReload(bot))
+    await bot.add_cog(LiveReload(bot))

@@ -6,11 +6,13 @@ from datetime import datetime
 import pytz
 from discord.ext import commands
 
+from koabot.kbot import KBot
+
 
 class TimeZone(commands.Cog):
     """TimeZone class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
 
     @commands.command(aliases=['t'])
@@ -35,6 +37,6 @@ class TimeZone(commands.Cog):
         await ctx.send(tz_result + '```')
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(TimeZone(bot))
+    await bot.add_cog(TimeZone(bot))

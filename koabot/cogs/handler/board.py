@@ -8,14 +8,15 @@ from discord.ext import commands
 
 import koabot.utils.net as net_utils
 import koabot.utils.posts as post_utils
+from koabot.kbot import KBot
 
 
 class Board(commands.Cog):
     """Board class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
-        
+
         self._danbooru_auth: aiohttp.BasicAuth = None
         self._e621_auth: aiohttp.BasicAuth = None
 
@@ -300,6 +301,6 @@ class Board(commands.Cog):
         return embed.set_image(url=fileurl)
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(Board(bot))
+    await bot.add_cog(Board(bot))

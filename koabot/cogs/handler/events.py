@@ -13,13 +13,14 @@ from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.imageboard import ImageBoard
 from koabot.cogs.reactionroles import ReactionRoles
 from koabot.cogs.streamservice import StreamService
+from koabot.kbot import KBot
 from koabot.patterns import COMMAND_PATTERN, URL_PATTERN
 
 
 class BotEvents(commands.Cog):
     """BotEvents class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
         self.bot.connect_time = None
         self.bot.isconnected = False
@@ -332,6 +333,6 @@ class BotEvents(commands.Cog):
             self.bot.isconnected = False
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(BotEvents(bot))
+    await bot.add_cog(BotEvents(bot))

@@ -7,12 +7,13 @@ import discord
 from discord.ext import commands
 
 from koabot.cogs.botstatus import BotStatus
+from koabot.kbot import KBot
 
 
 class Forums(commands.Cog):
     """Forums class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
 
     @commands.command(name='4chan', aliases=['4c', '4ch'])
@@ -124,6 +125,6 @@ class Forums(commands.Cog):
                 await ctx.send(embed=post_embed)
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(Forums(bot))
+    await bot.add_cog(Forums(bot))

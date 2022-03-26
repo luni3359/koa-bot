@@ -7,6 +7,7 @@ from typing import Literal
 from discord.ext import commands
 from num2words import num2words
 
+from koabot.kbot import KBot
 from koabot.patterns import DICE_PATTERN
 
 
@@ -90,7 +91,7 @@ class RollMatch:
 class Game(commands.Cog):
     """Commands to play with"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
 
     @commands.command(aliases=['r'])
@@ -253,6 +254,6 @@ class Game(commands.Cog):
         await ctx.send(random.getrandbits(1) and "Heads!" or "Tails!")
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(Game(bot))
+    await bot.add_cog(Game(bot))

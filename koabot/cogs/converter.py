@@ -5,6 +5,7 @@ import forex_python.converter as currency
 from discord.ext import commands
 from pint import UnitRegistry
 
+from koabot.kbot import KBot
 from koabot.patterns import (NUMBER_PATTERN, SPECIAL_UNIT_PATTERN_TUPLE,
                              UNIT_PATTERN_TUPLE)
 
@@ -12,7 +13,7 @@ from koabot.patterns import (NUMBER_PATTERN, SPECIAL_UNIT_PATTERN_TUPLE,
 class Converter(commands.Cog):
     """Converter class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
         self.ureg = UnitRegistry()
         self.ureg.default_format = "~P.3f"
@@ -117,6 +118,6 @@ class Converter(commands.Cog):
         await ctx.send(conversion_str)
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(Converter(bot))
+    await bot.add_cog(Converter(bot))

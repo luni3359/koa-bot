@@ -9,7 +9,7 @@ import emoji
 from discord.ext import commands
 
 from koabot.cogs.botstatus import BotStatus
-from koabot.koakuma import DATA_DIR
+from koabot.kbot import KBot
 from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 
 
@@ -23,7 +23,7 @@ def is_guild_owner():
 class ReactionRoles(commands.Cog):
     """ReactionRoles class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
         self.rr_temporary_list = {}
         self.rr_confirmations = {}
@@ -32,7 +32,7 @@ class ReactionRoles(commands.Cog):
         self.spam_limit = 12
 
         # load reaction role binds
-        file_path = os.path.join(DATA_DIR, 'binds.json')
+        file_path = os.path.join(self.bot.DATA_DIR, 'binds.json')
         if os.path.isfile(file_path):
             with open(file_path, 'r', encoding="UTF-8") as json_file:
                 j_data = json.load(json_file)
@@ -286,7 +286,7 @@ class ReactionRoles(commands.Cog):
         links = tmp_root['links']
 
         file_name = 'binds.json'
-        file_path = os.path.join(DATA_DIR, file_name)
+        file_path = os.path.join(self.bot.DATA_DIR, file_name)
 
         self.add_rr_watch(bind_message, bind_channel, links)
 
@@ -449,6 +449,6 @@ class ReactionRoles(commands.Cog):
         self.rr_assignments[message_id] = tmp_obj
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(ReactionRoles(bot))
+    await bot.add_cog(ReactionRoles(bot))

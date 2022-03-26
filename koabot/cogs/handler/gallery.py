@@ -16,17 +16,16 @@ from thefuzz import fuzz
 
 import koabot.utils.net as net_utils
 import koabot.utils.posts as post_utils
-from koabot import koakuma
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
-from koabot.koakuma import CACHE_DIR
+from koabot.kbot import KBot
 from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
 
 class Gallery(commands.Cog):
     """Gallery class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
         self.pixiv_refresh_token: str = None
 
@@ -171,7 +170,7 @@ class Gallery(commands.Cog):
 
         parsed_posts = []
         if board == 'danbooru':
-            file_cache_dir = os.path.join(CACHE_DIR, board, 'files')
+            file_cache_dir = os.path.join(self.bot.CACHE_DIR, board, 'files')
             os.makedirs(file_cache_dir, exist_ok=True)
 
             test_posts = [post]
@@ -450,7 +449,7 @@ class Gallery(commands.Cog):
                     # //////////////////////////////////////////////////////////////////
                     # avatar_url = illust.user.profile_image_urls.medium
                     # avatar_filename = net_utils.get_url_filename(avatar_url)
-                    # avatar_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'avatars')
+                    # avatar_cache_dir = os.path.join(self.bot.CACHE_DIR, 'pixiv', 'avatars')
                     # os.makedirs(avatar_cache_dir, exist_ok=True)
                     # avatar_path = os.path.join(avatar_cache_dir, avatar_filename)
 
@@ -458,14 +457,14 @@ class Gallery(commands.Cog):
                     # image_bytes = None
                     # if not os.path.exists(image_path):
                     #     print('Saving to cache...')
-                    #     image_bytes = await net_utils.fetch_image(avatar_url, headers=koakuma.bot.assets['pixiv']['headers'])
+                    #     image_bytes = await net_utils.fetch_image(avatar_url, headers=self.bot.assets['pixiv']['headers'])
 
                     #     with open(os.path.join(avatar_cache_dir, avatar_filename), 'wb') as image_file:
                     #         shutil.copyfileobj(image_bytes, image_file)
                     #     image_bytes.seek(0)
 
                 # create if pixiv cache directory if it doesn't exist
-                file_cache_dir = os.path.join(CACHE_DIR, 'pixiv', 'files')
+                file_cache_dir = os.path.join(self.bot.CACHE_DIR, 'pixiv', 'files')
                 os.makedirs(file_cache_dir, exist_ok=True)
                 image_path = os.path.join(file_cache_dir, filename)
 
@@ -473,7 +472,7 @@ class Gallery(commands.Cog):
                 image_bytes = None
                 if not os.path.exists(image_path):
                     print('Saving to cache...')
-                    image_bytes = await net_utils.fetch_image(img_url, headers=koakuma.bot.assets['pixiv']['headers'])
+                    image_bytes = await net_utils.fetch_image(img_url, headers=self.bot.assets['pixiv']['headers'])
 
                     with open(os.path.join(file_cache_dir, filename), 'wb') as image_file:
                         shutil.copyfileobj(image_bytes, image_file)
@@ -516,7 +515,7 @@ class Gallery(commands.Cog):
         if self.pixiv_refresh_token:
             return await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
 
-        pixiv_cache_dir = os.path.join(CACHE_DIR, 'pixiv')
+        pixiv_cache_dir = os.path.join(self.bot.CACHE_DIR, 'pixiv')
         token_filename = 'refresh_token'
         token_path = os.path.join(pixiv_cache_dir, token_filename)
 
@@ -811,6 +810,6 @@ class Gallery(commands.Cog):
         await msg.reply(embeds=embeds, mention_author=False)
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(Gallery(bot))
+    await bot.add_cog(Gallery(bot))

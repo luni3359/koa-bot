@@ -8,7 +8,7 @@ import discord
 import yt_dlp as youtube_dl
 from discord.ext import commands
 
-from koabot.koakuma import SOURCE_DIR
+from koabot.kbot import KBot
 from koabot.patterns import URL_PATTERN
 
 ydl_opts = {
@@ -53,7 +53,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 class Music(commands.Cog):
     """Play music"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
 
     @commands.command()
@@ -138,7 +138,7 @@ class Music(commands.Cog):
         # join a voice channel
         await ctx.invoke(self.bot.get_command('join'))
 
-        source = discord.FFmpegPCMAudio(os.path.join(SOURCE_DIR, 'assets', self.bot.testing['vc']['music-file']))
+        source = discord.FFmpegPCMAudio(os.path.join(self.bot.SOURCE_DIR, 'assets', self.bot.testing['vc']['music-file']))
         voice_client: discord.VoiceClient = ctx.voice_client
 
         print("playing music now!")
@@ -150,6 +150,6 @@ class Music(commands.Cog):
         voice_client.play(source, after=lambda e: print("Done playing sound file.", e))
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(Music(bot))
+    await bot.add_cog(Music(bot))

@@ -9,13 +9,13 @@ import discord
 from discord.ext import commands
 from single_source import get_version
 
-from koabot import koakuma
+from koabot.kbot import KBot
 
 
 class BotStatus(commands.Cog):
     """BotStatus class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
 
     @commands.command(name='temperature', aliases=['temp'])
@@ -87,7 +87,7 @@ class BotStatus(commands.Cog):
     @commands.command()
     async def version(self, ctx: commands.Context, /):
         """Show bot's version"""
-        version = get_version(koakuma.BOT_DIRNAME, koakuma.PROJECT_DIR)
+        version = get_version(self.bot.BOT_DIRNAME, self.bot.PROJECT_DIR)
         await ctx.send(f"On version `{version}`.")
 
     async def typing_a_message(self, ctx: commands.Context, /, **kwargs):
@@ -136,6 +136,6 @@ class BotStatus(commands.Cog):
         return random.choice(self.bot.quotes[key])
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(BotStatus(bot))
+    await bot.add_cog(BotStatus(bot))

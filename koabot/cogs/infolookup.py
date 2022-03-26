@@ -9,14 +9,14 @@ from mediawiki import MediaWiki
 from mediawiki import exceptions as MediaExceptions
 
 import koabot.utils.net as net_utils
-from koabot import koakuma
 from koabot.cogs.botstatus import BotStatus
+from koabot.kbot import KBot
 
 
 class InfoLookup(commands.Cog):
     """InfoLookup class"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
 
         self._wikipedia: MediaWiki = None
@@ -59,7 +59,7 @@ class InfoLookup(commands.Cog):
                 matches = re.findall(r'(\[([\w\ ’\']+)\])', txt, re.IGNORECASE)
                 for match in matches:
                     txt = txt.replace(
-                        match[0], f"[{match[1]}]({koakuma.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
+                        match[0], f"[{match[1]}]({self.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
 
                 return txt
 
@@ -383,6 +383,6 @@ class InfoLookup(commands.Cog):
             return await ctx.send(bot_cog.get_quote('dictionary_blank_search'))
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(InfoLookup(bot))
+    await bot.add_cog(InfoLookup(bot))

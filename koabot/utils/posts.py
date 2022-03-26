@@ -1,7 +1,6 @@
 """Post utilities"""
 import re
 
-from koabot import koakuma
 from koabot.utils.base import list_contains
 
 

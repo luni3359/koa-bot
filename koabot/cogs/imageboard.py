@@ -5,12 +5,13 @@ from discord.ext import commands
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
 from koabot.cogs.handler.gallery import Gallery
+from koabot.kbot import KBot
 
 
 class ImageBoard(commands.Cog):
     """Streaming websites definitions"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: KBot):
         self.bot = bot
 
     @commands.command(name='danbooru', aliases=['dan'])
@@ -70,6 +71,6 @@ class ImageBoard(commands.Cog):
             return await ctx.send(bot_cog.get_quote('board_blank_search'))
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: KBot):
     """Initiate cog"""
-    bot.add_cog(ImageBoard(bot))
+    await bot.add_cog(ImageBoard(bot))

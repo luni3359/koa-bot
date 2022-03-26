@@ -8,7 +8,7 @@ from discord.ext import commands
 from mediawiki import MediaWiki
 from mediawiki import exceptions as MediaExceptions
 
-import koabot.utils.net as net_utils
+import koabot.core.net as net_core
 from koabot.cogs.botstatus import BotStatus
 from koabot.kbot import KBot
 
@@ -94,7 +94,7 @@ class InfoLookup(commands.Cog):
                     summary = summary[:len(summary) - i - 1] + '…'
                     break
 
-            js = (await net_utils.http_request(f"https://en.wikipedia.org/api/rest_v1/page/summary/{page_title}", json=True)).json
+            js = (await net_core.http_request(f"https://en.wikipedia.org/api/rest_v1/page/summary/{page_title}", json=True)).json
             if 'thumbnail' in js:
                 embed.set_image(url=js['thumbnail']['source'])
 
@@ -126,7 +126,7 @@ class InfoLookup(commands.Cog):
         word_encoded = urllib.parse.quote_plus(search_term)
         user_search = guide['search_url'] + word_encoded
 
-        js = (await net_utils.http_request(user_search, json=True)).json
+        js = (await net_core.http_request(user_search, json=True)).json
 
         if not js:
             await ctx.send('Error retrieving data from server.')
@@ -190,7 +190,7 @@ class InfoLookup(commands.Cog):
         search_encoded = urllib.parse.quote_plus(search_term)
         user_search = guide['search_url'] + search_encoded
 
-        js = (await net_utils.http_request(user_search, json=True)).json
+        js = (await net_core.http_request(user_search, json=True)).json
 
         if not js:
             await ctx.send('Error retrieving data from server.')
@@ -251,7 +251,7 @@ class InfoLookup(commands.Cog):
         search_encoded = urllib.parse.quote(search_term)
         user_search = f"{guide['search_url']}/{search_encoded}?key={self.bot.auth_keys['merriam-webster']['key']}"
 
-        js = (await net_utils.http_request(user_search, json=True)).json
+        js = (await net_core.http_request(user_search, json=True)).json
 
         # Check if there are any results at all
         if not js:

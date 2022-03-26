@@ -5,7 +5,7 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
-import koabot.utils.net as net_utils
+import koabot.core.net as net_core
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
 from koabot.cogs.streamservice import StreamService
@@ -123,14 +123,14 @@ class Tasks(commands.Cog):
                 if streamer['platform'] == 'twitch':
                     twitch_search += f"user_id={streamer['user_id']}&"
 
-            twitch_query = await net_utils.http_request(twitch_search, headers=await self.streamservice.twitch_headers, json=True)
+            twitch_query = await net_core.http_request(twitch_search, headers=await self.streamservice.twitch_headers, json=True)
 
             # Token is invalid/expired, acquire a new token
             match twitch_query.status:
                 case 401:
                     await self.streamservice.fetch_twitch_access_token(force=True)
 
-                    twitch_query = await net_utils.http_request(twitch_search, headers=await self.streamservice.twitch_headers, json=True)
+                    twitch_query = await net_core.http_request(twitch_search, headers=await self.streamservice.twitch_headers, json=True)
 
             for streamer in twitch_query.json['data']:
                 already_online = False
@@ -170,8 +170,8 @@ class Tasks(commands.Cog):
                 thumbnail_url = streamer['streamer']['thumbnail_url']
                 thumbnail_url = thumbnail_url.replace('{width}', '600')
                 thumbnail_url = thumbnail_url.replace('{height}', '350')
-                thumbnail_filename = net_utils.get_url_filename(thumbnail_url)
-                image = await net_utils.fetch_image(thumbnail_url)
+                thumbnail_filename = net_core.get_url_filename(thumbnail_url)
+                image = await net_core.fetch_image(thumbnail_url)
                 embed.set_image(url=f'attachment://{thumbnail_filename}')
 
                 stream_announcements.append(

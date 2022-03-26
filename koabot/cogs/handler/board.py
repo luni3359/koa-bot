@@ -6,8 +6,8 @@ import commentjson
 import discord
 from discord.ext import commands
 
-import koabot.utils.net as net_utils
-import koabot.utils.posts as post_utils
+import koabot.core.net as net_core
+import koabot.core.posts as post_core
 from koabot.kbot import KBot
 
 
@@ -116,21 +116,21 @@ class Board(commands.Cog):
             case 'danbooru':
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)
-                    return await net_utils.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
+                    return await net_core.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
                 elif tags:
                     if include_nsfw:
                         url = 'https://danbooru.donmai.us'
                     else:
                         url = 'https://safebooru.donmai.us'
 
-                    return await net_utils.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
             case 'e621':
                 # e621 requires to know the User-Agent
                 headers = guide['api']['headers']
 
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)
-                    return await net_utils.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
+                    return await net_core.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
                 elif tags:
                     if include_nsfw:
                         url = 'https://e621.net'
@@ -138,15 +138,15 @@ class Board(commands.Cog):
                         url = 'https://e926.net'
 
                     headers['Content-Type'] = 'application/json'
-                    return await net_utils.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
             case 'sankaku':
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)
-                    return await net_utils.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
+                    return await net_core.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
                 elif tags:
                     search_query = '+'.join(tags.split(' '))
                     url = guide['api']['tag_search_url'].format(search_query)
-                    return await net_utils.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
             case _:
                 raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
 
@@ -218,7 +218,7 @@ class Board(commands.Cog):
             else:
                 match board:
                     case 'danbooru':
-                        if post_utils.post_is_missing_preview(post, board=board) or last_post:
+                        if post_core.post_is_missing_preview(post, board=board) or last_post:
                             await ctx.send(f'<{embed.url}>', embed=embed)
                         else:
                             await ctx.send(embed.url)
@@ -247,9 +247,9 @@ class Board(commands.Cog):
 
         match board:
             case 'danbooru':
-                post_char = re.sub(r' \(.*?\)', '', post_utils.combine_tags(post['tag_string_character']))
-                post_copy = post_utils.combine_tags(post['tag_string_copyright'], maximum=1)
-                post_artist = post_utils.combine_tags(post['tag_string_artist'])
+                post_char = re.sub(r' \(.*?\)', '', post_core.combine_tags(post['tag_string_character']))
+                post_copy = post_core.combine_tags(post['tag_string_copyright'], maximum=1)
+                post_artist = post_core.combine_tags(post['tag_string_artist'])
                 embed_post_title = ''
 
                 if post_char:
@@ -274,7 +274,7 @@ class Board(commands.Cog):
 
                 embed.title = embed_post_title
             case 'e621':
-                embed.title = f"#{post_id}: {post_utils.combine_tags(post['tags']['artist'])} - e621"
+                embed.title = f"#{post_id}: {post_core.combine_tags(post['tags']['artist'])} - e621"
             case 'sankaku':
                 embed.title = f"Post {post_id}"
             case _:
@@ -294,7 +294,7 @@ class Board(commands.Cog):
                 else:
                     url_candidate = post[res_key]
 
-                if net_utils.get_url_fileext(url_candidate) in ['png', 'jpg', 'webp', 'gif']:
+                if net_core.get_url_fileext(url_candidate) in ['png', 'jpg', 'webp', 'gif']:
                     fileurl = url_candidate
                     break
 

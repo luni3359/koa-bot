@@ -1,7 +1,7 @@
 """Post utilities"""
 import re
 
-from koabot.utils.base import list_contains
+from koabot.core.base import list_contains
 
 
 def get_name_or_id(url: str, /, *, start: str | list = None, end: str | list = None, pattern: str = "") -> str:

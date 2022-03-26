@@ -5,8 +5,8 @@ import re
 import discord
 from discord.ext import commands
 
-import koabot.utils.net as net_utils
-import koabot.utils.posts as post_utils
+import koabot.core.net as net_core
+import koabot.core.posts as post_core
 from koabot.cogs.botstatus import BotStatus
 from koabot.kbot import KBot
 
@@ -60,7 +60,7 @@ class StreamService(commands.Cog):
                 'client_id': twitch_keys['client_id'],
                 'client_secret':  twitch_keys['client_secret'],
                 'grant_type': 'client_credentials'}
-            response = (await net_utils.http_request(url, post=True, data=data, json=True)).json
+            response = (await net_core.http_request(url, post=True, data=data, json=True)).json
 
             os.makedirs(twitch_cache_dir, exist_ok=True)
 
@@ -98,7 +98,7 @@ class StreamService(commands.Cog):
                         # searching an username
                         search_type = 'user_login'
 
-                    response = await net_utils.http_request(f"{twitch_api_url}?{search_type}={item}", headers=await self.twitch_headers, json=True)
+                    response = await net_core.http_request(f"{twitch_api_url}?{search_type}={item}", headers=await self.twitch_headers, json=True)
                     streams = response.json
 
                     for stream in streams['data'][:3]:
@@ -106,7 +106,7 @@ class StreamService(commands.Cog):
 
                 # fetch list from twitch
                 else:
-                    response = await net_utils.http_request(twitch_api_url, headers=await self.twitch_headers, json=True)
+                    response = await net_core.http_request(twitch_api_url, headers=await self.twitch_headers, json=True)
                     streams = response.json
 
                     for stream in streams['data'][:5]:
@@ -129,7 +129,7 @@ class StreamService(commands.Cog):
         """
         guide = self.bot.assets['picarto']
         channel: discord.TextChannel = msg.channel
-        channel_name = post_utils.get_name_or_id(url, start='.tv/')
+        channel_name = post_core.get_name_or_id(url, start='.tv/')
 
         bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
@@ -137,7 +137,7 @@ class StreamService(commands.Cog):
             return False
 
         channel_url = f"https://api.picarto.tv/api/v1/channel/name/{channel_name}"
-        picarto_request = (await net_utils.http_request(channel_url, json=True)).json
+        picarto_request = (await net_core.http_request(channel_url, json=True)).json
 
         if not picarto_request:
             await channel.send(bot_cog.get_quote('stream_preview_failed'))
@@ -147,8 +147,8 @@ class StreamService(commands.Cog):
             await channel.send(bot_cog.get_quote('stream_preview_offline'))
             return False
 
-        image = await net_utils.fetch_image(picarto_request['thumbnails']['web'])
-        filename: str = net_utils.get_url_filename(picarto_request['thumbnails']['web'])
+        image = await net_core.fetch_image(picarto_request['thumbnails']['web'])
+        filename: str = net_core.get_url_filename(picarto_request['thumbnails']['web'])
 
         embed = discord.Embed()
         embed.set_author(

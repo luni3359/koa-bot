@@ -18,6 +18,7 @@ import koabot.core.net as net_core
 import koabot.core.posts as post_core
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
+from koabot.core.embed import EmbedGroup
 from koabot.kbot import KBot
 from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
@@ -327,38 +328,30 @@ class Gallery(commands.Cog):
             # Appending :orig to get a better image quality
             gallery_pics.append(f"{picture['media_url_https']}:orig")
 
-        embeds_to_send = []
-        total_gallery_pics = len(gallery_pics)
+        embed_group = EmbedGroup()
+        embed_group.color = discord.Colour(int(guide['embed']['color'], 16))
+
+        # If it's the first picture to show, add author, body, and counters
+        if (tw_likes := tweet.favorite_count) > 0:
+            embed_group.first.add_field(name='Likes', value=f"{tw_likes:,}")
+        if (tw_retweets := tweet.retweet_count) > 0:
+            embed_group.first.add_field(name='Retweets', value=f"{tw_retweets:,}")
+
+        embed_group.first.set_author(
+            name=f'{tweet.author.name} (@{tweet.author.screen_name})',
+            url=guide['post']['url'].format(tweet.author.screen_name),
+            icon_url=tweet.author.profile_image_url_https)
+        embed_group.first.description = tweet.full_text[tweet.display_text_range[0]:tweet.display_text_range[1]]
+
+        # If it's the last picture to show, add a brand footer
+        embed_group.last.set_footer(
+            text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
+            icon_url=self.bot.assets['twitter']['favicon'])
+
         for picture in gallery_pics:
-            total_gallery_pics -= 1
+            embed_group.add().set_image(url=picture)
 
-            embed = discord.Embed()
-            embed.set_image(url=picture)
-            hex_color = int(guide['embed']['color'], 16)
-            embed.colour = discord.Colour(hex_color)
-
-            # If it's the first picture to show, add author, body, and counters
-            if total_gallery_pics + 1 == len(gallery_pics):
-                embed.set_author(
-                    name=f'{tweet.author.name} (@{tweet.author.screen_name})',
-                    url=guide['post']['url'].format(tweet.author.screen_name),
-                    icon_url=tweet.author.profile_image_url_https)
-                embed.description = tweet.full_text[tweet.display_text_range[0]:tweet.display_text_range[1]]
-
-                if (tw_likes := tweet.favorite_count) > 0:
-                    embed.add_field(name='Likes', value=f"{tw_likes:,}")
-                if (tw_retweets := tweet.retweet_count) > 0:
-                    embed.add_field(name='Retweets', value=f"{tw_retweets:,}")
-
-            # If it's the last picture to show, add a brand footer
-            if total_gallery_pics <= 0:
-                embed.set_footer(
-                    text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
-                    icon_url=self.bot.assets['twitter']['favicon'])
-
-            embeds_to_send.append(embed)
-
-        await msg.reply(embeds=embeds_to_send, mention_author=False)
+        await msg.reply(embeds=embed_group.embeds, mention_author=False)
 
         # Supress original embed (sorry, desktop-only users)
         try:

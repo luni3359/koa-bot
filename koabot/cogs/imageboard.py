@@ -65,7 +65,7 @@ class ImageBoard(commands.Cog):
             case 'twitter':
                 await self.gallery.get_twitter_gallery(msg, url, guide=guide)
             case 'pixiv':
-                await self.gallery.get_pixiv_gallery(msg, url)
+                await self.gallery.get_pixiv_gallery(msg, url, only_missing_preview=only_missing_preview)
             case 'sankaku':
                 await self.gallery.display_static(msg.channel, url, board='sankaku', guide=guide, only_missing_preview=only_missing_preview)
             case 'deviantart':

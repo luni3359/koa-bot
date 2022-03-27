@@ -3,6 +3,7 @@ import html
 import os
 import re
 import shutil
+from io import BytesIO
 from pathlib import Path
 
 import asyncpraw
@@ -32,6 +33,18 @@ class BooruParsedPost():
         self.path = path
         self.hash = []
         self.score = []
+
+
+class PixivHelper():
+    def __init__(self) -> None:
+        self.files: list[discord.File] = []
+        self.embeds: list[discord.Embed] = []
+
+    def add_file(self, fp: BytesIO | str, filename: str) -> None:
+        self.files.append(discord.File(fp=fp, filename=filename))
+
+    def add_embed(self, embed: discord.Embed) -> None:
+        self.embeds.append(embed)
 
 
 class Gallery(commands.Cog):
@@ -370,18 +383,19 @@ class Gallery(commands.Cog):
                 case _:
                     print(f"Forbidden: Status {e.status} (code {e.code}")
 
-    async def get_pixiv_gallery(self, msg: discord.Message, url: str, /) -> None:
+    async def get_pixiv_gallery(self, msg: discord.Message, url: str, /, *, only_missing_preview: bool = False) -> None:
         """Automatically fetch and post any image galleries from pixiv
         Arguments:
             msg::discord.Message
                 The message where the link was sent
             url::str
                 Link of the pixiv post
+            only_missing_preview::bool
+                Only shows a preview if the native embed is missing from the original link. Default is False
         """
         channel: discord.TextChannel = msg.channel
 
-        post_id = post_core.get_name_or_id(url, start=['illust_id=', '/artworks/'], pattern=r'[0-9]+')
-        if not post_id:
+        if not (post_id := post_core.get_name_or_id(url, start=['illust_id=', '/artworks/'], pattern=r'[0-9]+')):
             return
 
         print(f"Now starting to process pixiv link #{post_id}")
@@ -406,6 +420,7 @@ class Gallery(commands.Cog):
         print(f"Pixiv auth passed! (for #{post_id})")
 
         illust = illust_json.illust
+
         # if illust.x_restrict != 0 and not channel.is_nsfw():
         #     embed = discord.Embed()
 
@@ -419,7 +434,6 @@ class Gallery(commands.Cog):
         #     await self.botstatus.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
         #     return
 
-        # temp_message = await channel.send(f"***{self.botstatus.get_quote('processing_long_task')}***")
         async with channel.typing():
             total_illust_pictures = illust.page_count
 
@@ -428,7 +442,12 @@ class Gallery(commands.Cog):
             else:
                 pictures = [illust]
 
-            total_to_preview = 1
+            if only_missing_preview:
+                total_to_preview = 1
+            else:
+                total_to_preview = 5
+
+            pixiv_helper = PixivHelper()
             for i, picture in enumerate(pictures[:total_to_preview]):
                 print(f'Retrieving picture #{post_id}...')
 
@@ -482,7 +501,7 @@ class Gallery(commands.Cog):
                 # cache file if it doesn't exist
                 image_bytes = None
                 if not os.path.exists(image_path):
-                    print('Saving to cache...')
+                    print("Saving to cache...")
                     image_bytes = await net_core.fetch_image(img_url, headers=self.bot.assets['pixiv']['headers'])
 
                     with open(os.path.join(file_cache_dir, filename), 'wb') as image_file:
@@ -490,10 +509,8 @@ class Gallery(commands.Cog):
                     image_bytes.seek(0)
 
                 if i + 1 >= min(total_to_preview, total_illust_pictures):
-                    remaining_footer = ''
-
                     if total_illust_pictures > total_to_preview:
-                        remaining_footer = f'{total_illust_pictures - total_to_preview}+ remaining'
+                        remaining_footer = f"{total_illust_pictures - total_to_preview}+ remaining"
                     else:
                         remaining_footer = self.bot.assets['pixiv']['name']
 
@@ -502,13 +519,16 @@ class Gallery(commands.Cog):
                         icon_url=self.bot.assets['pixiv']['favicon'])
 
                 if image_bytes:
-                    await msg.reply(file=discord.File(fp=image_bytes, filename=filename), embed=embed, mention_author=False)
+                    pixiv_helper.add_file(image_bytes, filename)
                     image_bytes.close()
                 else:
-                    print('Uploading from cache...')
-                    await msg.reply(file=discord.File(fp=image_path, filename=filename), embed=embed, mention_author=False)
+                    print("Uploading from cache...")
+                    pixiv_helper.add_file(image_path, filename)
 
-        # await temp_message.delete()
+                pixiv_helper.add_embed(embed)
+
+        await msg.reply(files=pixiv_helper.files, embeds=pixiv_helper.embeds, mention_author=False)
+
         try:
             await msg.edit(suppress=True)
         except discord.errors.Forbidden as e:

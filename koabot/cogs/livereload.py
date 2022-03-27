@@ -1,8 +1,8 @@
 """Live reloading
 https://gist.github.com/AXVin/08ed554a458fc7aee4da162f4c53d086"""
-# pylint: disable=no-member
+# pylint: disable=no-member,unused-argument
 import os
-import pathlib
+from pathlib import Path
 
 from discord.ext import commands, tasks
 
@@ -13,8 +13,8 @@ from koabot.kbot import KBot
 IGNORE_EXTENSIONS: list[str] = []
 
 
-def path_from_extension(extension: str) -> pathlib.Path:
-    return pathlib.Path(extension.replace('.', os.sep)+'.py')
+def path_from_extension(extension: str) -> Path:
+    return Path(extension.replace('.', os.sep)+'.py')
 
 
 class LiveReload(commands.Cog):
@@ -22,6 +22,9 @@ class LiveReload(commands.Cog):
 
     def __init__(self, bot: KBot):
         self.bot = bot
+        self.enabled = True
+
+    async def cog_load(self):
         self.live_reload_loop.start()
 
     async def cog_unload(self):
@@ -62,6 +65,46 @@ class LiveReload(commands.Cog):
             path = path_from_extension(extension)
             time = os.path.getmtime(path)
             self.last_modified_time[extension] = time
+
+    @commands.command(name="reload", hidden=True)
+    @commands.is_owner()
+    async def _reload(self, ctx: commands.Context, *, module: str):
+        """Reloads a module"""
+        if module == "all":
+            return
+
+        try:
+            await self.bot.unload_extension(module)
+            await self.bot.load_extension(module)
+        except Exception as e:
+            await ctx.send(f"{type(e).__name__}: {e}")
+        else:
+            await ctx.send(f"Successfully reloaded '{module}'.")
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def autoreload(self, ctx: commands.Context, mode: str):
+        """Toggles autoreload on or off"""
+        print(f"Turning autoreload {mode}...")
+
+        if mode == "on":
+            try:
+                if self.enabled:
+                    raise ValueError()
+                self.live_reload_loop.start()
+            except (RuntimeError, ValueError):
+                print("Autoreload is already on.")
+
+            self.enabled = True
+        elif mode == "off":
+            try:
+                if not self.enabled:
+                    raise ValueError()
+                self.live_reload_loop.stop()
+            except ValueError:
+                print("Autoreload is already off.")
+
+            self.enabled = False
 
 
 async def setup(bot: KBot):

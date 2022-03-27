@@ -23,16 +23,14 @@ ytdl = youtube_dl.YoutubeDL(ydl_opts)
 
 class YTDLSource(discord.PCMVolumeTransformer):
     """Found on the internet
-
     https://stackoverflow.com/a/56709893/7688278
     look into this https://gist.github.com/vbe0201/ade9b80f2d3b64643d854938d40a0a2d
     """
 
-    def __init__(self, source, *, data, volume=0.5):
+    def __init__(self, source: discord.AudioSource, *, data, volume=0.5):
         super().__init__(source, volume)
 
         self.data = data
-
         self.title = data.get('title')
         self.url = data.get('url')
 
@@ -138,7 +136,8 @@ class Music(commands.Cog):
         # join a voice channel
         await ctx.invoke(self.bot.get_command('join'))
 
-        source = discord.FFmpegPCMAudio(os.path.join(self.bot.SOURCE_DIR, 'assets', self.bot.testing['vc']['music-file']))
+        source = discord.FFmpegPCMAudio(os.path.join(self.bot.SOURCE_DIR, 'assets',
+                                        self.bot.testing['vc']['music-file']))
         voice_client: discord.VoiceClient = ctx.voice_client
 
         print("playing music now!")

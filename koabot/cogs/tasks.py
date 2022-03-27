@@ -18,8 +18,16 @@ class Tasks(commands.Cog):
     def __init__(self, bot: KBot):
         self.bot = bot
 
+        self._board: Board = None
         self._botstatus: BotStatus = None
         self._streamservice: StreamService = None
+
+    @property
+    def board(self) -> Board:
+        if not self._board:
+            self._board = self.bot.get_cog('Board')
+
+        return self._board
 
     @property
     def botstatus(self) -> BotStatus:
@@ -62,8 +70,6 @@ class Tasks(commands.Cog):
         # await self.bot.wait_until_ready()
 
         guide = self.bot.guides['gallery']['danbooru-default']
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-        board_cog: Board = self.bot.get_cog('Board')
         pending_posts = []
         channel_categories = {}
 
@@ -73,7 +79,7 @@ class Tasks(commands.Cog):
                 channel_categories[channel_category].append(self.bot.get_channel(int(channel)))
 
         while not self.bot.is_closed():
-            posts = (await board_cog.search_query(tags=self.bot.tasks['danbooru']['tag_list'], guide=guide, limit=5, random=True)).json
+            posts = (await self.board.search_query(tags=self.bot.tasks['danbooru']['tag_list'], guide=guide, limit=5, random=True)).json
 
             safe_posts = []
             nsfw_posts = []
@@ -92,11 +98,11 @@ class Tasks(commands.Cog):
 
             if safe_posts or nsfw_posts:
                 for channel in channel_categories['safe_channels']:
-                    await channel.send(bot_cog.get_quote('posts_to_approve') + '\n' + safe_posts)
+                    await channel.send(self.botstatus.get_quote('posts_to_approve') + '\n' + safe_posts)
 
             if nsfw_posts:
                 for channel in channel_categories['nsfw_channels']:
-                    await channel.send(bot_cog.get_quote('posts_to_approve') + '\n' + nsfw_posts)
+                    await channel.send(self.botstatus.get_quote('posts_to_approve') + '\n' + nsfw_posts)
 
             # check every 5 minutes
             await asyncio.sleep(60 * 5)

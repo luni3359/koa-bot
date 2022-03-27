@@ -31,6 +31,8 @@ class ReactionRoles(commands.Cog):
         self.rr_cooldown = {}
         self.spam_limit = 12
 
+        self._botstatus: BotStatus = None
+
         # load reaction role binds
         file_path = os.path.join(self.bot.DATA_DIR, 'binds.json')
         if os.path.isfile(file_path):
@@ -39,6 +41,13 @@ class ReactionRoles(commands.Cog):
 
                 for message_id, v in j_data.items():
                     self.add_rr_watch(message_id, v['channel_id'], v['links'])
+
+    @property
+    def botstatus(self) -> BotStatus:
+        if not self._botstatus:
+            self._botstatus = self.bot.get_cog('BotStatus')
+
+        return self._botstatus
 
     async def assign_roles(self, emoji_sent: str, user: discord.Member, message_id: int, channel_id: int):
         """Updates the roles of the given user
@@ -134,9 +143,8 @@ class ReactionRoles(commands.Cog):
     async def assign(self, ctx: commands.Context, url: str) -> None:
         """Initialize the emoji-message-role binding process"""
         url_matches = CHANNEL_URL_PATTERN.match(url)
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         if not url_matches:
-            return await ctx.send(bot_cog.get_quote('rr_assign_missing_or_invalid_message_url'))
+            return await ctx.send(self.botstatus.get_quote('rr_assign_missing_or_invalid_message_url'))
 
         message_id = url_matches.group(0).split('/')[-1]
         message: discord.Message = None
@@ -150,7 +158,7 @@ class ReactionRoles(commands.Cog):
         try:
             message = await target_channel.fetch_message(int(message_id))
         except discord.NotFound:
-            await ctx.send(bot_cog.get_quote('rr_assign_message_url_not_found'))
+            await ctx.send(self.botstatus.get_quote('rr_assign_message_url_not_found'))
         except discord.Forbidden:
             await ctx.send("I don't have permissions to interact with that message...")
         except discord.HTTPException:
@@ -164,7 +172,7 @@ class ReactionRoles(commands.Cog):
         server_id = url_matches.group(0).split('/')[-3]
         bind_tag = f'{author_id}/{server_id}'
         if bind_tag in self.rr_temporary_list:
-            return await ctx.send(bot_cog.get_quote('rr_assign_already_assigning'))
+            return await ctx.send(self.botstatus.get_quote('rr_assign_already_assigning'))
 
         tmp_bind = {}
         tmp_bind['bind_message'] = message_id
@@ -172,16 +180,15 @@ class ReactionRoles(commands.Cog):
         tmp_bind['links'] = []
         self.rr_temporary_list[bind_tag] = tmp_bind
 
-        await ctx.send(bot_cog.get_quote('rr_assign_process_complete'))
+        await ctx.send(self.botstatus.get_quote('rr_assign_process_complete'))
 
     @reaction_roles.command()
     async def bind(self, ctx: commands.Context) -> None:
         """Add a new emoji-role binding to the message being currently assigned to"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
         if bind_tag not in self.rr_temporary_list:
-            return await ctx.send(bot_cog.get_quote('rr_message_target_missing'))
+            return await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
 
         emoji_list = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) +
                          re.findall(emoji.get_emoji_regexp(), ctx.message.content))
@@ -254,10 +261,9 @@ class ReactionRoles(commands.Cog):
     async def undo(self, ctx: commands.Context, call_type: str) -> None:
         """Cancel the last issued reaction roles entry"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send(bot_cog.get_quote('rr_message_target_missing'))
+            await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
             return
 
         match call_type:
@@ -270,15 +276,14 @@ class ReactionRoles(commands.Cog):
     async def save(self, ctx: commands.Context) -> None:
         """Complete the emoji-role registration"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
         if bind_tag not in self.rr_temporary_list:
-            return await ctx.send(bot_cog.get_quote('rr_message_target_missing'))
+            return await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
 
         tmp_root: dict = self.rr_temporary_list[bind_tag]
 
         if not tmp_root['links']:
-            return await ctx.send(bot_cog.get_quote('rr_save_cannot_save_empty'))
+            return await ctx.send(self.botstatus.get_quote('rr_save_cannot_save_empty'))
 
         print('Saving bind...')
         bind_channel = tmp_root['bind_channel']
@@ -329,10 +334,9 @@ class ReactionRoles(commands.Cog):
     async def cancel(self, ctx: commands.Context) -> None:
         """Quit the reaction roles binding process"""
         bind_tag = f'{ctx.message.author.id}/{ctx.guild.id}'
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
 
         if bind_tag not in self.rr_temporary_list:
-            await ctx.send(bot_cog.get_quote('rr_message_target_missing'))
+            await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
         else:
             self.rr_temporary_list.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))

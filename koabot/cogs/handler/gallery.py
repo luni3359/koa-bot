@@ -24,6 +24,16 @@ from koabot.kbot import KBot
 from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
 
+class BooruParsedPost():
+    def __init__(self, id_, ext, filename, path) -> None:
+        self.id: int = id_
+        self.ext = ext
+        self.filename = filename
+        self.path = path
+        self.hash = []
+        self.score = []
+
+
 class Gallery(commands.Cog):
     """Gallery class"""
 
@@ -32,7 +42,7 @@ class Gallery(commands.Cog):
         self.pixiv_refresh_token: str = None
 
         self._botstatus: BotStatus = None
-        self._board_cog: Board = None
+        self._board: Board = None
         self._twitter_api: tweepy.API = None
         self._pixiv_aapi: pixivpy_async.AppPixivAPI = None
         self._reddit_api: asyncpraw.Reddit = None
@@ -45,11 +55,11 @@ class Gallery(commands.Cog):
         return self._botstatus
 
     @property
-    def board_cog(self) -> Board:
-        if not self._board_cog:
-            self._board_cog = self.bot.get_cog('Board')
+    def board(self) -> Board:
+        if not self._board:
+            self._board = self.bot.get_cog('Board')
 
-        return self._board_cog
+        return self._board
 
     @property
     def twitter_api(self) -> tweepy.API:
@@ -104,7 +114,7 @@ class Gallery(commands.Cog):
         if not (post_id := post_core.get_name_or_id(url, start=id_start, end=id_end, pattern=pattern)):
             return
 
-        post = (await self.board_cog.search_query(board=board, guide=guide, post_id=post_id)).json
+        post = (await self.board.search_query(board=board, guide=guide, post_id=post_id)).json
 
         if not post:
             return
@@ -116,7 +126,7 @@ class Gallery(commands.Cog):
         post_id = post['id']
 
         on_nsfw_channel = channel.is_nsfw()
-        first_post_missing_preview = self.board_cog.post_is_missing_preview(post, board=board)
+        first_post_missing_preview = self.board.post_is_missing_preview(post, board=board)
         posts = []
 
         if post['rating'] != 's' and not on_nsfw_channel:
@@ -147,7 +157,7 @@ class Gallery(commands.Cog):
 
         if only_missing_preview:
             if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
-                await self.board_cog.send_posts(channel, post, board=board, guide=guide)
+                await self.board.send_posts(channel, post, board=board, guide=guide)
             return
 
         if has_children:
@@ -156,14 +166,14 @@ class Gallery(commands.Cog):
             search = p_search
         else:
             if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
-                await self.board_cog.send_posts(channel, post, board=board, guide=guide)
+                await self.board.send_posts(channel, post, board=board, guide=guide)
             return
 
         if isinstance(search, str):
             search = [search]
 
         for s in search:
-            results = await self.board_cog.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)
+            results = await self.board.search_query(board=board, guide=guide, tags=s, include_nsfw=on_nsfw_channel)
             results = results.json
 
             # e621 fix for broken API
@@ -183,12 +193,12 @@ class Gallery(commands.Cog):
             if len(posts) != total_posts_count:
                 nsfw_culled = True
 
-        parsed_posts = []
+        parsed_posts: list[BooruParsedPost] = []
         if board == 'danbooru':
             file_cache_dir = os.path.join(self.bot.CACHE_DIR, board, 'files')
             os.makedirs(file_cache_dir, exist_ok=True)
 
-            test_posts = [post]
+            test_posts: list[dict] = [post]
             test_posts.extend(posts)
 
             for test_post in test_posts:
@@ -207,14 +217,7 @@ class Gallery(commands.Cog):
                                 should_cache = False
                                 Path(file_path).touch()
 
-                            parsed_posts.append({
-                                'id': test_post['id'],
-                                'ext': file_ext,
-                                'file_name': file_name,
-                                'path': file_path,
-                                'hash': [],
-                                'score': []
-                            })
+                            parsed_posts.append(BooruParsedPost(test_post['id'], file_ext, file_name, file_path))
                             break
 
                 if should_cache:
@@ -227,27 +230,26 @@ class Gallery(commands.Cog):
 
             print('Evaluating images...')
 
-            ground_truth = parsed_posts[0]
+            ground_truth = parsed_posts.pop(0)
             for hash_func in [imagehash.phash, imagehash.dhash, imagehash.average_hash, imagehash.colorhash]:
                 if hash_func != imagehash.colorhash:
                     hash_param = {'hash_size': 16}
                 else:
                     hash_param = {'binbits': 6}
 
-                ground_truth['hash'].append(hash_func(Image.open(ground_truth['path']), **hash_param))
+                ground_truth.hash.append(hash_func(Image.open(ground_truth.path), **hash_param))
 
-                for parsed_post in parsed_posts[1:]:
-                    parsed_post['hash'].append(hash_func(Image.open(parsed_post['path']), **hash_param))
+                for parsed_post in parsed_posts:
+                    parsed_post.hash.append(hash_func(Image.open(parsed_post.path), **hash_param))
 
-                    hash_diff = ground_truth['hash'][len(ground_truth['hash']) - 1] - \
-                        parsed_post['hash'][len(parsed_post['hash']) - 1]
-                    parsed_post['score'].append(hash_diff)
+                    hash_diff = ground_truth.hash[-1] - parsed_post.hash[-1]
+                    parsed_post.score.append(hash_diff)
 
             print(f'Scores for post #{post_id}')
 
-            for parsed_post in parsed_posts[1:]:
-                print('#' + str(parsed_post['id']), parsed_post['score'])
-                if sum(parsed_post['score']) <= 10:
+            for parsed_post in parsed_posts:
+                print(f"#{parsed_post.id}", parsed_post.score)
+                if sum(parsed_post.score) <= 10:
                     posts = posts[1:]
 
         if first_post_missing_preview:
@@ -256,9 +258,9 @@ class Gallery(commands.Cog):
 
         if posts:
             if first_post_missing_preview:
-                await self.board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel, max_posts=5)
+                await self.board.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel, max_posts=5)
             else:
-                await self.board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
+                await self.board.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
         else:
             if post['rating'] == 's' and not nsfw_culled or on_nsfw_channel:
                 return print('Removed all duplicates')
@@ -705,9 +707,8 @@ class Gallery(commands.Cog):
         if not api_result or api_result['status'] != 200:
             return
 
-        total_album_pictures = len(api_result['data']) - 1
-
-        if total_album_pictures < 1:
+        # TODO: Why -1?
+        if (total_album_pictures := len(api_result['data']) - 1) < 1:
             return
 
         embeds_to_send = []
@@ -766,11 +767,11 @@ class Gallery(commands.Cog):
         if hasattr(submission, 'gallery_data'):
             media_count = len(submission.gallery_data['items'])
             ordered_media_data = sorted(submission.gallery_data['items'], key=lambda x: x['id'])
-            media_type = 'p'        # p = stands for preview?
+            media_type = 'p'        # TODO: p = stands for preview?
             total_to_preview = 4
 
             if obfuscated_preview:
-                media_type = 'o'    # o = stands for obfuscated?
+                media_type = 'o'    # TODO: o = stands for obfuscated?
                 total_to_preview = 1
 
             for i, item_data in enumerate(ordered_media_data[:total_to_preview]):
@@ -786,6 +787,7 @@ class Gallery(commands.Cog):
                     post_preview = media_element[media_type][-1]['u']
                     embed.set_image(url=post_preview)
 
+                # TODO: Another len() - 1 case to change
                 # If we're on the last element
                 if i == len(ordered_media_data[:total_to_preview]) - 1:
                     if media_count > total_to_preview:

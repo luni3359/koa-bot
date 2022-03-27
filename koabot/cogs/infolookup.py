@@ -19,8 +19,16 @@ class InfoLookup(commands.Cog):
     def __init__(self, bot: KBot):
         self.bot = bot
 
+        self._botstatus: BotStatus = None
         self._wikipedia: MediaWiki = None
         self._merriam_find_pattern: re.Pattern = None
+
+    @property
+    def botstatus(self) -> BotStatus:
+        if not self._botstatus:
+            self._botstatus = self.bot.get_cog('BotStatus')
+
+        return self._botstatus
 
     @property
     def wikipedia(self) -> MediaWiki:
@@ -134,8 +142,7 @@ class InfoLookup(commands.Cog):
 
         # Check if there are any results at all
         if js['meta']['status'] != 200:
-            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-            return await ctx.send(bot_cog.get_quote('dictionary_no_results'))
+            return await ctx.send(self.botstatus.get_quote('dictionary_no_results'))
 
         embed = discord.Embed()
         embed.title = search_term
@@ -198,8 +205,7 @@ class InfoLookup(commands.Cog):
 
         # Check if there are any results at all
         if not 'list' in js or not js['list']:
-            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-            return await ctx.send(bot_cog.get_quote('dictionary_no_results'))
+            return await ctx.send(self.botstatus.get_quote('dictionary_no_results'))
 
         definition_embeds: list[discord.Embed] = []
         embed = discord.Embed()
@@ -227,8 +233,7 @@ class InfoLookup(commands.Cog):
             else:
                 embed.description += string_to_add
 
-        definition_embeds[len(definition_embeds) - 1].set_footer(text=guide['name'],
-                                                                 icon_url=guide['favicon']['size16'])
+        definition_embeds[-1].set_footer(text=guide['name'], icon_url=guide['favicon']['size16'])
 
         i = 0
         for embed in definition_embeds:
@@ -255,19 +260,17 @@ class InfoLookup(commands.Cog):
 
         # Check if there are any results at all
         if not js:
-            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-            return await ctx.send(bot_cog.get_quote('dictionary_no_results'))
+            return await ctx.send(self.botstatus.get_quote('dictionary_no_results'))
 
         # If word has no direct definitions, they're word suggestions
         # (if there's no dicts, it's safe to assume they're strings)
         if not isinstance(js[0], dict):
-            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
             suggestion_list = '\n\n'.join([f"• {suggestion}" for suggestion in js[:5]])
 
             embed = discord.Embed()
             embed.description = f"*{suggestion_list}*"
             embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
-            return await ctx.send(bot_cog.get_quote('dictionary_try_this'), embed=embed)
+            return await ctx.send(self.botstatus.get_quote('dictionary_try_this'), embed=embed)
         # If there's suggestions to a different grammatical tense
         elif 'def' not in js[0]:
             tense_group = js[0]['cxs'][0]
@@ -379,8 +382,7 @@ class InfoLookup(commands.Cog):
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         if isinstance(error, commands.MissingRequiredArgument):
-            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-            return await ctx.send(bot_cog.get_quote('dictionary_blank_search'))
+            return await ctx.send(self.botstatus.get_quote('dictionary_blank_search'))
 
 
 async def setup(bot: KBot):

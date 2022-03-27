@@ -98,13 +98,13 @@ class EmbedGroup(Embed):
         if self.merge_first_and_last:
             if len(self._embed_queue) > 1:
                 first_embed = self._embed_queue[0]
-                last_embed = self._embed_queue[len(self._embed_queue) - 1]
+                last_embed = self._embed_queue[-1]
 
                 if self.first != Embed():
                     self._embed_queue[0] = first_embed + self.first
 
                 if self.last != Embed():
-                    self._embed_queue[len(self._embed_queue) - 1] = last_embed + self.last
+                    self._embed_queue[-1] = last_embed + self.last
 
                 for embed in self._embed_queue:
                     self._embeds.append(embed + self)

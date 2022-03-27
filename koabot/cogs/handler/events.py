@@ -28,6 +28,11 @@ class BotEvents(commands.Cog):
         self.bot.last_channel_message_count = 0
         self.bot.last_channel_warned = False
 
+        self._botstatus: BotStatus = None
+        self._imageboard: ImageBoard = None
+        self._reactionroles: ReactionRoles = None
+        self._streamservice: StreamService = None
+
         # guides stuff
         self.valid_urls: list[dict] = []
         for group, contents in self.bot.match_groups.items():
@@ -53,6 +58,34 @@ class BotEvents(commands.Cog):
                 combined_guide = merge({}, target_guide, source_guide)
                 self.bot.guides[guide_type][guide_name] = combined_guide
 
+    @property
+    def botstatus(self) -> BotStatus:
+        if not self._botstatus:
+            self._botstatus = self.bot.get_cog('BotStatus')
+
+        return self._botstatus
+
+    @property
+    def imageboard(self) -> ImageBoard:
+        if not self._imageboard:
+            self._imageboard = self.bot.get_cog('ImageBoard')
+
+        return self._imageboard
+
+    @property
+    def reactionroles(self) -> ReactionRoles:
+        if not self._reactionroles:
+            self._reactionroles = self.bot.get_cog('ReactionRoles')
+
+        return self._reactionroles
+
+    @property
+    def streamservice(self) -> StreamService:
+        if not self._streamservice:
+            self._streamservice = self.bot.get_cog('StreamService')
+
+        return self._streamservice
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         """When a user adds a reaction to a message"""
@@ -70,8 +103,7 @@ class BotEvents(commands.Cog):
         if user is None or user.bot:
             return
 
-        rr_cog: ReactionRoles = self.bot.get_cog("ReactionRoles")
-        await rr_cog.reaction_added(payload, user)
+        await self.reactionroles.reaction_added(payload, user)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
@@ -86,8 +118,7 @@ class BotEvents(commands.Cog):
         if user is None or user.bot:
             return
 
-        rr_cog: ReactionRoles = self.bot.get_cog("ReactionRoles")
-        await rr_cog.reaction_removed(payload, user)
+        await self.reactionroles.reaction_removed(payload, user)
 
     # TODO: General error handler: https://gist.github.com/EvieePy/7822af90858ef65012ea500bcecf1612
     @commands.Cog.listener()
@@ -183,8 +214,6 @@ class BotEvents(commands.Cog):
 
         # Reference channels together
         if len(content) and prefix_start and msg.channel_mentions:  # only if explicitly asked for
-            bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-
             for mentioned_channel in msg.channel_mentions:
                 if mentioned_channel == channel:
                     continue
@@ -194,12 +223,12 @@ class BotEvents(commands.Cog):
                 embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon.url)
 
                 target_embed = embed_template.copy()
-                target_embed.description = bot_cog.get_quote(
+                target_embed.description = self.botstatus.get_quote(
                     'channel_linking_target', author=author.mention, channel=channel.mention, msg_url=msg.jump_url)
                 target_channel_msg = await mentioned_channel.send(embed=target_embed)
 
                 origin_embed = embed_template.copy()
-                origin_embed.description = bot_cog.get_quote(
+                origin_embed.description = self.botstatus.get_quote(
                     'channel_linking_origin', author=author.mention, channel=mentioned_channel.mention, msg_url=target_channel_msg.jump_url)
                 await channel.send(embed=origin_embed)
 
@@ -252,8 +281,7 @@ class BotEvents(commands.Cog):
                         case 'gallery':
                             gallery.append({'url': full_url, 'board': group, 'guide': guide_content})
                         case 'stream' if group == 'picarto':
-                            streams_cog: StreamService = self.bot.get_cog('StreamService')
-                            picarto_preview_shown = await streams_cog.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=prefix_start)
+                            picarto_preview_shown = await self.streamservice.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=prefix_start)
 
                             if picarto_preview_shown and prefix_start:
                                 await msg.delete()
@@ -263,11 +291,9 @@ class BotEvents(commands.Cog):
 
         # post gallery only if there's one to show...
         if len(gallery) == 1:
-            imageboard_cog: ImageBoard = self.bot.get_cog('ImageBoard')
-
             gallery = gallery[0]
             gallery_board = gallery['board']
-            await imageboard_cog.show_gallery(msg, gallery['url'], board=gallery_board, guide=gallery['guide'], only_missing_preview=not prefix_start)
+            await self.imageboard.show_gallery(msg, gallery['url'], board=gallery_board, guide=gallery['guide'], only_missing_preview=not prefix_start)
 
         elif len(gallery) > 1:
             common_domain = gallery[0]['board']
@@ -278,8 +304,7 @@ class BotEvents(commands.Cog):
                     break
 
             if common_domain:
-                imageboard_cog: ImageBoard = self.bot.get_cog('ImageBoard')
-                await imageboard_cog.show_combined_gallery(msg, [e['url'] for e in gallery], board=common_domain, guide=gallery[0]['guide'], only_missing_preview=not prefix_start)
+                await self.imageboard.show_combined_gallery(msg, [e['url'] for e in gallery], board=common_domain, guide=gallery[0]['guide'], only_missing_preview=not prefix_start)
 
         # checking if a command has been issued
         command_issued = False
@@ -297,18 +322,15 @@ class BotEvents(commands.Cog):
         if str(channel.id) in self.bot.rules['quiet_channels']:
             if not self.bot.last_channel_warned and self.bot.last_channel_message_count >= self.bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
                 self.bot.last_channel_warned = True
-                bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-
-                await bot_cog.typing_a_message(channel, content=bot_cog.get_quote('quiet_channel_past_threshold'), rnd_duration=[1, 2])
+                await self.botstatus.typing_a_message(channel, content=self.botstatus.get_quote('quiet_channel_past_threshold'), rnd_duration=[1, 2])
 
     @commands.Cog.listener()
     async def on_ready(self):
         """On bot start"""
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
         print(f'Logged in to Discord  [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
 
         # Change play status to something fitting
-        await self.bot.change_presence(activity=discord.Game(name=bot_cog.get_quote('playing_status')))
+        await self.bot.change_presence(activity=discord.Game(name=self.botstatus.get_quote('playing_status')))
 
     @commands.Cog.listener()
     async def on_connect(self):

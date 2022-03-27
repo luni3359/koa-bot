@@ -17,8 +17,16 @@ class StreamService(commands.Cog):
     def __init__(self, bot: KBot):
         self.bot = bot
 
-        self._twitch_access_token: str = None
+        self._botstatus: BotStatus = None
         self._twitch_headers: dict = None
+        self._twitch_access_token: str = None
+
+    @property
+    def botstatus(self) -> BotStatus:
+        if not self._botstatus:
+            self._botstatus = self.bot.get_cog('BotStatus')
+
+        return self._botstatus
 
     @property
     async def twitch_headers(self) -> dict:
@@ -131,8 +139,6 @@ class StreamService(commands.Cog):
         channel: discord.TextChannel = msg.channel
         channel_name = post_core.get_name_or_id(url, start='.tv/')
 
-        bot_cog: BotStatus = self.bot.get_cog('BotStatus')
-
         if not channel_name:
             return False
 
@@ -140,11 +146,11 @@ class StreamService(commands.Cog):
         picarto_request = (await net_core.http_request(channel_url, json=True)).json
 
         if not picarto_request:
-            await channel.send(bot_cog.get_quote('stream_preview_failed'))
+            await channel.send(self.botstatus.get_quote('stream_preview_failed'))
             return False
 
         if not picarto_request['online']:
-            await channel.send(bot_cog.get_quote('stream_preview_offline'))
+            await channel.send(self.botstatus.get_quote('stream_preview_offline'))
             return False
 
         image = await net_core.fetch_image(picarto_request['thumbnails']['web'])

@@ -1,4 +1,5 @@
 """Handles the use of imageboard galleries"""
+import html
 import os
 import re
 import shutil
@@ -341,7 +342,10 @@ class Gallery(commands.Cog):
             name=f'{tweet.author.name} (@{tweet.author.screen_name})',
             url=guide['post']['url'].format(tweet.author.screen_name),
             icon_url=tweet.author.profile_image_url_https)
-        embed_group.first.description = tweet.full_text[tweet.display_text_range[0]:tweet.display_text_range[1]]
+
+        # int, int = list[int] (2 elements)
+        range_start, range_end = tweet.display_text_range
+        embed_group.first.description = html.unescape(tweet.full_text[range_start:range_end])
 
         # If it's the last picture to show, add a brand footer
         embed_group.last.set_footer(
@@ -437,7 +441,9 @@ class Gallery(commands.Cog):
                         embed.title = illust.title
 
                     embed.url = url
-                    embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', illust.caption).strip()
+                    description = re.sub(r'<br \/>', '\n', illust.caption)
+                    description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', description)
+                    embed.description = description.strip()
 
                     if (px_bookmarks := illust.total_bookmarks) > 0:
                         embed.add_field(name='Bookmarks', value=f"{px_bookmarks:,}")

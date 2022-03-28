@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "koa-bot"
-version = "0.17.1"
+version = "0.17.2"
 description = ""
 authors = []
 readme = "README.md"

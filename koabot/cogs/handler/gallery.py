@@ -568,6 +568,9 @@ class Gallery(commands.Cog):
         if not (post_id := post_core.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')):
             return
 
+        # TODO: Implement oEmbed if it looks possible! json responses are extremely shorter!
+        # search_url = f"https://backend.deviantart.com/oembed?url={post_id}"
+
         search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
         api_result = (await net_core.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
 
@@ -668,10 +671,11 @@ class Gallery(commands.Cog):
         embed.color = 0x06070d
 
         if not image_only:
+            author = deviation['author']
             embed.set_author(
-                name=deviation['author']['username'],
-                url=f"https://www.deviantart.com/{deviation['author']['username']}",
-                icon_url=deviation['author']['usericon'])
+                name=author['username'],
+                url=f"https://www.deviantart.com/{author['username']}",
+                icon_url=author['usericon'])
 
         match deviation['type']:
             case 'image':
@@ -680,13 +684,26 @@ class Gallery(commands.Cog):
                 base_uri = deviation_media['baseUri']
                 pretty_name = deviation_media['prettyName']
 
+                image_url = ""
+                valid_types = ["gif", "preview"]
                 for media_type in deviation_media['types']:
-                    if media_type['t'] == 'preview':
-                        preview_url = media_type['c'].replace('<prettyName>', pretty_name)
-                        preview_url = preview_url.replace(',q_80', ',q_100')
-                        break
+                    match media_type['t']:
+                        case "gif":
+                            if "gif" not in valid_types:
+                                continue
 
-                image_url = f'{base_uri}/{preview_url}?token={token}'
+                            valid_types = valid_types[:valid_types.index("gif")]
+                            image_url = media_type['b']
+                        case "preview":
+                            if "preview" not in valid_types:
+                                continue
+
+                            valid_types = valid_types[:valid_types.index("preview")]
+                            preview_url = media_type['c'].replace('<prettyName>', pretty_name)
+                            preview_url = preview_url.replace(',q_80', ',q_100')
+                            image_url = f"{base_uri}/{preview_url}"
+
+                image_url = f"{image_url}?token={token}"
                 print(image_url)
 
                 if 'description' in deviation['extended'] and not image_only:

@@ -762,8 +762,13 @@ class Gallery(commands.Cog):
 
         # Don't override videos
         if submission.is_video:
-            print("Preview gallery not applicable. (reddit video)")
-            return
+            return print("Preview preview not applicable. (reddit hosted video)")
+        elif hasattr(submission, 'post_hint'):
+            match submission.post_hint:
+                case "hosted:video":
+                    return print("Preview preview not applicable. (reddit hosted video)")
+                case "rich:video":
+                    return print("Preview preview not applicable. (rich video)")
 
         await submission.subreddit.load()
 

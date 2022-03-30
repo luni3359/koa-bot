@@ -11,7 +11,7 @@ import discord
 import imagehash
 import pixivpy_async
 import tweepy
-from asyncpraw.reddit import Submission
+from asyncpraw.reddit import Submission, Subreddit
 from discord.ext import commands
 from PIL import Image
 from thefuzz import fuzz
@@ -787,12 +787,15 @@ class Gallery(commands.Cog):
                 case "rich:video":
                     return print("Preview preview not applicable. (rich video)")
 
-        await submission.subreddit.load()
+        subreddit: Subreddit = submission.subreddit
+        await subreddit.load()
+
+        subreddit_icon = subreddit.community_icon if subreddit.community_icon else subreddit.icon_img
 
         header_embed = discord.Embed()
         header_embed.set_author(name=submission.subreddit_name_prefixed,
                                 url=f"{reddit_url_prefix}/{submission.subreddit_name_prefixed}",
-                                icon_url=submission.subreddit.community_icon)
+                                icon_url=subreddit_icon)
         header_embed.title = submission.title
         header_embed.url = f"{reddit_url_prefix}{submission.permalink}"
         header_embed.add_field(name='Score', value=f"{submission.score:,}")
@@ -851,6 +854,8 @@ class Gallery(commands.Cog):
 
         embeds[-1].set_footer(text=footer_text, icon_url=guide['embed']['favicon']['size192'])
 
+        await msg.reply(embeds=embeds, mention_author=False)
+
         try:
             await msg.edit(suppress=True)
         except discord.errors.Forbidden as e:
@@ -860,7 +865,6 @@ class Gallery(commands.Cog):
                     print("Missing Permissions: Cannot suppress embed from sender's message")
                 case _:
                     print(f"Forbidden: Status {e.status} (code {e.code}")
-        await msg.reply(embeds=embeds, mention_author=False)
 
 
 async def setup(bot: KBot):

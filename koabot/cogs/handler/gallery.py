@@ -802,6 +802,18 @@ class Gallery(commands.Cog):
         header_embed.add_field(name='Comments', value=f"{submission.num_comments:,}")
         footer_text = guide['embed']['footer_text']
 
+        if submission.selftext:
+            max_post_length = 350   # arbitrary maximum
+            if len(submission.selftext) > max_post_length:
+                # TODO: Even though the output is nicer, this removes newlines.
+                # header_embed.description = textwrap.shorten(
+                # submission.selftext, width=max_post_length, placeholder="...")
+                # TODO: Disjointed markdown is not cleaned up
+                # i.e. the closing ** is cut off
+                header_embed.description = submission.selftext[:max_post_length - 1] + "…"
+            else:
+                header_embed.description = submission.selftext
+
         # Determine whether or not to post without thumbnail blur
         obfuscated_preview = False
         if not msg.channel.is_nsfw():

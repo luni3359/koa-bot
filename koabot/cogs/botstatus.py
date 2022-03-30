@@ -15,7 +15,7 @@ from koabot.kbot import KBot
 class BotStatus(commands.Cog):
     """BotStatus class"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
     @commands.command(name='temperature', aliases=['temp'])

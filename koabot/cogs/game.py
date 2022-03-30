@@ -29,7 +29,7 @@ class RollMatch:
         The amount of dice to keep.
     """
 
-    def __init__(self, dice_match: re.Match):
+    def __init__(self, dice_match: re.Match) -> None:
         self.type: str = None                       # points, roll
         self.sign: str = dice_match.group(1)        # +, -
         self.quantity: int = dice_match.group(2)    # 0, 1, 20
@@ -91,7 +91,7 @@ class RollMatch:
 class Game(commands.Cog):
     """Commands to play with"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
     @commands.command(aliases=['r'])

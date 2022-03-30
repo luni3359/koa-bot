@@ -8,7 +8,7 @@ from koabot.kbot import KBot
 class UserActions(commands.Cog):
     """UserActions class"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
     @commands.command(aliases=['ava'])

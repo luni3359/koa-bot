@@ -3,7 +3,7 @@ from typing_extensions import Self
 
 
 class Embed(discord.Embed):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
     def __add__(self, other: Self) -> Self:
@@ -72,7 +72,7 @@ class Embed(discord.Embed):
 
 
 class EmbedGroup(Embed):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
         self._embeds: list[Embed] = []

@@ -20,10 +20,8 @@ from koabot.patterns import COMMAND_PATTERN, URL_PATTERN
 class BotEvents(commands.Cog):
     """BotEvents class"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
-        self.bot.connect_time = None
-        self.bot.isconnected = False
         self.bot.last_channel = 0
         self.bot.last_channel_message_count = 0
         self.bot.last_channel_warned = False

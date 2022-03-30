@@ -13,7 +13,7 @@ from koabot.kbot import KBot
 class Forums(commands.Cog):
     """Forums class"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
         self._botstatus: BotStatus = None
@@ -31,10 +31,9 @@ class Forums(commands.Cog):
 
         board = basc_py4chan.Board(user_board, https=True)
         if thread_id:
-            thread = board.get_thread(thread_id)
             max_posts = 5
 
-            if not thread:
+            if not (thread := board.get_thread(thread_id)):
                 return await ctx.send(self.botstatus.get_quote('thread_missing'))
 
             posts_ready = []

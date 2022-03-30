@@ -23,7 +23,7 @@ def is_guild_owner():
 class ReactionRoles(commands.Cog):
     """ReactionRoles class"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
         self.rr_temporary_list = {}
         self.rr_confirmations = {}

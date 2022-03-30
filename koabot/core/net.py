@@ -8,7 +8,7 @@ import aiohttp
 class NetResponse():
     """Custom network response class"""
 
-    def __init__(self, response: aiohttp.ClientResponse, **kwargs):
+    def __init__(self, response: aiohttp.ClientResponse, **kwargs) -> None:
         self.client_response = response
         self.status: int = self.client_response.status
         self.response_body = kwargs.get('response_body', None)
@@ -38,8 +38,8 @@ async def http_request(url: str, **kwargs) -> NetResponse:
             whether or not the request is a POST request
     """
     auth: aiohttp.BasicAuth = kwargs.get('auth')
-    headers = kwargs.get('headers')
-    data = kwargs.get('data')
+    headers: dict = kwargs.get('headers')
+    data: dict = kwargs.get('data')
     post: bool = kwargs.get('post')
 
     async with aiohttp.ClientSession(auth=auth) as session:
@@ -103,13 +103,13 @@ def get_domain(url: str, /) -> str:
     return url.split('//')[-1].split('/')[0].split('?')[0]
 
 
-def get_domains(lst: list[str], /) -> list[str]:
+def get_domains(urls: list[str], /) -> list[str]:
     """Get domains from a list of urls
     https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868
     """
     domains = []
 
-    for url in lst:
-        domain = get_domain(url)
-        domains.append(domain)
+    for url in urls:
+        domains.append(get_domain(url))
+
     return domains

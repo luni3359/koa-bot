@@ -14,7 +14,7 @@ from koabot.kbot import KBot
 class StreamService(commands.Cog):
     """Streaming websites definitions"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
         self._botstatus: BotStatus = None
@@ -137,15 +137,13 @@ class StreamService(commands.Cog):
         """
         guide = self.bot.assets['picarto']
         channel: discord.TextChannel = msg.channel
-        channel_name = post_core.get_name_or_id(url, start='.tv/')
 
-        if not channel_name:
+        if not (channel_name := post_core.get_name_or_id(url, start='.tv/')):
             return False
 
         channel_url = f"https://api.picarto.tv/api/v1/channel/name/{channel_name}"
-        picarto_request = (await net_core.http_request(channel_url, json=True)).json
 
-        if not picarto_request:
+        if not (picarto_request := (await net_core.http_request(channel_url, json=True)).json):
             await channel.send(self.botstatus.get_quote('stream_preview_failed'))
             return False
 

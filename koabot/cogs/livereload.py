@@ -20,7 +20,7 @@ def path_from_extension(extension: str) -> Path:
 class LiveReload(commands.Cog):
     """Cog for reloading extensions as soon as the file is edited"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
         self.enabled = True
 

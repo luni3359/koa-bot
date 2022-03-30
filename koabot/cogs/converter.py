@@ -13,7 +13,7 @@ from koabot.patterns import (NUMBER_PATTERN, SPECIAL_UNIT_PATTERN_TUPLE,
 class Converter(commands.Cog):
     """Converter class"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
         self.ureg = UnitRegistry()
         self.ureg.default_format = "~P.3f"
@@ -52,14 +52,14 @@ class Converter(commands.Cog):
             await self.convert_units(ctx, unit_matches)
 
     @commands.command(name='exchange', aliases=['currency', 'xc', 'c'])
-    async def convert_currency(self, ctx: commands.Context, amount: float, currency_type1: str, _, currency_type2: str):
+    async def convert_currency(self, ctx: commands.Context, amount: float, currency_src: str, _, currency_dst: str):
         """Convert currency to others"""
 
-        currency_type1 = currency_type1.upper()
-        currency_type2 = currency_type2.upper()
-        converted_amount = self.currency.convert(currency_type1, currency_type2, amount)
+        currency_src = currency_src.upper()
+        currency_dst = currency_dst.upper()
+        converted_amount = self.currency.convert(currency_src, currency_dst, amount)
 
-        await ctx.send(f'```{amount} {currency_type1} → {converted_amount:0.2f} {currency_type2}```')
+        await ctx.send(f'```{amount} {currency_src} → {converted_amount:0.2f} {currency_dst}```')
 
     async def convert_units(self, ctx: commands.Context, units: list):
         """Convert units found to their opposite (SI <-> imp)

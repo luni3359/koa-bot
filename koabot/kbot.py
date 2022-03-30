@@ -6,7 +6,6 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-import discord
 from discord.ext import commands
 
 
@@ -22,9 +21,11 @@ class BaseDirectory(Enum):
 class KBot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.debug_mode: bool = None
         self.sqlite_conn: sqlite3.Connection = None
         self.launch_time: datetime = None
-        self.debug_mode: bool = None
+        self.connect_time: datetime = None
+        self.isconnected: bool = False
 
         self.BOT_DIRNAME: str = None
         self.SOURCE_DIR: str = None

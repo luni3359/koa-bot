@@ -50,22 +50,15 @@ class PixivHelper():
 class Gallery(commands.Cog):
     """Gallery class"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
         self.pixiv_refresh_token: str = None
 
-        self._botstatus: BotStatus = None
         self._board: Board = None
+        self._botstatus: BotStatus = None
         self._twitter_api: tweepy.API = None
         self._pixiv_aapi: pixivpy_async.AppPixivAPI = None
         self._reddit_api: asyncpraw.Reddit = None
-
-    @property
-    def botstatus(self) -> BotStatus:
-        if not self._botstatus:
-            self._botstatus = self.bot.get_cog('BotStatus')
-
-        return self._botstatus
 
     @property
     def board(self) -> Board:
@@ -73,6 +66,13 @@ class Gallery(commands.Cog):
             self._board = self.bot.get_cog('Board')
 
         return self._board
+
+    @property
+    def botstatus(self) -> BotStatus:
+        if not self._botstatus:
+            self._botstatus = self.bot.get_cog('BotStatus')
+
+        return self._botstatus
 
     @property
     def twitter_api(self) -> tweepy.API:
@@ -121,15 +121,13 @@ class Gallery(commands.Cog):
             raise ValueError("The 'guide' keyword argument is not defined.")
 
         id_start = guide['post']['id_start']
-        id_end = 'id_end' in guide['post'] and guide['post']['id_end'] or ['?']
-        pattern = 'pattern' in guide['post'] and guide['post']['pattern'] or ""
+        id_end = guide['post']['id_end'] if 'id_end' in guide['post'] else ['?']
+        pattern = guide['post']['pattern'] if 'pattern' in guide['post'] else ""
 
         if not (post_id := post_core.get_name_or_id(url, start=id_start, end=id_end, pattern=pattern)):
             return
 
-        post = (await self.board.search_query(board=board, guide=guide, post_id=post_id)).json
-
-        if not post:
+        if not (post := (await self.board.search_query(board=board, guide=guide, post_id=post_id)).json):
             return
 
         # e621 fix for broken API
@@ -154,19 +152,20 @@ class Gallery(commands.Cog):
             # content = f"{msg.author.mention} {self.botstatus.get_quote('improper_content_reminder')}"
             # await self.botstatus.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
 
-        if board == 'e621':
-            has_children = post['relationships']['has_active_children']
-            parent_id = post['relationships']['parent_id']
-            c_search = f'parent:{post_id} order:id'
-            p_search = [
-                f'id:{parent_id}',
-                f'parent:{parent_id} order:id -id:{post_id}'
-            ]
-        else:
-            has_children = post['has_children']
-            parent_id = post['parent_id']
-            c_search = f'parent:{post_id} order:id -id:{post_id}'
-            p_search = f'parent:{parent_id} order:id -id:{post_id}'
+        match board:
+            case 'e621':
+                has_children = post['relationships']['has_active_children']
+                parent_id = post['relationships']['parent_id']
+                c_search = f'parent:{post_id} order:id'
+                p_search = [
+                    f'id:{parent_id}',
+                    f'parent:{parent_id} order:id -id:{post_id}'
+                ]
+            case _:
+                has_children = post['has_children']
+                parent_id = post['parent_id']
+                c_search = f'parent:{post_id} order:id -id:{post_id}'
+                p_search = f'parent:{parent_id} order:id -id:{post_id}'
 
         if only_missing_preview:
             if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
@@ -275,12 +274,13 @@ class Gallery(commands.Cog):
             else:
                 await self.board.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
         else:
-            if post['rating'] == 's' and not nsfw_culled or on_nsfw_channel:
-                return print('Removed all duplicates')
-            elif post['rating'] == 's':
-                content = self.botstatus.get_quote('cannot_show_nsfw_gallery')
-            else:
-                content = self.botstatus.get_quote('rude_cannot_show_nsfw_gallery')
+            match post['rating']:
+                case 's' if not nsfw_culled or on_nsfw_channel:
+                    return print('Removed all duplicates')
+                case 's':
+                    content = self.botstatus.get_quote('cannot_show_nsfw_gallery')
+                case _:
+                    content = self.botstatus.get_quote('rude_cannot_show_nsfw_gallery')
 
             await self.botstatus.typing_a_message(channel, content=content, rnd_duration=[1, 2])
 
@@ -339,10 +339,8 @@ class Gallery(commands.Cog):
 
                     return
 
-        gallery_pics = []
-        for picture in tweet_ee_media:
-            # Appending :orig to get a better image quality
-            gallery_pics.append(f"{picture['media_url_https']}:orig")
+        # Appending :orig to get a better image quality
+        gallery_pics = [f"{picture['media_url_https']}:orig" for picture in tweet_ee_media]
 
         embed_group = EmbedGroup()
         embed_group.color = discord.Colour(int(guide['embed']['color'], 16))
@@ -398,7 +396,7 @@ class Gallery(commands.Cog):
         if not (post_id := post_core.get_name_or_id(url, start=['illust_id=', '/artworks/'], pattern=r'[0-9]+')):
             return
 
-        print(f"Now starting to process pixiv link #{post_id}")
+        print(f"Now starting to process pixiv #{post_id}")
         url = f"https://www.pixiv.net/artworks/{post_id}"
 
         # Login
@@ -408,14 +406,11 @@ class Gallery(commands.Cog):
             illust_json = await self.pixiv_aapi.illust_detail(post_id, req_auth=True)
         except pixivpy_async.PixivError as e:
             await channel.send("Odd...")
-            print(e)
-            return
+            return print(e)
 
-        print(illust_json)
         if 'illust' not in illust_json:
             # too bad
-            print(f"Invalid Pixiv id #{post_id}")
-            return
+            return print(f"Invalid Pixiv id #{post_id}")
 
         print(f"Pixiv auth passed! (for #{post_id})")
 
@@ -436,20 +431,13 @@ class Gallery(commands.Cog):
 
         async with channel.typing():
             total_illust_pictures = illust.page_count
-
-            if total_illust_pictures > 1:
-                pictures = illust.meta_pages
-            else:
-                pictures = [illust]
-
-            if only_missing_preview:
-                total_to_preview = 1
-            else:
-                total_to_preview = 5
+            pictures = illust.meta_pages if total_illust_pictures > 1 else [illust]
+            total_to_preview = 1 if only_missing_preview else 5
 
             pixiv_helper = PixivHelper()
-            for i, picture in enumerate(pictures[:total_to_preview]):
-                print(f'Retrieving picture #{post_id}...')
+            pictures = pictures[:total_to_preview]
+            for i, picture in enumerate(pictures):
+                print(f"Retrieving from #{post_id} picture {i + 1}/{len(pictures)}...")
 
                 img_url = picture.image_urls.medium
                 filename = net_core.get_url_filename(img_url)
@@ -734,8 +722,7 @@ class Gallery(commands.Cog):
 
     async def get_imgur_gallery(self, msg: discord.Message, url: str):
         """Automatically fetch and post any image galleries from imgur"""
-        album_id = post_core.get_name_or_id(url, start=['/a/', '/gallery/'])
-        if not album_id:
+        if not (album_id := post_core.get_name_or_id(url, start=['/a/', '/gallery/'])):
             return
 
         search_url = self.bot.assets['imgur']['album_url'].format(album_id)

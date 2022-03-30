@@ -15,7 +15,7 @@ from koabot.kbot import KBot
 class Tasks(commands.Cog):
     """Periodic task runner"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
         self._board: Board = None

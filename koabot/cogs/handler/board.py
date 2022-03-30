@@ -15,7 +15,7 @@ from koabot.kbot import KBot
 class Board(commands.Cog):
     """Board class"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
         self._danbooru_auth: aiohttp.BasicAuth = None
@@ -251,7 +251,7 @@ class Board(commands.Cog):
                 post_char = re.sub(r' \(.*?\)', '', post_core.combine_tags(post['tag_string_character']))
                 post_copy = post_core.combine_tags(post['tag_string_copyright'], maximum=1)
                 post_artist = post_core.combine_tags(post['tag_string_artist'])
-                embed_post_title = ''
+                embed_post_title = ""
 
                 if post_char:
                     embed_post_title += post_char
@@ -288,16 +288,17 @@ class Board(commands.Cog):
         else:
             fileurl = self.bot.assets['default']['failed_post_preview']
 
-        for res_key in guide['post']['resolutions']:
-            if res_key in post:
-                if board == 'e621':
+        valid_res_keys = [res_key for res_key in guide['post']['resolutions'] if res_key in post]
+        for res_key in valid_res_keys:
+            match board:
+                case 'e621':
                     url_candidate = post[res_key]['url']
-                else:
+                case _:
                     url_candidate = post[res_key]
 
-                if net_core.get_url_fileext(url_candidate) in ['png', 'jpg', 'webp', 'gif']:
-                    fileurl = url_candidate
-                    break
+            if net_core.get_url_fileext(url_candidate) in ['png', 'jpg', 'webp', 'gif']:
+                fileurl = url_candidate
+                break
 
         return embed.set_image(url=fileurl)
 

@@ -27,7 +27,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
     look into this https://gist.github.com/vbe0201/ade9b80f2d3b64643d854938d40a0a2d
     """
 
-    def __init__(self, source: discord.AudioSource, *, data, volume=0.5):
+    def __init__(self, source: discord.AudioSource, *, data, volume=0.5) -> None:
         super().__init__(source, volume)
 
         self.data = data
@@ -51,7 +51,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 class Music(commands.Cog):
     """Play music"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
     @commands.command()

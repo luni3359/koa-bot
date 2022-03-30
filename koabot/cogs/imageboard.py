@@ -11,7 +11,7 @@ from koabot.kbot import KBot
 class ImageBoard(commands.Cog):
     """Streaming websites definitions"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
         self._board: Board = None

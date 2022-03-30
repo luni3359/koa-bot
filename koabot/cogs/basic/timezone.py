@@ -12,7 +12,7 @@ from koabot.kbot import KBot
 class TimeZone(commands.Cog):
     """TimeZone class"""
 
-    def __init__(self, bot: KBot):
+    def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
     @commands.command(aliases=['t'])

@@ -66,6 +66,11 @@ class Embed(discord.Embed):
             for i, field in enumerate(fields):
                 embed.insert_field_at(i, name=field.name, value=field.value, inline=field.inline)
 
+        if self.timestamp:
+            embed.timestamp = self.timestamp
+        else:
+            embed.timestamp = other.timestamp
+
         return embed
 
     __radd__ = __add__

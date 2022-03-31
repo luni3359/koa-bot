@@ -1,4 +1,5 @@
 """Handles the use of imageboard galleries"""
+import datetime
 import html
 import os
 import re
@@ -313,8 +314,7 @@ class Gallery(commands.Cog):
             else:
                 print(f"Failure on Tweet #{post_id}")
 
-            print(e)
-            return
+            return print(e)
 
         if not hasattr(tweet, 'extended_entities'):
             return print("Twitter preview not applicable. (No extended entities)")
@@ -364,6 +364,7 @@ class Gallery(commands.Cog):
         embed_group.last.set_footer(
             text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
             icon_url=self.bot.assets['twitter']['favicon'])
+        embed_group.last.timestamp = datetime.datetime.now(datetime.timezone.utc)
 
         for picture in gallery_pics:
             embed_group.add().set_image(url=picture)

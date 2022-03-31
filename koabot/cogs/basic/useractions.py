@@ -14,24 +14,22 @@ class UserActions(commands.Cog):
     @commands.command(aliases=['ava'])
     async def avatar(self, ctx: commands.Context):
         """Display an user's avatar"""
+        embeds: list[discord.Embed] = []
 
         if ctx.message.mentions:
-            embeds: list[discord.Embed] = []
-            for mention in ctx.message.mentions:
-                embed = discord.Embed()
-                embed.set_image(url=mention.avatar.url)
-                embed.set_author(
-                    name=f'{mention.name} #{mention.discriminator}',
-                    icon_url=mention.avatar.url)
-                embeds.append(embed)
-            await ctx.send(embeds=embeds)
+            requested_users = ctx.message.mentions
         else:
+            requested_users = [ctx.message.author]
+
+        for user in requested_users:
             embed = discord.Embed()
-            embed.set_image(url=ctx.message.author.avatar.url)
+            embed.set_image(url=user.avatar.url)
             embed.set_author(
-                name=f'{ctx.message.author.name} #{ctx.message.author.discriminator}',
-                icon_url=ctx.message.author.avatar.url)
-            await ctx.send(embed=embed)
+                name=f'{user.name} #{user.discriminator}',
+                icon_url=user.avatar.url)
+            embeds.append(embed)
+
+        await ctx.send(embeds=embeds)
 
 
 async def setup(bot: KBot):

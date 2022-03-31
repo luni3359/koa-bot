@@ -8,7 +8,7 @@ from discord.ext import commands
 import koabot.core.net as net_core
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
-from koabot.cogs.streamservice import StreamService
+from koabot.cogs.streamservice import StreamAnnouncement, StreamService
 from koabot.kbot import KBot
 
 
@@ -32,7 +32,7 @@ class Tasks(commands.Cog):
 
     async def cog_load(self):
         """The tasks to be run at boot"""
-        # self.bot.loop.create_task(self.check_live_streamers())
+        self.bot.loop.create_task(self.check_live_streamers())
         self.bot.loop.create_task(self.change_presence_periodically())
 
     async def change_presence_periodically(self) -> None:
@@ -66,6 +66,7 @@ class Tasks(commands.Cog):
                 channel_categories[channel_category].append(self.bot.get_channel(int(channel)))
 
         while not self.bot.is_closed():
+            botstatus_cog = self.botstatus
             posts = (await self.board.search_query(tags=self.bot.tasks['danbooru']['tag_list'], guide=guide, limit=5, random=True)).json
 
             safe_posts = []
@@ -80,7 +81,6 @@ class Tasks(commands.Cog):
                     else:
                         nsfw_posts.append(post_url)
 
-            botstatus_cog = self.botstatus
             safe_posts = '\n'.join(safe_posts)
             nsfw_posts = '\n'.join(nsfw_posts)
 
@@ -116,14 +116,15 @@ class Tasks(commands.Cog):
             twitch_search = 'https://api.twitch.tv/helix/streams?'
 
             for streamer in self.bot.tasks['streamer_activity']['streamers']:
-                if streamer['platform'] == 'twitch':
-                    twitch_search += f"user_id={streamer['user_id']}&"
+                match streamer['platform']:
+                    case 'twitch':
+                        twitch_search += f"user_id={streamer['user_id']}&"
 
             twitch_query = await net_core.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
-            # Token is invalid/expired, acquire a new token
             match twitch_query.status:
                 case 401:
+                    # Token is invalid/expired, acquire a new token
                     await streamservice_cog.fetch_twitch_access_token(force=True)
 
                     twitch_query = await net_core.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
@@ -131,25 +132,26 @@ class Tasks(commands.Cog):
             for streamer in twitch_query.json['data']:
                 already_online = False
 
-                for on_streamer in online_streamers:
-                    if streamer['id'] == on_streamer['streamer']['id']:
+                for online_streamer in online_streamers:
+                    if streamer['id'] == online_streamer['streamer']['id']:
                         # streamer is already online, and it was already reported
-                        on_streamer['preserve'] = True
-                        on_streamer['announced'] = True
+                        online_streamer['preserve'] = True
+                        online_streamer['announced'] = True
                         already_online = True
+                        break
 
                 if already_online:
                     continue
 
-                for config_streamers in self.bot.tasks['streamer_activity']['streamers']:
-                    if streamer['user_id'] == str(config_streamers['user_id']):
-                        natural_name = config_streamers.get('casual_name', streamer['user_name'])
+                for config_streamer in self.bot.tasks['streamer_activity']['streamers']:
+                    if streamer['user_id'] == str(config_streamer['user_id']):
+                        natural_name: str = config_streamer.get('casual_name', streamer['user_name'])
                         break
 
                 online_streamers.append({'platform': 'twitch', 'streamer': streamer,
                                         'name': natural_name, 'preserve': True, 'announced': False})
 
-            stream_announcements = []
+            stream_announcements: list[StreamAnnouncement] = []
             for streamer in online_streamers:
                 if streamer['announced']:
                     continue
@@ -163,23 +165,22 @@ class Tasks(commands.Cog):
                     icon_url=self.bot.assets['twitch']['favicon'])
 
                 # setting thumbnail size
-                thumbnail_url = streamer['streamer']['thumbnail_url']
-                thumbnail_url = thumbnail_url.replace('{width}', '600')
-                thumbnail_url = thumbnail_url.replace('{height}', '350')
+                thumbnail_url: str = streamer['streamer']['thumbnail_url']
+                thumbnail_url = thumbnail_url.replace("{width}", "600").replace("{height}", "350")
                 thumbnail_filename = net_core.get_url_filename(thumbnail_url)
                 image = await net_core.fetch_image(thumbnail_url)
-                embed.set_image(url=f'attachment://{thumbnail_filename}')
+                embed.set_image(url=f"attachment://{thumbnail_filename}")
 
                 stream_announcements.append(
-                    {'message': f"{streamer['name']} is now live!", 'embed': embed, 'image': image, 'filename': thumbnail_filename})
+                    StreamAnnouncement(streamer_name=streamer['name'],
+                                       filename=thumbnail_filename,
+                                       image=image,
+                                       embed=embed))
 
-            for channel in self.bot.tasks['streamer_activity']['channels_to_announce_on']:
+            for channel_id in self.bot.tasks['streamer_activity']['channels_to_announce_on']:
+                channel: discord.TextChannel = self.bot.get_channel(channel_id)
                 for batch in stream_announcements:
-                    channel = self.bot.get_channel(channel)
-                    if 'image' in batch:
-                        await channel.send(batch['message'], file=discord.File(fp=batch['image'], filename=batch['filename']), embed=batch['embed'])
-                    else:
-                        await channel.send(batch['message'], embed=batch['embed'])
+                    await batch.send_announcement(channel)
 
             # check every 5 minutes
             await asyncio.sleep(60 * 5)

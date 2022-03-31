@@ -107,9 +107,4 @@ def get_domains(urls: list[str], /) -> list[str]:
     """Get domains from a list of urls
     https://stackoverflow.com/questions/9626535/get-protocol-host-name-from-url#answer-36609868
     """
-    domains = []
-
-    for url in urls:
-        domains.append(get_domain(url))
-
-    return domains
+    return list(map(get_domain, urls))

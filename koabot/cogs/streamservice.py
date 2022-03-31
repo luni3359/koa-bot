@@ -1,6 +1,7 @@
 """Commands for streaming services like Twitch and Picarto"""
 import os
 import re
+from io import BytesIO
 
 import discord
 from discord.ext import commands
@@ -9,6 +10,22 @@ import koabot.core.net as net_core
 import koabot.core.posts as post_core
 from koabot.cogs.botstatus import BotStatus
 from koabot.kbot import KBot
+
+
+class StreamAnnouncement():
+    def __init__(self, *, streamer_name: str, filename: str, image: BytesIO, embed: discord.Embed) -> None:
+        self.streamer_name = streamer_name
+        self.filename = filename
+        self.image = image
+        self.embed = embed
+
+    def get_message(self) -> str:
+        return f"{self.streamer_name} is now live!"
+
+    async def send_announcement(self, channel: discord.TextChannel) -> discord.Message:
+        if self.image:
+            return await channel.send(self.get_message(), file=discord.File(fp=self.image, filename=self.filename), embed=self.embed)
+        return await channel.send(self.get_message(), embed=self.embed)
 
 
 class StreamService(commands.Cog):

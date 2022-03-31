@@ -14,30 +14,17 @@ class ImageBoard(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-        self._board: Board = None
-        self._gallery: Gallery = None
-        self._botstatus: BotStatus = None
-
     @property
     def board(self) -> Board:
-        if not self._board:
-            self._board = self.bot.get_cog('Board')
-
-        return self._board
+        return self.bot.get_cog('Board')
 
     @property
     def gallery(self) -> Gallery:
-        if not self._gallery:
-            self._gallery = self.bot.get_cog('Gallery')
-
-        return self._gallery
+        return self.bot.get_cog('Gallery')
 
     @property
     def botstatus(self) -> BotStatus:
-        if not self._botstatus:
-            self._botstatus = self.bot.get_cog('BotStatus')
-
-        return self._botstatus
+        return self.bot.get_cog('BotStatus')
 
     @commands.command(name='danbooru', aliases=['dan'])
     async def search_danbooru(self, ctx, *, tags: str):

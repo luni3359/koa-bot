@@ -16,14 +16,9 @@ class Forums(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-        self._botstatus: BotStatus = None
-
     @property
     def botstatus(self) -> BotStatus:
-        if not self._botstatus:
-            self._botstatus = self.bot.get_cog('BotStatus')
-
-        return self._botstatus
+        return self.bot.get_cog('BotStatus')
 
     @commands.command(name='4chan', aliases=['4c', '4ch'])
     async def get_4chan_posts(self, ctx: commands.Context, user_board: str = 'u', thread_id: int = 0):

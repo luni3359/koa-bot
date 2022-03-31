@@ -17,16 +17,12 @@ class StreamService(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-        self._botstatus: BotStatus = None
         self._twitch_headers: dict = None
         self._twitch_access_token: str = None
 
     @property
     def botstatus(self) -> BotStatus:
-        if not self._botstatus:
-            self._botstatus = self.bot.get_cog('BotStatus')
-
-        return self._botstatus
+        return self.bot.get_cog('BotStatus')
 
     @property
     async def twitch_headers(self) -> dict:

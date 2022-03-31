@@ -18,30 +18,17 @@ class Tasks(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-        self._board: Board = None
-        self._botstatus: BotStatus = None
-        self._streamservice: StreamService = None
-
     @property
     def board(self) -> Board:
-        if not self._board:
-            self._board = self.bot.get_cog('Board')
-
-        return self._board
+        return self.bot.get_cog('Board')
 
     @property
     def botstatus(self) -> BotStatus:
-        if not self._botstatus:
-            self._botstatus = self.bot.get_cog('BotStatus')
-
-        return self._botstatus
+        return self.bot.get_cog('BotStatus')
 
     @property
     def streamservice(self) -> StreamService:
-        if not self._streamservice:
-            self._streamservice = self.bot.get_cog('StreamService')
-
-        return self._streamservice
+        return self.bot.get_cog('StreamService')
 
     async def cog_load(self):
         """The tasks to be run at boot"""
@@ -93,16 +80,17 @@ class Tasks(commands.Cog):
                     else:
                         nsfw_posts.append(post_url)
 
+            botstatus_cog = self.botstatus
             safe_posts = '\n'.join(safe_posts)
             nsfw_posts = '\n'.join(nsfw_posts)
 
             if safe_posts or nsfw_posts:
                 for channel in channel_categories['safe_channels']:
-                    await channel.send(self.botstatus.get_quote('posts_to_approve') + '\n' + safe_posts)
+                    await channel.send(botstatus_cog.get_quote('posts_to_approve') + '\n' + safe_posts)
 
             if nsfw_posts:
                 for channel in channel_categories['nsfw_channels']:
-                    await channel.send(self.botstatus.get_quote('posts_to_approve') + '\n' + nsfw_posts)
+                    await channel.send(botstatus_cog.get_quote('posts_to_approve') + '\n' + nsfw_posts)
 
             # check every 5 minutes
             await asyncio.sleep(60 * 5)
@@ -115,6 +103,8 @@ class Tasks(commands.Cog):
         online_streamers = []
 
         while not self.bot.is_closed():
+            streamservice_cog = self.streamservice
+
             temp_online = []
             for streamer in online_streamers:
                 if streamer['preserve']:
@@ -129,14 +119,14 @@ class Tasks(commands.Cog):
                 if streamer['platform'] == 'twitch':
                     twitch_search += f"user_id={streamer['user_id']}&"
 
-            twitch_query = await net_core.http_request(twitch_search, headers=await self.streamservice.twitch_headers, json=True)
+            twitch_query = await net_core.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
             # Token is invalid/expired, acquire a new token
             match twitch_query.status:
                 case 401:
-                    await self.streamservice.fetch_twitch_access_token(force=True)
+                    await streamservice_cog.fetch_twitch_access_token(force=True)
 
-                    twitch_query = await net_core.http_request(twitch_search, headers=await self.streamservice.twitch_headers, json=True)
+                    twitch_query = await net_core.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
             for streamer in twitch_query.json['data']:
                 already_online = False

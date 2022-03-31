@@ -31,8 +31,6 @@ class ReactionRoles(commands.Cog):
         self.rr_cooldown = {}
         self.spam_limit = 12
 
-        self._botstatus: BotStatus = None
-
         # load reaction role binds
         file_path = os.path.join(self.bot.DATA_DIR, 'binds.json')
         if os.path.isfile(file_path):
@@ -44,10 +42,7 @@ class ReactionRoles(commands.Cog):
 
     @property
     def botstatus(self) -> BotStatus:
-        if not self._botstatus:
-            self._botstatus = self.bot.get_cog('BotStatus')
-
-        return self._botstatus
+        return self.bot.get_cog('BotStatus')
 
     async def assign_roles(self, emoji_sent: str, user: discord.Member, message_id: int, channel_id: int):
         """Updates the roles of the given user

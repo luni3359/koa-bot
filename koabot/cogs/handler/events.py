@@ -26,11 +26,6 @@ class BotEvents(commands.Cog):
         self.bot.last_channel_message_count = 0
         self.bot.last_channel_warned = False
 
-        self._botstatus: BotStatus = None
-        self._imageboard: ImageBoard = None
-        self._reactionroles: ReactionRoles = None
-        self._streamservice: StreamService = None
-
         # guides stuff
         self.valid_urls: list[dict] = []
         for group, contents in self.bot.match_groups.items():
@@ -58,31 +53,19 @@ class BotEvents(commands.Cog):
 
     @property
     def botstatus(self) -> BotStatus:
-        if not self._botstatus:
-            self._botstatus = self.bot.get_cog('BotStatus')
-
-        return self._botstatus
+        return self.bot.get_cog('BotStatus')
 
     @property
     def imageboard(self) -> ImageBoard:
-        if not self._imageboard:
-            self._imageboard = self.bot.get_cog('ImageBoard')
-
-        return self._imageboard
+        return self.bot.get_cog('ImageBoard')
 
     @property
     def reactionroles(self) -> ReactionRoles:
-        if not self._reactionroles:
-            self._reactionroles = self.bot.get_cog('ReactionRoles')
-
-        return self._reactionroles
+        return self.bot.get_cog('ReactionRoles')
 
     @property
     def streamservice(self) -> StreamService:
-        if not self._streamservice:
-            self._streamservice = self.bot.get_cog('StreamService')
-
-        return self._streamservice
+        return self.bot.get_cog('StreamService')
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -208,6 +191,7 @@ class BotEvents(commands.Cog):
                     return
 
         channel: discord.TextChannel = msg.channel
+        botstatus_cog = self.botstatus
         prefix_start = content[0] == '!'
 
         # Reference channels together
@@ -221,12 +205,12 @@ class BotEvents(commands.Cog):
                 embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon.url)
 
                 target_embed = embed_template.copy()
-                target_embed.description = self.botstatus.get_quote(
+                target_embed.description = botstatus_cog.get_quote(
                     'channel_linking_target', author=author.mention, channel=channel.mention, msg_url=msg.jump_url)
                 target_channel_msg = await mentioned_channel.send(embed=target_embed)
 
                 origin_embed = embed_template.copy()
-                origin_embed.description = self.botstatus.get_quote(
+                origin_embed.description = botstatus_cog.get_quote(
                     'channel_linking_origin', author=author.mention, channel=mentioned_channel.mention, msg_url=target_channel_msg.jump_url)
                 await channel.send(embed=origin_embed)
 
@@ -320,7 +304,7 @@ class BotEvents(commands.Cog):
         if str(channel.id) in self.bot.rules['quiet_channels']:
             if not self.bot.last_channel_warned and self.bot.last_channel_message_count >= self.bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
                 self.bot.last_channel_warned = True
-                await self.botstatus.typing_a_message(channel, content=self.botstatus.get_quote('quiet_channel_past_threshold'), rnd_duration=[1, 2])
+                await botstatus_cog.typing_a_message(channel, content=botstatus_cog.get_quote('quiet_channel_past_threshold'), rnd_duration=[1, 2])
 
     @commands.Cog.listener()
     async def on_ready(self):

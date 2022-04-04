@@ -662,7 +662,8 @@ class Gallery(commands.Cog):
                 icon_url=author['usericon'])
 
         match deviation['type']:
-            case 'image':
+            case 'image' if 'prettyName' in deviation['media']:
+                # 'image' is an static image or a gif
                 deviation_media = deviation['media']
                 token = deviation_media['token'][0]
                 base_uri = deviation_media['baseUri']
@@ -688,7 +689,25 @@ class Gallery(commands.Cog):
                             image_url = f"{base_uri}/{preview_url}"
 
                 image_url = f"{image_url}?token={token}"
-                print(image_url)
+
+                if 'description' in deviation['extended'] and not image_only:
+                    embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
+                                               deviation['extended']['description']).strip()
+
+                if len(embed.description) > 200:
+                    embed.description = embed.description[:200] + "..."
+
+                embed.set_image(url=image_url)
+            case 'image':
+                # 'image' assumed to be a gif
+                deviation_media = deviation['media']
+                token = deviation_media['token'][0]
+
+                for media_type in deviation_media['types']:
+                    if media_type['t'] == 'gif':
+                        preview_url = media_type['b']
+                        image_url = f"{preview_url}?token={token}"
+                        break
 
                 if 'description' in deviation['extended'] and not image_only:
                     embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',

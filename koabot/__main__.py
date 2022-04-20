@@ -14,13 +14,13 @@ from discord.ext import commands
 
 from koabot.kbot import BaseDirectory, KBot
 
-BOT_DIRNAME = 'koa-bot'
-
 SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
 PROJECT_DIR = Path(SOURCE_DIR).parent
-DATA_DIR = appdirs.user_data_dir(BOT_DIRNAME)
-CONFIG_DIR = appdirs.user_config_dir(BOT_DIRNAME)
-CACHE_DIR = appdirs.user_cache_dir(BOT_DIRNAME)
+PROJECT_NAME = PROJECT_DIR.name
+
+DATA_DIR = appdirs.user_data_dir(PROJECT_NAME)
+CONFIG_DIR = appdirs.user_config_dir(PROJECT_NAME)
+CACHE_DIR = appdirs.user_cache_dir(PROJECT_NAME)
 
 # Create base directories if they're missing
 for base_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
@@ -28,7 +28,7 @@ for base_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
 
 
 def set_base_directories():
-    bot.set_base_directory(BaseDirectory.BOT_DIRNAME, BOT_DIRNAME)
+    bot.set_base_directory(BaseDirectory.PROJECT_NAME, PROJECT_NAME)
     bot.set_base_directory(BaseDirectory.SOURCE_DIR, SOURCE_DIR)
     bot.set_base_directory(BaseDirectory.PROJECT_DIR, PROJECT_DIR)
     bot.set_base_directory(BaseDirectory.DATA_DIR, DATA_DIR)
@@ -59,7 +59,7 @@ async def debug_check(ctx: commands.Context) -> bool:
 
 
 async def main():
-    print(f"Starting {BOT_DIRNAME}...")
+    print(f"Starting {PROJECT_NAME}...")
     bot.launch_time = datetime.utcnow()
     bot.debug_mode = '--debug' in argv
     set_base_directories()

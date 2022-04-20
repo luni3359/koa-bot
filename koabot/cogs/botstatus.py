@@ -87,7 +87,7 @@ class BotStatus(commands.Cog):
     @commands.command()
     async def version(self, ctx: commands.Context, /):
         """Show bot's version"""
-        version = get_version(self.bot.BOT_DIRNAME, self.bot.PROJECT_DIR)
+        version = get_version(self.bot.PROJECT_NAME, self.bot.PROJECT_DIR)
         await ctx.send(f"On version `{version}`.")
 
     async def typing_a_message(self, ctx: commands.Context, /, **kwargs):

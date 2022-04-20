@@ -10,7 +10,7 @@ from discord.ext import commands
 
 
 class BaseDirectory(Enum):
-    BOT_DIRNAME = 1
+    PROJECT_NAME = 1
     SOURCE_DIR = 2
     PROJECT_DIR = 3
     DATA_DIR = 4
@@ -27,7 +27,7 @@ class KBot(commands.Bot):
         self.connect_time: datetime = None
         self.isconnected: bool = False
 
-        self.BOT_DIRNAME: str = None
+        self.PROJECT_NAME: str = None
         self.SOURCE_DIR: str = None
         self.PROJECT_DIR: Path = None
         self.DATA_DIR: str = None
@@ -48,8 +48,8 @@ class KBot(commands.Bot):
         match directory:
             case BaseDirectory.SOURCE_DIR:
                 self.SOURCE_DIR = value
-            case BaseDirectory.BOT_DIRNAME:
-                self.BOT_DIRNAME = value
+            case BaseDirectory.PROJECT_NAME:
+                self.PROJECT_NAME = value
             case BaseDirectory.PROJECT_DIR:
                 self.PROJECT_DIR = value
             case BaseDirectory.DATA_DIR:

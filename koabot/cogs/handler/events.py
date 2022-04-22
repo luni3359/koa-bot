@@ -23,8 +23,9 @@ class BotEvents(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
         self.bot.last_channel = 0
-        self.bot.last_channel_message_count = 0
         self.bot.last_channel_warned = False
+        self.bot.last_channel_message_count = 0
+        self.beta_bot_id = self.bot.koa['discord_user']['beta_id']
 
         # guides stuff
         self.valid_urls: list[dict] = []
@@ -158,90 +159,125 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         """Searches messages for urls and certain keywords"""
-
-        author: discord.abc.User = msg.author
-        content: str = msg.content
+        author: discord.User | discord.Member = msg.author
 
         # Prevent bot from spamming itself
         if author.bot:
             return
 
         if msg.guild is None:
-            print(f'{author.name}#{author.discriminator} ({author.id}): {content}')
+            print(f'{author.name}#{author.discriminator} ({author.id}): {msg.content}')
             return
 
         # Beta bot overrides me in the servers we share
-        beta_bot_id = self.bot.koa['discord_user']['beta_id']
+        if self.beta_bot_override(author.id not in self.bot.testing['debug_users'], msg.guild):
+            return
 
-        # if it's a normal user
-        if author.id not in self.bot.testing['debug_users']:
-            # ...and i'm the debug instance
-            if msg.guild.me.id == beta_bot_id:
-                # do nothing
-                return
-        # if it's a debug user
-        else:
-            beta_bot: discord.Member = msg.guild.get_member(beta_bot_id)
-
-            # ...and the debug instance is online
-            if beta_bot and beta_bot.status == discord.Status.online:
-                # ...and i'm not the debug instance
-                if msg.guild.me.id != beta_bot_id:
-                    # do nothing
-                    return
-
-        channel: discord.TextChannel = msg.channel
         botstatus_cog = self.botstatus
-        prefix_start = content[0] == '!'
+        empty_message = not bool(msg.content)
 
-        # Reference channels together
-        if len(content) and prefix_start and msg.channel_mentions:  # only if explicitly asked for
-            for mentioned_channel in msg.channel_mentions:
-                if mentioned_channel == channel:
-                    continue
+        if empty_message:
+            return
 
-                embed_template = discord.Embed()
-                embed_template.set_author(name=author.display_name, icon_url=author.avatar.url)
-                embed_template.set_footer(text=msg.guild.name, icon_url=msg.guild.icon.url)
+        prefix_start = msg.content[0] == '!'
 
-                target_embed = embed_template.copy()
-                target_embed.description = botstatus_cog.get_quote(
-                    'channel_linking_target', author=author.mention, channel=channel.mention, msg_url=msg.jump_url)
-                target_channel_msg = await mentioned_channel.send(embed=target_embed)
+        # only create references if asked for
+        if prefix_start and msg.channel_mentions:
+            await self.create_channel_references(msg, msg.guild, author, botstatus_cog)
 
-                origin_embed = embed_template.copy()
-                origin_embed.description = botstatus_cog.get_quote(
-                    'channel_linking_origin', author=author.mention, channel=mentioned_channel.mention, msg_url=target_channel_msg.jump_url)
-                await channel.send(embed=origin_embed)
+        url_matches_found = self.find_urls(msg.content)
 
-        url_matches_found = []
-        escaped_url = False
+        if (parsed_galleries := await self.parse_galleries(msg, url_matches_found, prefix_start)):
+            await self.send_galleries(msg, parsed_galleries, not prefix_start)
+
+        # checking if a command has been issued
+        if prefix_start:
+            command_issued = self.command_was_issued(msg)
+        else:
+            command_issued = False
+
+        await self.check_quiet_channels(msg, botstatus_cog, command_issued or url_matches_found)
+
+    async def create_channel_references(self, msg: discord.Message, guild, author, botstatus_cog: BotStatus):
+        """Reference channels together"""
+        for target_chnl in msg.channel_mentions:
+            if target_chnl == msg.channel:
+                continue
+
+            embed_template = discord.Embed()
+            guild_icon_url = guild.icon.url if hasattr(guild, 'guild') else None
+            embed_template.set_author(name=author.display_name, icon_url=author.avatar.url)
+            embed_template.set_footer(text=guild.name, icon_url=guild_icon_url)
+
+            target_embed = embed_template.copy()
+            target_embed.description = botstatus_cog.get_quote(
+                'channel_linking_target', author=author.mention, channel=msg.channel.mention, msg_url=msg.jump_url)
+            target_chnl_msg = await target_chnl.send(embed=target_embed)
+
+            origin_embed = embed_template.copy()
+            target_chnl_mention = target_chnl.mention
+            target_jmp_url = target_chnl_msg.jump_url
+            origin_embed.description = botstatus_cog.get_quote(
+                'channel_linking_origin', author=author.mention, channel=target_chnl_mention, msg_url=target_jmp_url)
+            await msg.channel.send(embed=origin_embed)
+
+    def beta_bot_override(self, not_beta_user: bool, guild: discord.Guild):
+        """Checks if there's two separate instances of the same bot running on the same server, so that 
+        only one of them can everrespond at a time. It's user-based, so only select users get to use 
+        the beta when both are present. 
+        """
+        # if it's a normal user...
+        if not_beta_user:
+            # ...and i'm the debug instance
+            if guild.me.id == self.beta_bot_id:
+                # do nothing
+                return True
+            return False
+        # or if it's a debug user...
+        beta_bot: discord.Member = guild.get_member(self.beta_bot_id)
+        # ...and the debug instance is online
+        if beta_bot and beta_bot.status == discord.Status.online:
+            # ...and i'm not the debug instance
+            if guild.me.id != self.beta_bot_id:
+                # do nothing
+                return True
+        return False
+
+    def find_urls(self, string: str) -> list:
+        """Finds all urls in a given string, ignoring those enclosed in <>"""
+        url_matches = []
+        escaping_url = False
         i = 0
-        while i < len(content):
+        while i < len(string):
             # check for urls, ignoring those with escaped embeds
-            if content[i] == '<':
-                escaped_url = True
+            if string[i] == '<':
+                escaping_url = True
                 i += 1
                 continue
 
-            if url_match := URL_PATTERN.match(content, i):
-                if not escaped_url or url_match.end() >= len(content) or url_match.end() < len(content) and content[url_match.end()] != '>':
-                    url_matches_found.append(
+            if (url_match := URL_PATTERN.match(string, i)):
+                closing_bracket = string[url_match.end()] == '>'
+                end_of_string = url_match.end() >= len(string)
+                if not escaping_url or end_of_string or url_match.end() < len(string) and not closing_bracket:
+                    url_matches.append(
                         {'full_url': url_match.group(),
                          'fqdn': tldextract.extract(url_match.group()).fqdn})
 
                 i = url_match.end()
                 continue
 
-            escaped_url = False
+            escaping_url = False
             i += 1
 
-        gallery = []
-        for url_match in url_matches_found:
+        return url_matches
+
+    async def parse_galleries(self, msg: discord.Message, url_matches, delete_original) -> list:
+        parsed_galleries = []
+        for url_match in url_matches:
             for valid_url in self.valid_urls:
                 group = valid_url['group']
-                url_pattern = valid_url['url']
                 guides = valid_url['guide']
+                url_pattern = valid_url['url']
 
                 # match() matches only from the start of the string
                 if not re.match(url_pattern, url_match['fqdn']):
@@ -254,57 +290,70 @@ class BotEvents(commands.Cog):
                     try:
                         guide_content = self.bot.guides[guide_type][guide_name]
                     except KeyError as e:
-                        print(f'KeyError: "{e.args[0]}" is an undefined guide name or type .')
+                        print(f'KeyError: "{e.args[0]}" is an undefined guide name or type.')
                         continue
 
                     full_url = url_match['full_url']
 
                     match guide_type:
                         case 'gallery':
-                            gallery.append({'url': full_url, 'board': group, 'guide': guide_content})
+                            parsed_galleries.append({'url': full_url, 'board': group, 'guide': guide_content})
                         case 'stream' if group == 'picarto':
-                            picarto_preview_shown = await self.streamservice.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=prefix_start)
+                            picarto_preview_shown = await self.streamservice.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=delete_original)
 
-                            if picarto_preview_shown and prefix_start:
+                            if picarto_preview_shown and delete_original:
                                 await msg.delete()
 
                 # done with this url
                 break
 
-        # post gallery only if there's one to show...
-        if len(gallery) == 1:
-            gallery = gallery[0]
-            gallery_board = gallery['board']
-            await self.imageboard.show_gallery(msg, gallery['url'], board=gallery_board, guide=gallery['guide'], only_missing_preview=not prefix_start)
+        return parsed_galleries
 
-        elif len(gallery) > 1:
-            common_domain = gallery[0]['board']
-            for gallery_element in gallery:
+    async def send_galleries(self, msg: discord.Message, parsed_galleries: list, only_missing_preview: bool) -> None:
+        # post gallery only if there's one to show...
+        if len(parsed_galleries) == 1:
+            parsed_galleries = parsed_galleries[0]
+            gallery_board = parsed_galleries['board']
+            await self.imageboard.show_gallery(msg, parsed_galleries['url'], board=gallery_board, guide=parsed_galleries['guide'], only_missing_preview=only_missing_preview)
+
+        elif len(parsed_galleries) > 1:
+            common_domain = parsed_galleries[0]['board']
+            for gallery_element in parsed_galleries:
                 if gallery_element['board'] != common_domain:
                     common_domain = False
                     print("Skipping previews. The links sent do not belong to the same domain.")
                     break
 
             if common_domain:
-                await self.imageboard.show_combined_gallery(msg, [e['url'] for e in gallery], board=common_domain, guide=gallery[0]['guide'], only_missing_preview=not prefix_start)
+                guide = parsed_galleries[0]['guide']
+                gallery_urls: list[str] = [e['url'] for e in parsed_galleries]
+                await self.imageboard.show_combined_gallery(msg, gallery_urls, board=common_domain, guide=guide, only_missing_preview=only_missing_preview)
 
-        # checking if a command has been issued
-        command_issued = False
-        if len(content) and prefix_start:
-            if (command_name_regex := COMMAND_PATTERN.search(content)):
-                cmd: commands.Command = self.bot.get_command(command_name_regex.group(1))
-                command_issued = bool(cmd)
+    def command_was_issued(self, msg: discord.Message) -> bool:
+        if (command_name_regex := COMMAND_PATTERN.search(msg.content)):
+            cmd: commands.Command = self.bot.get_command(command_name_regex.group(1))
+            return bool(cmd)
+        return False
 
-        if self.bot.last_channel != channel.id or url_matches_found or msg.attachments or command_issued:
-            self.bot.last_channel = channel.id
+    async def check_quiet_channels(self, msg: discord.Message, botstatus_cog: BotStatus, valid_interaction: bool) -> None:
+        channel_id: str = str(msg.channel.id)
+
+        if self.bot.last_channel != channel_id or msg.attachments or valid_interaction:
+            self.bot.last_channel = channel_id
             self.bot.last_channel_message_count = 0
-        else:
-            self.bot.last_channel_message_count += 1
+            return
 
-        if str(channel.id) in self.bot.rules['quiet_channels']:
-            if not self.bot.last_channel_warned and self.bot.last_channel_message_count >= self.bot.rules['quiet_channels'][str(channel.id)]['max_messages_without_embeds']:
-                self.bot.last_channel_warned = True
-                await botstatus_cog.typing_a_message(channel, content=botstatus_cog.get_quote('quiet_channel_past_threshold'), rnd_duration=[1, 2])
+        self.bot.last_channel_message_count += 1
+
+        if channel_id not in self.bot.rules['quiet_channels']:
+            return
+
+        max_messages_without_embeds = self.bot.rules['quiet_channels'][channel_id]['max_messages_without_embeds']
+
+        if not self.bot.last_channel_warned and self.bot.last_channel_message_count >= max_messages_without_embeds:
+            self.bot.last_channel_warned = True
+            quote_line = botstatus_cog.get_quote('quiet_channel_past_threshold')
+            await botstatus_cog.typing_a_message(msg.channel, content=quote_line, rnd_duration=[1, 2])
 
     @commands.Cog.listener()
     async def on_ready(self):

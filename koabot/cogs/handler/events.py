@@ -17,6 +17,19 @@ from koabot.kbot import KBot
 from koabot.patterns import COMMAND_PATTERN, URL_PATTERN
 
 
+class UrlMatch():
+    def __init__(self, full_url, fqdn) -> None:
+        self.full_url: str = full_url
+        self.fqdn: str = fqdn
+
+
+class MatchGroup():
+    def __init__(self, group, url, guide) -> None:
+        self.url: str = url
+        self.group: str = group
+        self.guide: dict = guide
+
+
 class BotEvents(commands.Cog):
     """BotEvents class"""
 
@@ -27,30 +40,8 @@ class BotEvents(commands.Cog):
         self.bot.last_channel_message_count = 0
         self.beta_bot_id = self.bot.koa['discord_user']['beta_id']
 
-        # guides stuff
-        self.valid_urls: list[dict] = []
-        for group, contents in self.bot.match_groups.items():
-            for match in contents:
-                url_pattern = match['url']
-                url_pattern = url_pattern.replace(r'.', r'\.')
-                url_pattern = url_pattern.replace(r'*', r'(.*?)')
-                self.valid_urls.append({'group': group, 'url': url_pattern, 'guide': match['guide']})
-
-        for guide_type, v in self.bot.guides.items():
-            for guide_name, guide_content in v.items():
-                if 'inherits' not in guide_content:
-                    continue
-
-                guide_to_inherit = guide_content['inherits'].split('/')
-                source_guide = self.bot.guides[guide_type][guide_name]
-
-                if len(guide_to_inherit) > 1:
-                    target_guide = self.bot.guides[guide_to_inherit[0]][guide_to_inherit[1]]
-                else:
-                    target_guide = self.bot.guides[guide_type][guide_to_inherit[0]]
-
-                combined_guide = merge({}, target_guide, source_guide)
-                self.bot.guides[guide_type][guide_name] = combined_guide
+        self.match_groups: list[MatchGroup] = []
+        self.build_valid_urls()
 
     @property
     def botstatus(self) -> BotStatus:
@@ -67,6 +58,33 @@ class BotEvents(commands.Cog):
     @property
     def streamservice(self) -> StreamService:
         return self.bot.get_cog('StreamService')
+
+    def build_valid_urls(self) -> None:
+        """Guides stuff"""
+        self.match_groups = []
+
+        for group, contents in self.bot.match_groups.items():
+            for match in contents:
+                url_pattern = match['url']
+                url_pattern = url_pattern.replace(r'.', r'\.')
+                url_pattern = url_pattern.replace(r'*', r'(.*?)')
+                self.match_groups.append(MatchGroup(group, url_pattern, match['guide']))
+
+        for guide_type, v in self.bot.guides.items():
+            for guide_name, guide_content in v.items():
+                if 'inherits' not in guide_content:
+                    continue
+
+                guide_to_inherit = guide_content['inherits'].split('/')
+                source_guide = self.bot.guides[guide_type][guide_name]
+
+                if len(guide_to_inherit) > 1:
+                    target_guide = self.bot.guides[guide_to_inherit[0]][guide_to_inherit[1]]
+                else:
+                    target_guide = self.bot.guides[guide_type][guide_to_inherit[0]]
+
+                combined_guide = merge({}, target_guide, source_guide)
+                self.bot.guides[guide_type][guide_name] = combined_guide
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -243,7 +261,7 @@ class BotEvents(commands.Cog):
                 return True
         return False
 
-    def find_urls(self, string: str) -> list:
+    def find_urls(self, string: str) -> list[UrlMatch]:
         """Finds all urls in a given string, ignoring those enclosed in <>"""
         url_matches = []
         escaping_url = False
@@ -256,14 +274,15 @@ class BotEvents(commands.Cog):
                 continue
 
             if (url_match := URL_PATTERN.match(string, i)):
-                closing_bracket = string[url_match.end()] == '>'
-                end_of_string = url_match.end() >= len(string)
-                if not escaping_url or end_of_string or url_match.end() < len(string) and not closing_bracket:
-                    url_matches.append(
-                        {'full_url': url_match.group(),
-                         'fqdn': tldextract.extract(url_match.group()).fqdn})
+                url_match_end = url_match.end()
+                end_of_string = url_match_end >= len(string)
+                within_string = url_match_end < len(string)
+                if not escaping_url or end_of_string or (within_string and string[url_match_end] != '>'):
+                    full_url = url_match.group()
+                    fqdn = tldextract.extract(url_match.group()).fqdn
+                    url_matches.append(UrlMatch(full_url, fqdn))
 
-                i = url_match.end()
+                i = url_match_end
                 continue
 
             escaping_url = False
@@ -271,19 +290,15 @@ class BotEvents(commands.Cog):
 
         return url_matches
 
-    async def parse_galleries(self, msg: discord.Message, url_matches, delete_original) -> list:
+    async def parse_galleries(self, msg: discord.Message, url_matches: list[UrlMatch], delete_original) -> list[MatchGroup]:
         parsed_galleries = []
         for url_match in url_matches:
-            for valid_url in self.valid_urls:
-                group = valid_url['group']
-                guides = valid_url['guide']
-                url_pattern = valid_url['url']
-
+            for match_group in self.match_groups:
                 # match() matches only from the start of the string
-                if not re.match(url_pattern, url_match['fqdn']):
+                if not re.match(match_group.url, url_match.fqdn):
                     continue
 
-                for guide in guides:
+                for guide in match_group.guide:
                     guide_type = guide['type']
                     guide_name = guide['name']
 
@@ -293,13 +308,11 @@ class BotEvents(commands.Cog):
                         print(f'KeyError: "{e.args[0]}" is an undefined guide name or type.')
                         continue
 
-                    full_url = url_match['full_url']
-
                     match guide_type:
                         case 'gallery':
-                            parsed_galleries.append({'url': full_url, 'board': group, 'guide': guide_content})
-                        case 'stream' if group == 'picarto':
-                            picarto_preview_shown = await self.streamservice.get_picarto_stream_preview(msg, full_url, orig_to_be_deleted=delete_original)
+                            parsed_galleries.append(MatchGroup(match_group.group, url_match.full_url, guide_content))
+                        case 'stream' if match_group.group == 'picarto':
+                            picarto_preview_shown = await self.streamservice.get_picarto_stream_preview(msg, url_match.full_url, orig_to_be_deleted=delete_original)
 
                             if picarto_preview_shown and delete_original:
                                 await msg.delete()
@@ -309,24 +322,23 @@ class BotEvents(commands.Cog):
 
         return parsed_galleries
 
-    async def send_galleries(self, msg: discord.Message, parsed_galleries: list, only_missing_preview: bool) -> None:
+    async def send_galleries(self, msg: discord.Message, parsed_galleries: list[MatchGroup], only_missing_preview: bool) -> None:
         # post gallery only if there's one to show...
         if len(parsed_galleries) == 1:
-            parsed_galleries = parsed_galleries[0]
-            gallery_board = parsed_galleries['board']
-            await self.imageboard.show_gallery(msg, parsed_galleries['url'], board=gallery_board, guide=parsed_galleries['guide'], only_missing_preview=only_missing_preview)
+            gallery = parsed_galleries[0]
+            await self.imageboard.show_gallery(msg, gallery.url, board=gallery.group, guide=gallery.guide, only_missing_preview=only_missing_preview)
 
         elif len(parsed_galleries) > 1:
-            common_domain = parsed_galleries[0]['board']
-            for gallery_element in parsed_galleries:
-                if gallery_element['board'] != common_domain:
-                    common_domain = False
+            common_domain = parsed_galleries[0].group
+            for parsed_gallery in parsed_galleries:
+                if parsed_gallery.group != common_domain:
+                    common_domain = ""
                     print("Skipping previews. The links sent do not belong to the same domain.")
                     break
 
             if common_domain:
-                guide = parsed_galleries[0]['guide']
-                gallery_urls: list[str] = [e['url'] for e in parsed_galleries]
+                guide = parsed_galleries[0].guide
+                gallery_urls: list[str] = [e.url for e in parsed_galleries]
                 await self.imageboard.show_combined_gallery(msg, gallery_urls, board=common_domain, guide=guide, only_missing_preview=only_missing_preview)
 
     def command_was_issued(self, msg: discord.Message) -> bool:

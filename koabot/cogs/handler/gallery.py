@@ -694,7 +694,7 @@ class Gallery(commands.Cog):
                     embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
                                                deviation['extended']['description']).strip()
 
-                if len(embed.description) > 200:
+                if embed.description and len(embed.description) > 200:
                     embed.description = embed.description[:200] + "..."
 
                 embed.set_image(url=image_url)

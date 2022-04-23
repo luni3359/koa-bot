@@ -1,5 +1,4 @@
 """The main bot class"""
-import os
 import sqlite3
 import timeit
 from datetime import datetime
@@ -28,7 +27,7 @@ class KBot(commands.Bot):
         self.isconnected: bool = False
 
         self.PROJECT_NAME: str = None
-        self.SOURCE_DIR: str = None
+        self.SOURCE_DIR: Path = None
         self.PROJECT_DIR: Path = None
         self.DATA_DIR: str = None
         self.CONFIG_DIR: str = None
@@ -42,9 +41,6 @@ class KBot(commands.Bot):
         # await self.change_presence(activity=discord.Game(name=self.get_cog('BotStatus').get_quote('playing_status')))
 
     def set_base_directory(self, directory: BaseDirectory, value: str | Path) -> None:
-        if isinstance(value, Path):
-            value = str(value)
-
         match directory:
             case BaseDirectory.SOURCE_DIR:
                 self.SOURCE_DIR = value
@@ -59,41 +55,44 @@ class KBot(commands.Bot):
             case BaseDirectory.CACHE_DIR:
                 self.CACHE_DIR = value
 
-    async def load_all_extensions(self, path: str) -> None:
+    async def load_all_extensions(self) -> None:
         """Recursively load all cogs in the project"""
         print("Loading cogs in project...")
 
-        start_load_time = timeit.default_timer()
-        cog_prefix = "koabot.cogs"
-        cog_paths: list[str] = []
+        extension_dirs = [Path(self.SOURCE_DIR, "cogs")]
 
-        for p, _, f in os.walk(path):
-            for file in f:
-                if file.endswith(".py"):
-                    container_dir = p.replace(path, '').replace('/', '.')
-                    (filename, _) = os.path.splitext(file)
+        start_load_time = timeit.default_timer()
+        module_list: list[str] = []
+
+        for ext_dir in extension_dirs:
+            for child in ext_dir.rglob('*'):
+                if child.suffix == ".py":
+                    filename = child.stem
 
                     if filename == "__init__":
                         continue
 
-                    cog_path = cog_prefix + container_dir + '.' + filename
-                    cog_paths.append(cog_path)
+                    relative_path = child.relative_to(self.PROJECT_DIR)
+                    path_as_import = str(relative_path.with_suffix('')).replace('/', '.')
+                    module_list.append(path_as_import)
 
         dropped_cogs = 0
-        for ext in cog_paths:
+        for module in module_list:
             try:
-                print(f"Loading \"{ext}\"...".ljust(40), end='\r')
-                await self.load_extension(ext)
+                print(f"Loading \"{module}\"...".ljust(40), end='\r')
+                await self.load_extension(module)
             except commands.errors.ExtensionFailed as e:
                 dropped_cogs += 1
                 print(e)
-                print(f"Failed to load \"{ext}\".")
+                print(f"Failed to load \"{module}\".")
+            except commands.errors.NoEntryPointError as e:
+                print(f"Skipping \"{module}\" (not a module)")
 
         time_to_finish = timeit.default_timer() - start_load_time
 
         if dropped_cogs == 0:
-            log_msg = f"Finished loading {len(cog_paths)} cogs in {time_to_finish:0.2f}s."
+            log_msg = f"Finished loading {len(module_list)} cogs in {time_to_finish:0.2f}s."
         else:
-            log_msg = f"WARNING: Only {len(cog_paths)-dropped_cogs} out of {len(cog_paths)} cogs loaded successfully (in {time_to_finish:0.2f}s)."
+            log_msg = f"WARNING: Only {len(module_list)-dropped_cogs} out of {len(module_list)} cogs loaded successfully (in {time_to_finish:0.2f}s)."
 
         print(log_msg.ljust(40))

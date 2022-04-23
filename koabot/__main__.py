@@ -14,8 +14,8 @@ from discord.ext import commands
 
 from koabot.kbot import BaseDirectory, KBot
 
-SOURCE_DIR = os.path.dirname(os.path.realpath(__file__))
-PROJECT_DIR = Path(SOURCE_DIR).parent
+SOURCE_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = SOURCE_DIR.parent
 PROJECT_NAME = PROJECT_DIR.name
 
 DATA_DIR = appdirs.user_data_dir(PROJECT_NAME)
@@ -27,7 +27,7 @@ for base_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
     os.makedirs(base_dir, exist_ok=True)
 
 
-def set_base_directories():
+def set_base_directories(bot: KBot):
     bot.set_base_directory(BaseDirectory.PROJECT_NAME, PROJECT_NAME)
     bot.set_base_directory(BaseDirectory.SOURCE_DIR, SOURCE_DIR)
     bot.set_base_directory(BaseDirectory.PROJECT_DIR, PROJECT_DIR)
@@ -62,7 +62,7 @@ async def main():
     print(f"Starting {PROJECT_NAME}...")
     bot.launch_time = datetime.utcnow()
     bot.debug_mode = '--debug' in argv
-    set_base_directories()
+    set_base_directories(bot)
 
     bot_data = {}
     data_filenames = [
@@ -107,7 +107,7 @@ async def main():
     bot.add_check(debug_check)
 
     async with bot:
-        await bot.load_all_extensions(os.path.join(SOURCE_DIR, "cogs"))
+        await bot.load_all_extensions()
         await bot.start(bot.koa['token'])
 
 bot = KBot(command_prefix='!', description='', intents=discord.Intents.all())

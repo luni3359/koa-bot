@@ -48,16 +48,11 @@ class PixivHelper():
         self.embeds.append(embed)
 
 
-class Gallery(commands.Cog):
-    """Gallery class"""
+class SitePreview(commands.Cog):
+    """Site preview"""
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
-        self.pixiv_refresh_token: str = None
-
-        self._twitter_api: tweepy.API = None
-        self._pixiv_aapi: pixivpy_async.AppPixivAPI = None
-        self._reddit_api: asyncpraw.Reddit = None
 
     @property
     def board(self) -> Board:
@@ -66,6 +61,28 @@ class Gallery(commands.Cog):
     @property
     def botstatus(self) -> BotStatus:
         return self.bot.get_cog('BotStatus')
+
+
+class Patreon(SitePreview):
+    """Patreon site preview"""
+
+    def __init__(self, bot: KBot) -> None:
+        super().__init__(bot)
+
+    def get_id(self, url: str) -> str:
+        return post_core.get_name_or_id(url, start='/posts/', pattern=r'[0-9]+$')
+
+    async def get_patreon_gallery(self, msg: discord.Message, url: str):
+        if not (post_id := self.get_id(url)):
+            return
+
+
+class Twitter(SitePreview):
+    """Twitter site preview"""
+
+    def __init__(self, bot: KBot) -> None:
+        super().__init__(bot)
+        self._twitter_api: tweepy.API = None
 
     @property
     def twitter_api(self) -> tweepy.API:
@@ -77,12 +94,316 @@ class Gallery(commands.Cog):
 
         return self._twitter_api
 
+    def get_id(self, guide: dict, url: str) -> str:
+        id_start = guide['post']['id_start']
+        id_end = guide['post']['id_end']
+
+        return post_core.get_name_or_id(url, start=id_start, end=id_end)
+
+    def get_tweet(self, tweet_id) -> tweepy.Tweet:
+        try:
+            return self.twitter_api.get_status(tweet_id, tweet_mode="extended")
+        except tweepy.HTTPException as e:
+            # Error codes: https://developer.twitter.com/en/support/twitter-api/error-troubleshooting
+            if e.response is not None:
+                code = e.response.status
+                print(f"Failure on Tweet #{tweet_id}: [E{code}]")
+            else:
+                print(f"Failure on Tweet #{tweet_id}")
+            print(e)
+        return None
+
+    async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict = None) -> None:
+        """Automatically fetch and post any image galleries from twitter
+        Arguments:
+            msg::discord.Message
+                The message where the link was sent
+            url::str
+                Link of the tweet
+        Keywords:
+            guide::dict
+                The data which holds the board information
+        """
+        guide = guide or self.bot.guides['gallery']['twitter-gallery']
+
+        if not (post_id := self.get_id(guide, url)):
+            return
+
+        if not (tweet := self.get_tweet(post_id)):
+            return
+
+        if not hasattr(tweet, 'extended_entities'):
+            return print("Twitter preview not applicable. (No extended entities)")
+
+        if len((tweet_ee_media := tweet.extended_entities['media'])) == 1:
+            match tweet_ee_media[0]['type']:
+                case 'photo':
+                    if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
+                        return print("Twitter preview not applicable. (Media photo is sfw)")
+
+                    # TODO: There's got to be a better way...
+                    if guide['embed']['footer_text'] == "TwitFix":
+                        return print("Twitter preview not applicable. (Handled by TwitFix)")
+
+                case _:  # 'video' or 'animated_gif'
+                    if guide['embed']['footer_text'] == "TwitFix":
+                        return print("Twitter preview not applicable. (Handled by TwitFix)")
+
+                    if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
+                        fixed_url = url.replace("twitter", "fxtwitter", 1)
+                        await msg.reply(content=f"Sorry! Due to Discord's API limitations I cannot embed videos. (Twitter disallows NSFW previews)\n{fixed_url}", mention_author=False)
+
+                    return
+
+        # Appending :orig to get a better image quality
+        gallery_pics = [f"{picture['media_url_https']}:orig" for picture in tweet_ee_media]
+
+        embed_group = EmbedGroup()
+        embed_group.color = discord.Colour(int(guide['embed']['color'], 16))
+
+        # If it's the first picture to show, add author, body, and counters
+        if (tw_likes := tweet.favorite_count) > 0:
+            embed_group.first.add_field(name='Likes', value=f"{tw_likes:,}")
+        if (tw_retweets := tweet.retweet_count) > 0:
+            embed_group.first.add_field(name='Retweets', value=f"{tw_retweets:,}")
+
+        embed_group.first.set_author(
+            name=f'{tweet.author.name} (@{tweet.author.screen_name})',
+            url=guide['post']['url'].format(tweet.author.screen_name),
+            icon_url=tweet.author.profile_image_url_https)
+
+        # int, int = list[int] (2 elements)
+        range_start, range_end = tweet.display_text_range
+        embed_group.first.description = html.unescape(tweet.full_text[range_start:range_end])
+
+        # If it's the last picture to show, add a brand footer
+        embed_group.last.set_footer(
+            text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
+            icon_url=self.bot.assets['twitter']['favicon'])
+        embed_group.last.timestamp = datetime.datetime.now(datetime.timezone.utc)
+
+        for picture in gallery_pics:
+            embed_group.add().set_image(url=picture)
+
+        await msg.reply(embeds=embed_group.embeds, mention_author=False)
+
+        # Supress original embed (sorry, desktop-only users)
+        try:
+            await msg.edit(suppress=True)
+        except discord.errors.Forbidden as e:
+            # Missing Permissions
+            match e.code:
+                case 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                case _:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
+
+
+class Pixiv(SitePreview):
+    """Pixiv site preview"""
+
+    def __init__(self, bot: KBot) -> None:
+        super().__init__(bot)
+        self.pixiv_refresh_token: str = None
+        self._pixiv_aapi: pixivpy_async.AppPixivAPI = None
+
     @property
     def pixiv_aapi(self) -> pixivpy_async.AppPixivAPI:
         if not self._pixiv_aapi:
             self._pixiv_aapi = pixivpy_async.AppPixivAPI()
 
         return self._pixiv_aapi
+
+    def get_id(self, url: str) -> str:
+        return post_core.get_name_or_id(url, start=['illust_id=', '/artworks/'], pattern=r'[0-9]+')
+
+    async def get_pixiv_gallery(self, msg: discord.Message, url: str, /, *, only_missing_preview: bool = False) -> None:
+        """Automatically fetch and post any image galleries from pixiv
+        Arguments:
+            msg::discord.Message
+                The message where the link was sent
+            url::str
+                Link of the pixiv post
+            only_missing_preview::bool
+                Only shows a preview if the native embed is missing from the original link. Default is False
+        """
+        channel: discord.TextChannel = msg.channel
+
+        if not (post_id := self.get_id(url)):
+            return
+
+        print(f"Now starting to process pixiv #{post_id}")
+        url = f"https://www.pixiv.net/artworks/{post_id}"
+
+        # Login
+        await self.reauthenticate_pixiv()
+
+        try:
+            illust_json = await self.pixiv_aapi.illust_detail(post_id, req_auth=True)
+        except pixivpy_async.PixivError as e:
+            await channel.send("Odd...")
+            return print(e)
+
+        if 'illust' not in illust_json:
+            # too bad
+            return print(f"Invalid Pixiv id #{post_id}")
+
+        print(f"Pixiv auth passed! (for #{post_id})")
+
+        # botstatus_cog = self.botstatus
+        illust = illust_json.illust
+
+        # if illust.x_restrict != 0 and not channel.is_nsfw():
+        #     embed = discord.Embed()
+
+        #     if 'nsfw_placeholder' in self.bot.assets['pixiv']:
+        #         embed.set_image(url=self.bot.assets['pixiv']['nsfw_placeholder'])
+        #     else:
+        #         embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
+
+        #     content = f"{msg.author.mention} {botstatus_cog.get_quote('improper_content_reminder')}"
+
+        #     await botstatus_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
+        #     return
+
+        async with channel.typing():
+            total_illust_pictures = illust.page_count
+            pictures = illust.meta_pages if total_illust_pictures > 1 else [illust]
+            total_to_preview = 1 if only_missing_preview else 5
+
+            pixiv_helper = PixivHelper()
+            pictures = pictures[:total_to_preview]
+            for i, picture in enumerate(pictures):
+                print(f"Retrieving from #{post_id} picture {i + 1}/{len(pictures)}...")
+
+                img_url = picture.image_urls.medium
+                filename = net_core.get_url_filename(img_url)
+
+                embed = discord.Embed()
+                embed.set_image(url=f'attachment://{filename}')
+
+                if i == 0:
+                    if illust.title != "無題":
+                        embed.title = illust.title
+
+                    embed.url = url
+                    description = re.sub(r'<br \/>', '\n', illust.caption)
+                    description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', description)
+                    embed.description = description.strip()
+
+                    if (px_bookmarks := illust.total_bookmarks) > 0:
+                        embed.add_field(name='Bookmarks', value=f"{px_bookmarks:,}")
+
+                    if (px_views := illust.total_view) > 0:
+                        embed.add_field(name='Views', value=f"{px_views:,}")
+
+                    embed.set_author(name=illust.user.name,
+                                     url=f"https://www.pixiv.net/users/{illust.user.id}")
+
+                    # Thanks Pixiv... even your avatars are inaccessible!
+                    # //////////////////////////////////////////////////////////////////
+                    # avatar_url = illust.user.profile_image_urls.medium
+                    # avatar_filename = net_utils.get_url_filename(avatar_url)
+                    # avatar_cache_dir = os.path.join(self.bot.CACHE_DIR, 'pixiv', 'avatars')
+                    # os.makedirs(avatar_cache_dir, exist_ok=True)
+                    # avatar_path = os.path.join(avatar_cache_dir, avatar_filename)
+
+                    # # cache file if it doesn't exist
+                    # image_bytes = None
+                    # if not os.path.exists(image_path):
+                    #     print('Saving to cache...')
+                    #     image_bytes = await net_core.fetch_image(avatar_url, headers=self.bot.assets['pixiv']['headers'])
+
+                    #     with open(os.path.join(avatar_cache_dir, avatar_filename), 'wb') as image_file:
+                    #         shutil.copyfileobj(image_bytes, image_file)
+                    #     image_bytes.seek(0)
+
+                # create if pixiv cache directory if it doesn't exist
+                file_cache_dir = os.path.join(self.bot.CACHE_DIR, 'pixiv', 'files')
+                os.makedirs(file_cache_dir, exist_ok=True)
+                image_path = os.path.join(file_cache_dir, filename)
+
+                # cache file if it doesn't exist
+                image_bytes = None
+                if not os.path.exists(image_path):
+                    print("Saving to cache...")
+                    image_bytes = await net_core.fetch_image(img_url, headers=self.bot.assets['pixiv']['headers'])
+
+                    with open(os.path.join(file_cache_dir, filename), 'wb') as image_file:
+                        shutil.copyfileobj(image_bytes, image_file)
+                    image_bytes.seek(0)
+
+                if i + 1 >= min(total_to_preview, total_illust_pictures):
+                    if total_illust_pictures > total_to_preview:
+                        remaining_footer = f"{total_illust_pictures - total_to_preview}+ remaining"
+                    else:
+                        remaining_footer = self.bot.assets['pixiv']['name']
+
+                    embed.set_footer(
+                        text=remaining_footer,
+                        icon_url=self.bot.assets['pixiv']['favicon'])
+
+                if image_bytes:
+                    pixiv_helper.add_file(image_bytes, filename)
+                    image_bytes.close()
+                else:
+                    print("Uploading from cache...")
+                    pixiv_helper.add_file(image_path, filename)
+
+                pixiv_helper.add_embed(embed)
+
+        await msg.reply(files=pixiv_helper.files, embeds=pixiv_helper.embeds, mention_author=False)
+
+        try:
+            await msg.edit(suppress=True)
+        except discord.errors.Forbidden as e:
+            # Missing Permissions
+            match e.code:
+                case 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                case _:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
+
+        print('DONE PIXIV!')
+
+    async def reauthenticate_pixiv(self) -> None:
+        """Fetch and cache the refresh token"""
+        if self.pixiv_refresh_token:
+            return await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
+
+        pixiv_cache_dir = os.path.join(self.bot.CACHE_DIR, 'pixiv')
+        token_filename = 'refresh_token'
+        token_path = os.path.join(pixiv_cache_dir, token_filename)
+
+        if os.path.exists(token_path):
+            with open(token_path, encoding="UTF-8") as token_file:
+                self.pixiv_refresh_token = token_file.readline()
+                await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
+        else:
+            pix_keys = self.bot.auth_keys['pixiv']
+            await self.pixiv_aapi.login(pix_keys['username'], pix_keys['password'])
+            self.pixiv_refresh_token = self.pixiv_aapi.refresh_token
+            os.makedirs(pixiv_cache_dir, exist_ok=True)
+            with open(token_path, 'w', encoding="UTF-8") as token_file:
+                token_file.write(self.pixiv_refresh_token)
+
+
+class Gallery(commands.Cog):
+    """Gallery class"""
+
+    def __init__(self, bot: KBot) -> None:
+        self.bot = bot
+
+        self._twitter_api: tweepy.API = None
+        self._reddit_api: asyncpraw.Reddit = None
+
+    @property
+    def board(self) -> Board:
+        return self.bot.get_cog('Board')
+
+    @property
+    def botstatus(self) -> BotStatus:
+        return self.bot.get_cog('BotStatus')
 
     @property
     def reddit_api(self) -> asyncpraw.Reddit:
@@ -278,273 +599,6 @@ class Gallery(commands.Cog):
                     content = botstatus_cog.get_quote('rude_cannot_show_nsfw_gallery')
 
             await botstatus_cog.typing_a_message(channel, content=content, rnd_duration=[1, 2])
-
-    async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict = None) -> None:
-        """Automatically fetch and post any image galleries from twitter
-        Arguments:
-            msg::discord.Message
-                The message where the link was sent
-            url::str
-                Link of the tweet
-        Keywords:
-            guide::dict
-                The data which holds the board information
-        """
-        guide = guide or self.bot.guides['gallery']['twitter-gallery']
-
-        id_start = guide['post']['id_start']
-        id_end = guide['post']['id_end']
-
-        if not (post_id := post_core.get_name_or_id(url, start=id_start, end=id_end)):
-            return
-
-        try:
-            tweet = self.twitter_api.get_status(post_id, tweet_mode='extended')
-        except tweepy.HTTPException as e:
-            # Error codes: https://developer.twitter.com/en/support/twitter-api/error-troubleshooting
-            if e.response is not None:
-                code = e.response.status
-                print(f"Failure on Tweet #{post_id}: [E{code}]")
-            else:
-                print(f"Failure on Tweet #{post_id}")
-
-            return print(e)
-
-        if not hasattr(tweet, 'extended_entities'):
-            return print("Twitter preview not applicable. (No extended entities)")
-
-        if len((tweet_ee_media := tweet.extended_entities['media'])) == 1:
-            match tweet_ee_media[0]['type']:
-                case 'photo':
-                    if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
-                        return print("Twitter preview not applicable. (Media photo is sfw)")
-
-                    # TODO: There's got to be a better way...
-                    if guide['embed']['footer_text'] == "TwitFix":
-                        return print("Twitter preview not applicable. (Handled by TwitFix)")
-
-                case _:  # 'video' or 'animated_gif'
-                    if guide['embed']['footer_text'] == "TwitFix":
-                        return print("Twitter preview not applicable. (Handled by TwitFix)")
-
-                    if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
-                        fixed_url = url.replace("twitter", "fxtwitter", 1)
-                        await msg.reply(content=f"Sorry! Due to Discord's API limitations I cannot embed videos. (Twitter disallows NSFW previews)\n{fixed_url}", mention_author=False)
-
-                    return
-
-        # Appending :orig to get a better image quality
-        gallery_pics = [f"{picture['media_url_https']}:orig" for picture in tweet_ee_media]
-
-        embed_group = EmbedGroup()
-        embed_group.color = discord.Colour(int(guide['embed']['color'], 16))
-
-        # If it's the first picture to show, add author, body, and counters
-        if (tw_likes := tweet.favorite_count) > 0:
-            embed_group.first.add_field(name='Likes', value=f"{tw_likes:,}")
-        if (tw_retweets := tweet.retweet_count) > 0:
-            embed_group.first.add_field(name='Retweets', value=f"{tw_retweets:,}")
-
-        embed_group.first.set_author(
-            name=f'{tweet.author.name} (@{tweet.author.screen_name})',
-            url=guide['post']['url'].format(tweet.author.screen_name),
-            icon_url=tweet.author.profile_image_url_https)
-
-        # int, int = list[int] (2 elements)
-        range_start, range_end = tweet.display_text_range
-        embed_group.first.description = html.unescape(tweet.full_text[range_start:range_end])
-
-        # If it's the last picture to show, add a brand footer
-        embed_group.last.set_footer(
-            text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
-            icon_url=self.bot.assets['twitter']['favicon'])
-        embed_group.last.timestamp = datetime.datetime.now(datetime.timezone.utc)
-
-        for picture in gallery_pics:
-            embed_group.add().set_image(url=picture)
-
-        await msg.reply(embeds=embed_group.embeds, mention_author=False)
-
-        # Supress original embed (sorry, desktop-only users)
-        try:
-            await msg.edit(suppress=True)
-        except discord.errors.Forbidden as e:
-            # Missing Permissions
-            match e.code:
-                case 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                case _:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
-
-    async def get_pixiv_gallery(self, msg: discord.Message, url: str, /, *, only_missing_preview: bool = False) -> None:
-        """Automatically fetch and post any image galleries from pixiv
-        Arguments:
-            msg::discord.Message
-                The message where the link was sent
-            url::str
-                Link of the pixiv post
-            only_missing_preview::bool
-                Only shows a preview if the native embed is missing from the original link. Default is False
-        """
-        channel: discord.TextChannel = msg.channel
-
-        if not (post_id := post_core.get_name_or_id(url, start=['illust_id=', '/artworks/'], pattern=r'[0-9]+')):
-            return
-
-        print(f"Now starting to process pixiv #{post_id}")
-        url = f"https://www.pixiv.net/artworks/{post_id}"
-
-        # Login
-        await self.reauthenticate_pixiv()
-
-        try:
-            illust_json = await self.pixiv_aapi.illust_detail(post_id, req_auth=True)
-        except pixivpy_async.PixivError as e:
-            await channel.send("Odd...")
-            return print(e)
-
-        if 'illust' not in illust_json:
-            # too bad
-            return print(f"Invalid Pixiv id #{post_id}")
-
-        print(f"Pixiv auth passed! (for #{post_id})")
-
-        # botstatus_cog = self.botstatus
-        illust = illust_json.illust
-
-        # if illust.x_restrict != 0 and not channel.is_nsfw():
-        #     embed = discord.Embed()
-
-        #     if 'nsfw_placeholder' in self.bot.assets['pixiv']:
-        #         embed.set_image(url=self.bot.assets['pixiv']['nsfw_placeholder'])
-        #     else:
-        #         embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
-
-        #     content = f"{msg.author.mention} {botstatus_cog.get_quote('improper_content_reminder')}"
-
-        #     await botstatus_cog.typing_a_message(channel, content=content, embed=embed, rnd_duration=[1, 2])
-        #     return
-
-        async with channel.typing():
-            total_illust_pictures = illust.page_count
-            pictures = illust.meta_pages if total_illust_pictures > 1 else [illust]
-            total_to_preview = 1 if only_missing_preview else 5
-
-            pixiv_helper = PixivHelper()
-            pictures = pictures[:total_to_preview]
-            for i, picture in enumerate(pictures):
-                print(f"Retrieving from #{post_id} picture {i + 1}/{len(pictures)}...")
-
-                img_url = picture.image_urls.medium
-                filename = net_core.get_url_filename(img_url)
-
-                embed = discord.Embed()
-                embed.set_image(url=f'attachment://{filename}')
-
-                if i == 0:
-                    if illust.title != "無題":
-                        embed.title = illust.title
-
-                    embed.url = url
-                    description = re.sub(r'<br \/>', '\n', illust.caption)
-                    description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', description)
-                    embed.description = description.strip()
-
-                    if (px_bookmarks := illust.total_bookmarks) > 0:
-                        embed.add_field(name='Bookmarks', value=f"{px_bookmarks:,}")
-
-                    if (px_views := illust.total_view) > 0:
-                        embed.add_field(name='Views', value=f"{px_views:,}")
-
-                    embed.set_author(name=illust.user.name,
-                                     url=f"https://www.pixiv.net/users/{illust.user.id}")
-
-                    # Thanks Pixiv... even your avatars are inaccessible!
-                    # //////////////////////////////////////////////////////////////////
-                    # avatar_url = illust.user.profile_image_urls.medium
-                    # avatar_filename = net_utils.get_url_filename(avatar_url)
-                    # avatar_cache_dir = os.path.join(self.bot.CACHE_DIR, 'pixiv', 'avatars')
-                    # os.makedirs(avatar_cache_dir, exist_ok=True)
-                    # avatar_path = os.path.join(avatar_cache_dir, avatar_filename)
-
-                    # # cache file if it doesn't exist
-                    # image_bytes = None
-                    # if not os.path.exists(image_path):
-                    #     print('Saving to cache...')
-                    #     image_bytes = await net_core.fetch_image(avatar_url, headers=self.bot.assets['pixiv']['headers'])
-
-                    #     with open(os.path.join(avatar_cache_dir, avatar_filename), 'wb') as image_file:
-                    #         shutil.copyfileobj(image_bytes, image_file)
-                    #     image_bytes.seek(0)
-
-                # create if pixiv cache directory if it doesn't exist
-                file_cache_dir = os.path.join(self.bot.CACHE_DIR, 'pixiv', 'files')
-                os.makedirs(file_cache_dir, exist_ok=True)
-                image_path = os.path.join(file_cache_dir, filename)
-
-                # cache file if it doesn't exist
-                image_bytes = None
-                if not os.path.exists(image_path):
-                    print("Saving to cache...")
-                    image_bytes = await net_core.fetch_image(img_url, headers=self.bot.assets['pixiv']['headers'])
-
-                    with open(os.path.join(file_cache_dir, filename), 'wb') as image_file:
-                        shutil.copyfileobj(image_bytes, image_file)
-                    image_bytes.seek(0)
-
-                if i + 1 >= min(total_to_preview, total_illust_pictures):
-                    if total_illust_pictures > total_to_preview:
-                        remaining_footer = f"{total_illust_pictures - total_to_preview}+ remaining"
-                    else:
-                        remaining_footer = self.bot.assets['pixiv']['name']
-
-                    embed.set_footer(
-                        text=remaining_footer,
-                        icon_url=self.bot.assets['pixiv']['favicon'])
-
-                if image_bytes:
-                    pixiv_helper.add_file(image_bytes, filename)
-                    image_bytes.close()
-                else:
-                    print("Uploading from cache...")
-                    pixiv_helper.add_file(image_path, filename)
-
-                pixiv_helper.add_embed(embed)
-
-        await msg.reply(files=pixiv_helper.files, embeds=pixiv_helper.embeds, mention_author=False)
-
-        try:
-            await msg.edit(suppress=True)
-        except discord.errors.Forbidden as e:
-            # Missing Permissions
-            match e.code:
-                case 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                case _:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
-
-        print('DONE PIXIV!')
-
-    async def reauthenticate_pixiv(self) -> None:
-        """Fetch and cache the refresh token"""
-        if self.pixiv_refresh_token:
-            return await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
-
-        pixiv_cache_dir = os.path.join(self.bot.CACHE_DIR, 'pixiv')
-        token_filename = 'refresh_token'
-        token_path = os.path.join(pixiv_cache_dir, token_filename)
-
-        if os.path.exists(token_path):
-            with open(token_path, encoding="UTF-8") as token_file:
-                self.pixiv_refresh_token = token_file.readline()
-                await self.pixiv_aapi.login(refresh_token=self.pixiv_refresh_token)
-        else:
-            pix_keys = self.bot.auth_keys['pixiv']
-            await self.pixiv_aapi.login(pix_keys['username'], pix_keys['password'])
-            self.pixiv_refresh_token = self.pixiv_aapi.refresh_token
-            os.makedirs(pixiv_cache_dir, exist_ok=True)
-            with open(token_path, 'w', encoding="UTF-8") as token_file:
-                token_file.write(self.pixiv_refresh_token)
 
     async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch post from deviantart"""
@@ -883,4 +937,8 @@ class Gallery(commands.Cog):
 
 async def setup(bot: KBot):
     """Initiate cog"""
+    await bot.add_cog(SitePreview(bot))
+    await bot.add_cog(Patreon(bot))
+    await bot.add_cog(Twitter(bot))
+    await bot.add_cog(Pixiv(bot))
     await bot.add_cog(Gallery(bot))

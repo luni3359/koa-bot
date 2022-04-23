@@ -4,7 +4,7 @@ from discord.ext import commands
 
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
-from koabot.cogs.handler.gallery import Gallery
+from koabot.cogs.handler.gallery import Gallery, Patreon, Pixiv, Twitter
 from koabot.kbot import KBot
 
 
@@ -25,6 +25,18 @@ class ImageBoard(commands.Cog):
     @property
     def botstatus(self) -> BotStatus:
         return self.bot.get_cog('BotStatus')
+
+    @property
+    def twitter(self) -> Twitter:
+        return self.bot.get_cog('Twitter')
+
+    @property
+    def patreon(self) -> Patreon:
+        return self.bot.get_cog('Patreon')
+
+    @property
+    def pixiv(self) -> Pixiv:
+        return self.bot.get_cog('Pixiv')
 
     @commands.command(name='danbooru', aliases=['dan'])
     async def search_danbooru(self, ctx, *, tags: str):
@@ -50,9 +62,9 @@ class ImageBoard(commands.Cog):
             case 'e621':
                 await self.gallery.display_static(msg.channel, url, board='e621', guide=guide, only_missing_preview=only_missing_preview)
             case 'twitter':
-                await self.gallery.get_twitter_gallery(msg, url, guide=guide)
+                await self.twitter.get_twitter_gallery(msg, url, guide=guide)
             case 'pixiv':
-                await self.gallery.get_pixiv_gallery(msg, url, only_missing_preview=only_missing_preview)
+                await self.pixiv.get_pixiv_gallery(msg, url, only_missing_preview=only_missing_preview)
             case 'sankaku':
                 await self.gallery.display_static(msg.channel, url, board='sankaku', guide=guide, only_missing_preview=only_missing_preview)
             case 'deviantart':
@@ -61,6 +73,8 @@ class ImageBoard(commands.Cog):
                 await self.gallery.get_imgur_gallery(msg, url)
             case 'reddit':
                 await self.gallery.get_reddit_gallery(msg, url, guide=guide)
+            case 'patreon':
+                await self.patreon.get_patreon_gallery(msg, url)
             case _:
                 raise ValueError(f'Board "{board}" has no gallery entry.')
 

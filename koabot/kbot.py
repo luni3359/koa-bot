@@ -1,4 +1,5 @@
 """The main bot class"""
+import os
 import sqlite3
 import timeit
 from datetime import datetime
@@ -73,7 +74,7 @@ class KBot(commands.Bot):
                         continue
 
                     relative_path = child.relative_to(self.PROJECT_DIR)
-                    path_as_import = str(relative_path.with_suffix('')).replace('/', '.')
+                    path_as_import = str(relative_path.with_suffix('')).replace(os.sep, '.')
                     module_list.append(path_as_import)
 
         dropped_cogs = 0

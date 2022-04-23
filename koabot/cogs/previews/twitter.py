@@ -84,7 +84,7 @@ class TwitterPreview(SitePreview):
 
                     if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
                         fixed_url = url.replace("twitter", "fxtwitter", 1)
-                        await msg.reply(content=f"Sorry! Due to Discord's API limitations I cannot embed videos. (Twitter disallows NSFW previews)\n{fixed_url}", mention_author=False)
+                        await msg.reply(content=fixed_url, mention_author=False)
 
                     return
 

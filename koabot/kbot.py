@@ -59,7 +59,7 @@ class KBot(commands.Bot):
         """Recursively load all cogs in the project"""
         print("Loading cogs in project...")
 
-        extension_dirs = [Path(self.SOURCE_DIR, "cogs")]
+        extension_dirs = [Path(self.SOURCE_DIR, "core"), Path(self.SOURCE_DIR, "cogs")]
 
         start_load_time = timeit.default_timer()
         module_list: list[str] = []

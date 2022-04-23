@@ -4,7 +4,13 @@ from discord.ext import commands
 
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
-from koabot.cogs.handler.gallery import Gallery, Patreon, Pixiv, Twitter
+from koabot.cogs.handler.gallery import Gallery
+from koabot.cogs.previews.deviantart import DeviantArtPreview
+from koabot.cogs.previews.imgur import ImgurPreview
+from koabot.cogs.previews.patreon import PatreonPreview
+from koabot.cogs.previews.pixiv import PixivPreview
+from koabot.cogs.previews.reddit import RedditPreview
+from koabot.cogs.previews.twitter import TwitterPreview
 from koabot.kbot import KBot
 
 
@@ -27,16 +33,28 @@ class ImageBoard(commands.Cog):
         return self.bot.get_cog('BotStatus')
 
     @property
-    def twitter(self) -> Twitter:
-        return self.bot.get_cog('Twitter')
+    def twitter(self) -> TwitterPreview:
+        return self.bot.get_cog('TwitterPreview')
 
     @property
-    def patreon(self) -> Patreon:
-        return self.bot.get_cog('Patreon')
+    def patreon(self) -> PatreonPreview:
+        return self.bot.get_cog('PatreonPreview')
 
     @property
-    def pixiv(self) -> Pixiv:
-        return self.bot.get_cog('Pixiv')
+    def pixiv(self) -> PixivPreview:
+        return self.bot.get_cog('PixivPreview')
+
+    @property
+    def imgur(self) -> ImgurPreview:
+        return self.bot.get_cog('ImgurPreview')
+
+    @property
+    def deviantart(self) -> DeviantArtPreview:
+        return self.bot.get_cog('DeviantArtPreview')
+
+    @property
+    def reddit(self) -> RedditPreview:
+        return self.bot.get_cog('RedditPreview')
 
     @commands.command(name='danbooru', aliases=['dan'])
     async def search_danbooru(self, ctx, *, tags: str):
@@ -68,11 +86,11 @@ class ImageBoard(commands.Cog):
             case 'sankaku':
                 await self.gallery.display_static(msg.channel, url, board='sankaku', guide=guide, only_missing_preview=only_missing_preview)
             case 'deviantart':
-                await self.gallery.get_deviantart_post(msg, url)
+                await self.deviantart.get_deviantart_post(msg, url)
             case 'imgur':
-                await self.gallery.get_imgur_gallery(msg, url)
+                await self.imgur.get_imgur_gallery(msg, url)
             case 'reddit':
-                await self.gallery.get_reddit_gallery(msg, url, guide=guide)
+                await self.reddit.get_reddit_gallery(msg, url, guide=guide)
             case 'patreon':
                 await self.patreon.get_patreon_gallery(msg, url)
             case _:
@@ -82,7 +100,7 @@ class ImageBoard(commands.Cog):
         """Show multiple galleries that share one common element as one"""
         match board:
             case 'deviantart':
-                await self.gallery.get_deviantart_posts(msg, urls)
+                await self.deviantart.get_deviantart_posts(msg, urls)
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         if isinstance(error, commands.MissingRequiredArgument):

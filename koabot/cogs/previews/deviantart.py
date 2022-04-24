@@ -16,10 +16,13 @@ class DeviantArtPreview(SitePreview):
     def __init__(self, bot: KBot) -> None:
         super().__init__(bot)
 
+    def get_id(self, url: str) -> str:
+        return post_core.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')
+
     async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch post from deviantart"""
 
-        if not (post_id := post_core.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')):
+        if not (post_id := self.get_id(url)):
             return
 
         # TODO: Implement oEmbed if it looks possible! json responses are extremely shorter!
@@ -51,7 +54,6 @@ class DeviantArtPreview(SitePreview):
 
     async def get_deviantart_posts(self, msg: discord.Message, urls: list[str]):
         """Automatically fetch multiple posts from deviantart"""
-
         title_to_test_against = urls[0].split('/')[-1].rsplit('-', maxsplit=1)[0]
         similarity_ratio = 0
         for url in urls[1:]:
@@ -67,20 +69,22 @@ class DeviantArtPreview(SitePreview):
         base_type: str = None
         api_results = []
         for url in urls:
-            if not (post_id := post_core.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')):
+            if not (post_id := self.get_id(url)):
                 return
 
             search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
-            api_result = (await net_core.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
+            err_msg = f"Error fetching DA post #{post_id}"
+            api_result = (await net_core.http_request(search_url, json=True, err_msg=err_msg)).json
 
             deviation = api_result['deviation']
+            deviation_type = deviation['type']
 
             if base_type is None:
-                base_type = deviation['type']
+                base_type = deviation_type
 
-            if deviation['type'] != base_type:
+            if deviation_type != base_type:
                 print("Preview not available. Deviation types differ.")
-                return
+                return None
 
             api_results.append(api_result)
 
@@ -143,16 +147,10 @@ class DeviantArtPreview(SitePreview):
                 valid_types = ["gif", "preview"]
                 for media_type in deviation_media['types']:
                     match media_type['t']:
-                        case "gif":
-                            if "gif" not in valid_types:
-                                continue
-
+                        case "gif" if "gif" not in valid_types:
                             valid_types = valid_types[:valid_types.index("gif")]
                             image_url = media_type['b']
-                        case "preview":
-                            if "preview" not in valid_types:
-                                continue
-
+                        case "preview" if "preview" not in valid_types:
                             valid_types = valid_types[:valid_types.index("preview")]
                             preview_url = media_type['c'].replace('<prettyName>', pretty_name)
                             preview_url = preview_url.replace(',q_80', ',q_100')

@@ -1,8 +1,8 @@
 """All about reaction roles"""
 import json
-import os
 import re
 import timeit
+from pathlib import Path
 
 import discord
 import emoji
@@ -32,13 +32,16 @@ class ReactionRoles(commands.Cog):
         self.spam_limit = 12
 
         # load reaction role binds
-        file_path = os.path.join(self.bot.DATA_DIR, 'binds.json')
-        if os.path.isfile(file_path):
-            with open(file_path, 'r', encoding="UTF-8") as json_file:
-                j_data = json.load(json_file)
+        binds_file = Path(self.bot.DATA_DIR, "binds.json")
+        if not binds_file.exists():
+            binds_file.touch()
+            return
 
-                for message_id, v in j_data.items():
-                    self.add_rr_watch(message_id, v['channel_id'], v['links'])
+        with open(binds_file, 'r', encoding="UTF-8") as json_file:
+            j_data = json.load(json_file)
+
+            for message_id, v in j_data.items():
+                self.add_rr_watch(message_id, v['channel_id'], v['links'])
 
     @property
     def botstatus(self) -> BotStatus:
@@ -280,13 +283,13 @@ class ReactionRoles(commands.Cog):
         if not tmp_root['links']:
             return await ctx.send(self.botstatus.get_quote('rr_save_cannot_save_empty'))
 
-        print('Saving bind...')
+        print("Saving bind...")
         bind_channel = tmp_root['bind_channel']
         bind_message = tmp_root['bind_message']
         links = tmp_root['links']
 
-        file_name = 'binds.json'
-        file_path = os.path.join(self.bot.DATA_DIR, file_name)
+        file_name = "binds.json"
+        binds_file = Path(self.bot.DATA_DIR, file_name)
 
         self.add_rr_watch(bind_message, bind_channel, links)
 
@@ -301,11 +304,11 @@ class ReactionRoles(commands.Cog):
 
         # TODO: Possible optimization: don't open the file twice if possible
         # create file if it doesn't exist
-        if not os.path.isfile(file_path):
-            with open(file_path, 'w', encoding="UTF-8") as json_file:
+        if not binds_file.exists():
+            with open(binds_file, 'w', encoding="UTF-8") as json_file:
                 json_file.write('{}')
 
-        with open(file_path, 'r+', encoding="UTF-8") as json_file:
+        with open(binds_file, 'r+', encoding="UTF-8") as json_file:
             tmp_obj = {}
             tmp_obj['channel_id'] = bind_channel
             tmp_obj['links'] = links
@@ -323,7 +326,7 @@ class ReactionRoles(commands.Cog):
 
         self.rr_temporary_list.pop(bind_tag)
 
-        await ctx.send('Registration complete!')
+        await ctx.send("Registration complete!")
 
     @reaction_roles.command(aliases=['quit', 'exit', 'stop'])
     async def cancel(self, ctx: commands.Context) -> None:

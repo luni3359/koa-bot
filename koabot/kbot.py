@@ -11,8 +11,8 @@ from discord.ext import commands
 
 class BaseDirectory(Enum):
     PROJECT_NAME = 1
-    SOURCE_DIR = 2
-    PROJECT_DIR = 3
+    PROJECT_DIR = 2
+    MODULE_DIR = 3
     DATA_DIR = 4
     CONFIG_DIR = 5
     CACHE_DIR = 6
@@ -28,11 +28,11 @@ class KBot(commands.Bot):
         self.isconnected: bool = False
 
         self.PROJECT_NAME: str = None
-        self.SOURCE_DIR: Path = None
         self.PROJECT_DIR: Path = None
-        self.DATA_DIR: str = None
-        self.CONFIG_DIR: str = None
-        self.CACHE_DIR: str = None
+        self.MODULE_DIR: Path = None
+        self.DATA_DIR: Path = None
+        self.CONFIG_DIR: Path = None
+        self.CACHE_DIR: Path = None
 
     async def setup_hook(self):
         print(f'Logged in to Discord  [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
@@ -43,12 +43,12 @@ class KBot(commands.Bot):
 
     def set_base_directory(self, directory: BaseDirectory, value: str | Path) -> None:
         match directory:
-            case BaseDirectory.SOURCE_DIR:
-                self.SOURCE_DIR = value
             case BaseDirectory.PROJECT_NAME:
-                self.PROJECT_NAME = value
+                self.PROJECT_NAME = value  # this is the only string value
             case BaseDirectory.PROJECT_DIR:
                 self.PROJECT_DIR = value
+            case BaseDirectory.MODULE_DIR:
+                self.MODULE_DIR = value
             case BaseDirectory.DATA_DIR:
                 self.DATA_DIR = value
             case BaseDirectory.CONFIG_DIR:
@@ -60,7 +60,7 @@ class KBot(commands.Bot):
         """Recursively load all cogs in the project"""
         print("Loading cogs in project...")
 
-        extension_dirs = [Path(self.SOURCE_DIR, "core"), Path(self.SOURCE_DIR, "cogs")]
+        extension_dirs = [Path(self.MODULE_DIR, "core"), Path(self.MODULE_DIR, "cogs")]
 
         start_load_time = timeit.default_timer()
         module_list: list[str] = []

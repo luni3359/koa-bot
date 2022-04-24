@@ -14,23 +14,23 @@ from discord.ext import commands
 
 from koabot.kbot import BaseDirectory, KBot
 
-SOURCE_DIR = Path(__file__).resolve().parent
-PROJECT_DIR = SOURCE_DIR.parent
+MODULE_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = MODULE_DIR.parent
 PROJECT_NAME = PROJECT_DIR.name
 
-DATA_DIR = appdirs.user_data_dir(PROJECT_NAME)
-CONFIG_DIR = appdirs.user_config_dir(PROJECT_NAME)
-CACHE_DIR = appdirs.user_cache_dir(PROJECT_NAME)
+DATA_DIR = Path(appdirs.user_data_dir(PROJECT_NAME))
+CONFIG_DIR = Path(appdirs.user_config_dir(PROJECT_NAME))
+CACHE_DIR = Path(appdirs.user_cache_dir(PROJECT_NAME))
 
 # Create base directories if they're missing
 for base_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
-    os.makedirs(base_dir, exist_ok=True)
+    base_dir.mkdir(exist_ok=True)
 
 
 def set_base_directories(bot: KBot):
     bot.set_base_directory(BaseDirectory.PROJECT_NAME, PROJECT_NAME)
-    bot.set_base_directory(BaseDirectory.SOURCE_DIR, SOURCE_DIR)
     bot.set_base_directory(BaseDirectory.PROJECT_DIR, PROJECT_DIR)
+    bot.set_base_directory(BaseDirectory.MODULE_DIR, MODULE_DIR)
     bot.set_base_directory(BaseDirectory.DATA_DIR, DATA_DIR)
     bot.set_base_directory(BaseDirectory.CONFIG_DIR, CONFIG_DIR)
     bot.set_base_directory(BaseDirectory.CACHE_DIR, CACHE_DIR)
@@ -78,7 +78,8 @@ async def main():
 
     for filename in data_filenames:
         try:
-            with open(os.path.join(CONFIG_DIR, filename), encoding="UTF-8") as json_file:
+            config_file = Path(CONFIG_DIR, filename)
+            with open(config_file, encoding="UTF-8") as json_file:
                 bot_data.update(commentjson.load(json_file))
         except FileNotFoundError as e:
             print(e)
@@ -89,7 +90,8 @@ async def main():
     start_load_time = timeit.default_timer()
 
     try:
-        bot.sqlite_conn = sqlite3.connect(os.path.join(CACHE_DIR, "dbBeta.sqlite3"))
+        db_file = Path(CACHE_DIR, "dbBeta.sqlite3")
+        bot.sqlite_conn = sqlite3.connect(db_file)
 
         # Generate tables in database
         with open("db/database.sql", encoding="UTF-8") as f:

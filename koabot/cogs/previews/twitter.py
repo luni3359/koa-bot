@@ -46,6 +46,33 @@ class TwitterPreview(SitePreview):
             print(e)
         return None
 
+    async def check_applicable_tweet(self, msg: discord.Message, guide: dict, url: str, tweet):
+        if not hasattr(tweet, 'extended_entities'):
+            print("Twitter preview not applicable. (No extended entities)")
+            return False
+
+        if len((tweet_ee_media := tweet.extended_entities['media'])) == 1:
+            match tweet_ee_media[0]['type']:
+                case 'photo':
+                    if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
+                        print("Twitter preview not applicable. (Media photo is sfw)")
+                        return False
+
+                    # TODO: There's got to be a better way...
+                    if guide['embed']['footer_text'] == "TwitFix":
+                        print("Twitter preview not applicable. (Handled by TwitFix)")
+                        return False
+
+                case _:  # 'video' or 'animated_gif'
+                    if guide['embed']['footer_text'] == "TwitFix":
+                        print("Twitter preview not applicable. (Handled by TwitFix)")
+
+                    if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
+                        fixed_url = url.replace("twitter", "fxtwitter", 1)
+                        await msg.reply(content=fixed_url, mention_author=False)
+                    return False
+        return True
+
     async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict = None) -> None:
         """Automatically fetch and post any image galleries from twitter
         Arguments:
@@ -65,47 +92,26 @@ class TwitterPreview(SitePreview):
         if not (tweet := self.get_tweet(post_id)):
             return
 
-        if not hasattr(tweet, 'extended_entities'):
-            return print("Twitter preview not applicable. (No extended entities)")
-
-        if len((tweet_ee_media := tweet.extended_entities['media'])) == 1:
-            match tweet_ee_media[0]['type']:
-                case 'photo':
-                    if not hasattr(tweet, 'possibly_sensitive') or not tweet.possibly_sensitive:
-                        return print("Twitter preview not applicable. (Media photo is sfw)")
-
-                    # TODO: There's got to be a better way...
-                    if guide['embed']['footer_text'] == "TwitFix":
-                        return print("Twitter preview not applicable. (Handled by TwitFix)")
-
-                case _:  # 'video' or 'animated_gif'
-                    if guide['embed']['footer_text'] == "TwitFix":
-                        return print("Twitter preview not applicable. (Handled by TwitFix)")
-
-                    if hasattr(tweet, 'possibly_sensitive') and tweet.possibly_sensitive:
-                        fixed_url = url.replace("twitter", "fxtwitter", 1)
-                        await msg.reply(content=fixed_url, mention_author=False)
-
-                    return
+        if not await self.check_applicable_tweet(msg, guide, url, tweet):
+            return
 
         # Appending :orig to get a better image quality
-        gallery_pics = [f"{picture['media_url_https']}:orig" for picture in tweet_ee_media]
+        gallery_pics = [f"{picture['media_url_https']}:orig" for picture in tweet.extended_entities['media']]
 
         embed_group = EmbedGroup()
         embed_group.color = discord.Colour(int(guide['embed']['color'], 16))
 
-        # If it's the first picture to show, add author, body, and counters
-        if (tw_likes := tweet.favorite_count) > 0:
-            embed_group.first.add_field(name='Likes', value=f"{tw_likes:,}")
-        if (tw_retweets := tweet.retweet_count) > 0:
-            embed_group.first.add_field(name='Retweets', value=f"{tw_retweets:,}")
-
+        # If it's the first picture to show then add author, body, and counters
         embed_group.first.set_author(
             name=f'{tweet.author.name} (@{tweet.author.screen_name})',
             url=guide['post']['url'].format(tweet.author.screen_name),
             icon_url=tweet.author.profile_image_url_https)
 
-        # int, int = list[int] (2 elements)
+        if (tw_likes := tweet.favorite_count) > 0:
+            embed_group.first.add_field(name='Likes', value=f"{tw_likes:,}")
+        if (tw_retweets := tweet.retweet_count) > 0:
+            embed_group.first.add_field(name='Retweets', value=f"{tw_retweets:,}")
+
         range_start, range_end = tweet.display_text_range
         embed_group.first.description = html.unescape(tweet.full_text[range_start:range_end])
 

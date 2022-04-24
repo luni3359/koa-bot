@@ -1,8 +1,8 @@
 """Music functions!"""
 import asyncio
-import os
 import random
 import re
+from pathlib import Path
 
 import discord
 import yt_dlp as youtube_dl
@@ -136,8 +136,8 @@ class Music(commands.Cog):
         # join a voice channel
         await ctx.invoke(self.bot.get_command('join'))
 
-        source = discord.FFmpegPCMAudio(os.path.join(self.bot.SOURCE_DIR, 'assets',
-                                        self.bot.testing['vc']['music-file']))
+        music_file = Path(self.bot.MODULE_DIR, "assets", self.bot.testing['vc']['music-file'])
+        source = discord.FFmpegPCMAudio(music_file)
         voice_client: discord.VoiceClient = ctx.voice_client
 
         print("playing music now!")

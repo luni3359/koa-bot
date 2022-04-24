@@ -15,14 +15,34 @@ class RedditPreview(SitePreview):
 
     @property
     def reddit_api(self) -> asyncpraw.Reddit:
-        if not self._reddit_api:
-            rdt_keys = self.bot.auth_keys['reddit']
-            self._reddit_api = asyncpraw.Reddit(client_id=rdt_keys['client_id'],
-                                                client_secret=rdt_keys['client_secret'],
-                                                username=rdt_keys['username'],
-                                                password=rdt_keys['password'],
-                                                user_agent=rdt_keys['headers']['User-Agent'])
+        if self._reddit_api:
+            return self._reddit_api
+
+        credentials = self.bot.auth_keys['reddit']
+        self._reddit_api = asyncpraw.Reddit(client_id=credentials['client_id'],
+                                            client_secret=credentials['client_secret'],
+                                            username=credentials['username'],
+                                            password=credentials['password'],
+                                            user_agent=credentials['headers']['User-Agent'])
         return self._reddit_api
+
+    def submission_is_video(self, submission: Submission):
+        is_video = False
+        if submission.is_video:
+            is_video = True
+            print("Preview preview not applicable. (reddit hosted video)")
+        elif hasattr(submission, 'post_hint'):
+            match submission.post_hint:
+                case "hosted:video":
+                    is_video = True
+                    print("Preview preview not applicable. (reddit hosted video)")
+                case "rich:video":
+                    is_video = True
+                    print("Preview preview not applicable. (rich video)")
+        return is_video
+
+    def get_subreddit_icon(self, subreddit: Subreddit):
+        return subreddit.community_icon if subreddit.community_icon else subreddit.icon_img
 
     async def get_reddit_gallery(self, msg: discord.Message, url: str, /, *, guide: dict):
         """Automatically post Reddit galleries whenever possible"""
@@ -30,24 +50,16 @@ class RedditPreview(SitePreview):
         submission: Submission = await self.reddit_api.submission(url=url)
 
         # Don't override videos
-        if submission.is_video:
-            return print("Preview preview not applicable. (reddit hosted video)")
-        elif hasattr(submission, 'post_hint'):
-            match submission.post_hint:
-                case "hosted:video":
-                    return print("Preview preview not applicable. (reddit hosted video)")
-                case "rich:video":
-                    return print("Preview preview not applicable. (rich video)")
+        if self.submission_is_video(submission):
+            return
 
         subreddit: Subreddit = submission.subreddit
         await subreddit.load()
 
-        subreddit_icon = subreddit.community_icon if subreddit.community_icon else subreddit.icon_img
-
         header_embed = discord.Embed()
         header_embed.set_author(name=submission.subreddit_name_prefixed,
                                 url=f"{reddit_url_prefix}/{submission.subreddit_name_prefixed}",
-                                icon_url=subreddit_icon)
+                                icon_url=self.get_subreddit_icon(subreddit))
         header_embed.title = submission.title
         header_embed.url = f"{reddit_url_prefix}{submission.permalink}"
         header_embed.add_field(name='Score', value=f"{submission.score:,}")

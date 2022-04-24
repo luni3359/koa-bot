@@ -1,7 +1,7 @@
 """Commands for streaming services like Twitch and Picarto"""
-import os
 import re
 from io import BytesIO
+from pathlib import Path
 
 import discord
 from discord.ext import commands
@@ -66,11 +66,11 @@ class StreamService(commands.Cog):
         """
         twitch_access_token: str = None
         token_filename = 'access_token'
-        twitch_cache_dir = os.path.join(self.bot.CACHE_DIR, 'twitch')
-        token_path = os.path.join(twitch_cache_dir, token_filename)
+        twitch_cache_dir = Path(self.bot.CACHE_DIR, "twitch")
+        token_path = Path(twitch_cache_dir, token_filename)
 
         # if the file exists
-        if os.path.exists(token_path) and not force:
+        if token_path.exists() and not force:
             with open(token_path, encoding="UTF-8") as token_file:
                 twitch_access_token = token_file.readline()
 
@@ -81,9 +81,9 @@ class StreamService(commands.Cog):
                 'client_id': twitch_keys['client_id'],
                 'client_secret':  twitch_keys['client_secret'],
                 'grant_type': 'client_credentials'}
-            response = (await net_core.http_request(url, post=True, data=data, json=True)).json
 
-            os.makedirs(twitch_cache_dir, exist_ok=True)
+            twitch_cache_dir.mkdir(exist_ok=True)
+            response = (await net_core.http_request(url, post=True, data=data, json=True)).json
 
             with open(token_path, 'w', encoding="UTF-8") as token_file:
                 twitch_access_token = response['access_token']

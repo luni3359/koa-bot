@@ -1,12 +1,12 @@
 import discord
 
 import koabot.core.posts as post_core
-from koabot.core.previews import SitePreview
+from koabot.core.base import Site
 from koabot.kbot import KBot
 
 
-class PatreonPreview(SitePreview):
-    """Patreon site preview"""
+class SitePatreon(Site):
+    """Patreon operations handler"""
 
     def __init__(self, bot: KBot) -> None:
         super().__init__(bot)
@@ -21,4 +21,4 @@ class PatreonPreview(SitePreview):
 
 async def setup(bot: KBot):
     """Initiate cog"""
-    await bot.add_cog(PatreonPreview(bot))
+    await bot.add_cog(SitePatreon(bot))

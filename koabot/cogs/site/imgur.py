@@ -2,12 +2,12 @@ import discord
 
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
-from koabot.core.previews import SitePreview
+from koabot.core.base import Site
 from koabot.kbot import KBot
 
 
-class ImgurPreview(SitePreview):
-    """Imgur site preview"""
+class SiteImgur(Site):
+    """Imgur operations handler"""
 
     def __init__(self, bot: KBot) -> None:
         super().__init__(bot)
@@ -54,4 +54,4 @@ class ImgurPreview(SitePreview):
 
 async def setup(bot: KBot):
     """Initiate cog"""
-    await bot.add_cog(ImgurPreview(bot))
+    await bot.add_cog(SiteImgur(bot))

@@ -5,13 +5,13 @@ from thefuzz import fuzz
 
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
-from koabot.core.previews import SitePreview
+from koabot.core.base import Site
 from koabot.kbot import KBot
 from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
 
-class DeviantArtPreview(SitePreview):
-    """DeviantArt site preview"""
+class SiteDeviantArt(Site):
+    """DeviantArt operations handler"""
 
     def __init__(self, bot: KBot) -> None:
         super().__init__(bot)
@@ -206,4 +206,4 @@ class DeviantArtPreview(SitePreview):
 
 async def setup(bot: KBot):
     """Initiate cog"""
-    await bot.add_cog(DeviantArtPreview(bot))
+    await bot.add_cog(SiteDeviantArt(bot))

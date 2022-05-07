@@ -1,17 +1,16 @@
-import datetime
 import html
 
 import discord
 import tweepy
 
 import koabot.core.posts as post_core
+from koabot.core.base import Site
 from koabot.core.embed import EmbedGroup
-from koabot.core.previews import SitePreview
 from koabot.kbot import KBot
 
 
-class TwitterPreview(SitePreview):
-    """Twitter site preview"""
+class SiteTwitter(Site):
+    """Twitter operations handler"""
 
     def __init__(self, bot: KBot) -> None:
         super().__init__(bot)
@@ -140,4 +139,4 @@ class TwitterPreview(SitePreview):
 
 async def setup(bot: KBot):
     """Initiate cog"""
-    await bot.add_cog(TwitterPreview(bot))
+    await bot.add_cog(SiteTwitter(bot))

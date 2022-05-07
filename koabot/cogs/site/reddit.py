@@ -2,12 +2,12 @@ import asyncpraw
 import discord
 from asyncpraw.reddit import Submission, Subreddit
 
-from koabot.core.previews import SitePreview
+from koabot.core.base import Site
 from koabot.kbot import KBot
 
 
-class RedditPreview(SitePreview):
-    """Reddit site preview"""
+class SiteReddit(Site):
+    """Reddit operations handler"""
 
     def __init__(self, bot: KBot) -> None:
         super().__init__(bot)
@@ -145,4 +145,4 @@ class RedditPreview(SitePreview):
 
 async def setup(bot: KBot):
     """Initiate cog"""
-    await bot.add_cog(RedditPreview(bot))
+    await bot.add_cog(SiteReddit(bot))

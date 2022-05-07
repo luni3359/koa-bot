@@ -1,25 +1,13 @@
-from discord.ext import commands
+# class PreviewHandler(commands.Cog):
+#     """"""
 
-from koabot.cogs.botstatus import BotStatus
-from koabot.cogs.handler.board import Board
-from koabot.kbot import KBot
+#     def __init__(self) -> None:
+#         self.supported_sites: list[SitePreview] = [
+#             ""
+#         ]
 
-
-class SitePreview(commands.Cog):
-    """Site preview"""
-
-    def __init__(self, bot: KBot) -> None:
-        self.bot = bot
-
-    @property
-    def board(self) -> Board:
-        return self.bot.get_cog('Board')
-
-    @property
-    def botstatus(self) -> BotStatus:
-        return self.bot.get_cog('BotStatus')
-
-
-async def setup(bot: KBot):
-    """Initiate cog"""
-    await bot.add_cog(SitePreview(bot))
+#     @staticmethod
+#     def load_sites():
+#         pass
+#     def get_preview(url):
+#         pass

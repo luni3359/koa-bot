@@ -5,12 +5,12 @@ from discord.ext import commands
 from koabot.cogs.botstatus import BotStatus
 from koabot.cogs.handler.board import Board
 from koabot.cogs.handler.gallery import Gallery
-from koabot.cogs.previews.deviantart import DeviantArtPreview
-from koabot.cogs.previews.imgur import ImgurPreview
-from koabot.cogs.previews.patreon import PatreonPreview
-from koabot.cogs.previews.pixiv import PixivPreview
-from koabot.cogs.previews.reddit import RedditPreview
-from koabot.cogs.previews.twitter import TwitterPreview
+from koabot.cogs.site.deviantart import SiteDeviantArt
+from koabot.cogs.site.imgur import SiteImgur
+from koabot.cogs.site.patreon import SitePatreon
+from koabot.cogs.site.pixiv import SitePixiv
+from koabot.cogs.site.reddit import SiteReddit
+from koabot.cogs.site.twitter import SiteTwitter
 from koabot.kbot import KBot
 
 
@@ -33,28 +33,28 @@ class ImageBoard(commands.Cog):
         return self.bot.get_cog('BotStatus')
 
     @property
-    def twitter(self) -> TwitterPreview:
-        return self.bot.get_cog('TwitterPreview')
+    def twitter(self) -> SiteTwitter:
+        return self.bot.get_cog('SiteTwitter')
 
     @property
-    def patreon(self) -> PatreonPreview:
-        return self.bot.get_cog('PatreonPreview')
+    def patreon(self) -> SitePatreon:
+        return self.bot.get_cog('SitePatreon')
 
     @property
-    def pixiv(self) -> PixivPreview:
-        return self.bot.get_cog('PixivPreview')
+    def pixiv(self) -> SitePixiv:
+        return self.bot.get_cog('SitePixiv')
 
     @property
-    def imgur(self) -> ImgurPreview:
-        return self.bot.get_cog('ImgurPreview')
+    def imgur(self) -> SiteImgur:
+        return self.bot.get_cog('SiteImgur')
 
     @property
-    def deviantart(self) -> DeviantArtPreview:
-        return self.bot.get_cog('DeviantArtPreview')
+    def deviantart(self) -> SiteDeviantArt:
+        return self.bot.get_cog('SiteDeviantArt')
 
     @property
-    def reddit(self) -> RedditPreview:
-        return self.bot.get_cog('RedditPreview')
+    def reddit(self) -> SiteReddit:
+        return self.bot.get_cog('SiteReddit')
 
     @commands.command(name='danbooru', aliases=['dan'])
     async def search_danbooru(self, ctx, *, tags: str):

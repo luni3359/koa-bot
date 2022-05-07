@@ -206,7 +206,7 @@ class BotEvents(commands.Cog):
         url_matches_found = self.find_urls(msg.content)
 
         if (parsed_galleries := await self.parse_galleries(msg, url_matches_found, prefix_start)):
-            await self.send_galleries(msg, parsed_galleries, not prefix_start)
+            await self.send_previews(msg, parsed_galleries, not prefix_start)
 
         # checking if a command has been issued
         if prefix_start:
@@ -322,11 +322,11 @@ class BotEvents(commands.Cog):
 
         return parsed_galleries
 
-    async def send_galleries(self, msg: discord.Message, parsed_galleries: list[MatchGroup], only_missing_preview: bool) -> None:
+    async def send_previews(self, msg: discord.Message, parsed_galleries: list[MatchGroup], only_if_missing: bool) -> None:
         # post gallery only if there's one to show...
         if len(parsed_galleries) == 1:
             gallery = parsed_galleries[0]
-            await self.imageboard.show_gallery(msg, gallery.url, board=gallery.group, guide=gallery.guide, only_missing_preview=only_missing_preview)
+            await self.imageboard.show_preview(msg, gallery.url, board=gallery.group, guide=gallery.guide, only_if_missing=only_if_missing)
 
         elif len(parsed_galleries) > 1:
             common_domain = parsed_galleries[0].group
@@ -339,7 +339,7 @@ class BotEvents(commands.Cog):
             if common_domain:
                 guide = parsed_galleries[0].guide
                 gallery_urls: list[str] = [e.url for e in parsed_galleries]
-                await self.imageboard.show_combined_gallery(msg, gallery_urls, board=common_domain, guide=guide, only_missing_preview=only_missing_preview)
+                await self.imageboard.show_combined_preview(msg, gallery_urls, board=common_domain, guide=guide, only_if_missing=only_if_missing)
 
     def command_was_issued(self, msg: discord.Message) -> bool:
         if (command_name_regex := COMMAND_PATTERN.search(msg.content)):

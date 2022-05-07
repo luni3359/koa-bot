@@ -89,14 +89,14 @@ class SitePixiv(Site):
             print("Uploading from cache...")
             pixiv_helper.add_file(image_path, filename)
 
-    async def get_pixiv_gallery(self, msg: discord.Message, url: str, /, *, only_missing_preview: bool = False) -> None:
+    async def get_pixiv_gallery(self, msg: discord.Message, url: str, /, *, only_if_missing: bool = False) -> None:
         """Automatically fetch and post any image galleries from pixiv
         Arguments:
             msg::discord.Message
                 The message where the link was sent
             url::str
                 Link of the pixiv post
-            only_missing_preview::bool
+            only_if_missing::bool
                 Only shows a preview if the native embed is missing from the original link. Default is False
         """
         if not (post_id := self.get_id(url)):
@@ -127,7 +127,7 @@ class SitePixiv(Site):
         async with msg.channel.typing():
             total_illust_pictures = illust.page_count
             pictures = illust.meta_pages if total_illust_pictures > 1 else [illust]
-            total_to_preview = 1 if only_missing_preview else 5
+            total_to_preview = 1 if only_if_missing else 5
 
             pixiv_helper = PixivHelper()
             pictures = pictures[:total_to_preview]

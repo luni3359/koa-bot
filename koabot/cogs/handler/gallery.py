@@ -38,7 +38,7 @@ class Gallery(commands.Cog):
     def botstatus(self) -> BotStatus:
         return self.bot.get_cog('BotStatus')
 
-    async def display_static(self, channel: discord.TextChannel, url: str, /, *, board: str = 'danbooru', guide: dict, only_missing_preview: bool = False) -> None:
+    async def display_static(self, channel: discord.TextChannel, url: str, /, *, board: str = 'danbooru', guide: dict, only_if_missing: bool = False) -> None:
         """Display posts from a gallery in separate unmodifiable embeds
         Arguments:
             channel::discord.TextChannel
@@ -50,7 +50,7 @@ class Gallery(commands.Cog):
                 Name of the board to handle. Default is 'danbooru'
             guide::dict
                 The data which holds the board information
-            only_missing_preview::bool
+            only_if_missing::bool
                 Only shows a preview if the native embed is missing from the original link. Default is False
         """
         if not guide:
@@ -105,7 +105,7 @@ class Gallery(commands.Cog):
                 c_search = f'parent:{post_id} order:id -id:{post_id}'
                 p_search = f'parent:{parent_id} order:id -id:{post_id}'
 
-        if only_missing_preview:
+        if only_if_missing:
             if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
                 await board_cog.send_posts(channel, post, board=board, guide=guide)
             return

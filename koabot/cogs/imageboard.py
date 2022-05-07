@@ -72,19 +72,19 @@ class ImageBoard(commands.Cog):
         """Search on sankaku!"""
         await self.board.search_board(ctx, tags, board='sankaku', guide=self.bot.guides['gallery']['sankaku-show'], hide_posts_remaining=True)
 
-    async def show_gallery(self, msg: discord.Message, url: str, /, *, board: str, guide: dict, only_missing_preview: bool = False):
-        """Show a gallery"""
+    async def show_preview(self, msg: discord.Message, url: str, /, *, board: str, guide: dict, only_if_missing: bool = False):
+        """Show a preview"""
         match board:
             case 'danbooru':
-                await self.gallery.display_static(msg.channel, url, guide=guide, only_missing_preview=only_missing_preview)
+                await self.gallery.display_static(msg.channel, url, guide=guide, only_if_missing=only_if_missing)
             case 'e621':
-                await self.gallery.display_static(msg.channel, url, board='e621', guide=guide, only_missing_preview=only_missing_preview)
+                await self.gallery.display_static(msg.channel, url, board='e621', guide=guide, only_if_missing=only_if_missing)
             case 'twitter':
                 await self.twitter.get_twitter_gallery(msg, url, guide=guide)
             case 'pixiv':
-                await self.pixiv.get_pixiv_gallery(msg, url, only_missing_preview=only_missing_preview)
+                await self.pixiv.get_pixiv_gallery(msg, url, only_if_missing=only_if_missing)
             case 'sankaku':
-                await self.gallery.display_static(msg.channel, url, board='sankaku', guide=guide, only_missing_preview=only_missing_preview)
+                await self.gallery.display_static(msg.channel, url, board='sankaku', guide=guide, only_if_missing=only_if_missing)
             case 'deviantart':
                 await self.deviantart.get_deviantart_post(msg, url)
             case 'imgur':
@@ -96,8 +96,8 @@ class ImageBoard(commands.Cog):
             case _:
                 raise ValueError(f'Board "{board}" has no gallery entry.')
 
-    async def show_combined_gallery(self, msg: discord.Message, urls: list[str], /, *, board: str, guide: dict, only_missing_preview: bool = False):
-        """Show multiple galleries that share one common element as one"""
+    async def show_combined_preview(self, msg: discord.Message, urls: list[str], /, *, board: str, guide: dict, only_if_missing: bool = False):
+        """Show multiple previews that share one common element as one"""
         match board:
             case 'deviantart':
                 await self.deviantart.get_deviantart_posts(msg, urls)

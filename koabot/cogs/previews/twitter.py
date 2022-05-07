@@ -119,7 +119,7 @@ class TwitterPreview(SitePreview):
         embed_group.last.set_footer(
             text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
             icon_url=self.bot.assets['twitter']['favicon'])
-        embed_group.last.timestamp = datetime.datetime.now(datetime.timezone.utc)
+        embed_group.last.timestamp = tweet.created_at
 
         for picture in gallery_pics:
             embed_group.add().set_image(url=picture)

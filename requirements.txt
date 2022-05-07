@@ -20,7 +20,7 @@ cffi==1.15.0; python_full_version >= "3.8.0" and python_version >= "3.6" and pla
 charset-normalizer==2.0.12; python_full_version >= "3.8.0" and python_version >= "3.7"
 commentjson==0.9.0
 deprecated==1.2.13; python_full_version >= "3.5.3"
-discord.py @ git+https://github.com/Rapptz/discord.py@277d35c ; python_full_version >= "3.8.0"
+discord.py @ git+https://github.com/Rapptz/discord.py@eee65ac ; python_full_version >= "3.8.0"
 docopt==0.6.2
 emoji==1.7.0
 filelock==3.6.0; python_version >= "3.7"
@@ -57,8 +57,8 @@ single-source==0.3.0; python_version >= "3.6" and python_version < "4.0"
 six==1.16.0; python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.3.0" and python_version >= "3.7"
 soupsieve==2.3.2.post1; python_version >= "3.6" and python_full_version >= "3.6.0"
 thefuzz==0.19.0
-tldextract==3.2.1; python_version >= "3.7"
-tweepy==4.8.0; python_version >= "3.7"
+tldextract==3.3.0; python_version >= "3.7"
+tweepy==4.9.0; python_version >= "3.7"
 typing-extensions==4.2.0; python_version >= "3.7"
 update-checker==0.18.0; python_version >= "3.6"
 urllib3==1.26.9; python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version < "4" and python_version >= "3.7"

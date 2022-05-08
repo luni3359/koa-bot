@@ -1,5 +1,6 @@
 """The main bot class"""
 import os
+import re
 import sqlite3
 import timeit
 from datetime import datetime
@@ -8,6 +9,7 @@ from pathlib import Path
 
 import discord
 from discord.ext import commands
+from tqdm import tqdm
 
 
 class BaseDirectory(Enum):
@@ -71,33 +73,41 @@ class KBot(commands.Bot):
                 if child.suffix == ".py":
                     filename = child.stem
 
-                    if filename == "__init__":
+                    if re.search(r'__.*__', filename):
+                        # file is __init__ or __main__
                         continue
 
                     relative_path = child.relative_to(self.PROJECT_DIR)
                     path_as_import = str(relative_path.with_suffix('')).replace(os.sep, '.')
                     module_list.append(path_as_import)
 
-        dropped_cogs = 0
-        for module in module_list:
+        skipped_cogs: int = 0
+        dropped_cogs: list = []
+
+        for module in tqdm(module_list, ncols=75):
             try:
-                print(f"Loading \"{module}\"...".ljust(40), end='\r')
+                # print(f"Loading \"{module}\"...".ljust(40), end='\r')
                 await self.load_extension(module)
             except commands.errors.ExtensionFailed as e:
-                dropped_cogs += 1
-                print(e)
-                print(f"Failed to load \"{module}\".")
+                dropped_cogs.append([module, e])
+                # print(e)
+                # print(f"Failed to load \"{module}\".")
             except commands.errors.NoEntryPointError as e:
-                print(f"Skipping \"{module}\" (not a module)")
+                skipped_cogs += 1
+                # print(f"Skipping \"{module}\" (not a module)")
 
         time_to_finish = timeit.default_timer() - start_load_time
+        loaded_cogs = len(module_list) - skipped_cogs
 
-        if dropped_cogs == 0:
-            log_msg = f"Finished loading {len(module_list)} cogs in {time_to_finish:0.2f}s."
+        if not dropped_cogs:
+            log_msg = f"Finished loading {loaded_cogs} cogs in {time_to_finish:0.2f}s."
         else:
-            log_msg = f"WARNING: Only {len(module_list)-dropped_cogs} out of {len(module_list)} cogs loaded successfully (in {time_to_finish:0.2f}s)."
+            log_msg = f"WARNING: Only {loaded_cogs - len(dropped_cogs)} out of {loaded_cogs} cogs loaded successfully (in {time_to_finish:0.2f}s)."
 
-        print(log_msg.ljust(40))
+            for name, error in dropped_cogs:
+                log_msg += f"\nModule: {name}\n{error}"
+
+        print(log_msg)
 
 
 async def debug_check(ctx: commands.Context) -> bool:

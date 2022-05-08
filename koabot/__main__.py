@@ -10,7 +10,6 @@ from sys import argv
 import appdirs
 import commentjson
 import discord
-from discord.ext import commands
 
 from koabot.kbot import BaseDirectory, KBot
 
@@ -22,40 +21,18 @@ DATA_DIR = Path(appdirs.user_data_dir(PROJECT_NAME))
 CONFIG_DIR = Path(appdirs.user_config_dir(PROJECT_NAME))
 CACHE_DIR = Path(appdirs.user_cache_dir(PROJECT_NAME))
 
-# Create base directories if they're missing
-for base_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
-    base_dir.mkdir(exist_ok=True)
-
 
 def set_base_directories(bot: KBot):
+    # Create base directories if they're missing
+    for base_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
+        base_dir.mkdir(exist_ok=True)
+
     bot.set_base_directory(BaseDirectory.PROJECT_NAME, PROJECT_NAME)
     bot.set_base_directory(BaseDirectory.PROJECT_DIR, PROJECT_DIR)
     bot.set_base_directory(BaseDirectory.MODULE_DIR, MODULE_DIR)
     bot.set_base_directory(BaseDirectory.DATA_DIR, DATA_DIR)
     bot.set_base_directory(BaseDirectory.CONFIG_DIR, CONFIG_DIR)
     bot.set_base_directory(BaseDirectory.CACHE_DIR, CACHE_DIR)
-
-
-async def debug_check(ctx: commands.Context) -> bool:
-    """Disable live instance for specific users if a beta instance is running"""
-
-    # ignore everything in DMs
-    if ctx.guild is None:
-        return False
-
-    # if the author is not a debug user
-    if ctx.author.id not in bot.testing['debug_users']:
-        return not bot.debug_mode
-
-    if not bot.debug_mode:
-        beta_bot_id = bot.koa['discord_user']['beta_id']
-        beta_bot: discord.Member = ctx.guild.get_member(beta_bot_id)
-
-        # if the beta bot is online
-        if beta_bot and beta_bot.status == discord.Status.online:
-            return False
-
-    return True
 
 
 async def main():
@@ -105,8 +82,6 @@ async def main():
     except sqlite3.Error as e:
         print(e)
         print("Could not connect to the database! Functionality will be limited.")
-
-    bot.add_check(debug_check)
 
     async with bot:
         await bot.load_all_extensions()

@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
+import discord
 from discord.ext import commands
 
 
@@ -36,7 +37,7 @@ class KBot(commands.Bot):
 
     async def setup_hook(self):
         print(f'Logged in to Discord  [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
-
+        self.add_check(debug_check)
         # TODO: For some reason `self.change_presence` is None when this executes
         # Change play status to something fitting
         # await self.change_presence(activity=discord.Game(name=self.get_cog('BotStatus').get_quote('playing_status')))
@@ -97,3 +98,24 @@ class KBot(commands.Bot):
             log_msg = f"WARNING: Only {len(module_list)-dropped_cogs} out of {len(module_list)} cogs loaded successfully (in {time_to_finish:0.2f}s)."
 
         print(log_msg.ljust(40))
+
+
+async def debug_check(ctx: commands.Context) -> bool:
+    """Disable live instance for specific users if a beta instance is running"""
+    # ignore everything in DMs
+    if ctx.guild is None:
+        return False
+
+    # if the author is not a debug user
+    if ctx.author.id not in ctx.bot.testing['debug_users']:
+        return not ctx.bot.debug_mode
+
+    if not ctx.bot.debug_mode:
+        beta_bot_id = ctx.bot.koa['discord_user']['beta_id']
+        beta_bot: discord.Member = ctx.guild.get_member(beta_bot_id)
+
+        # if the beta bot is online
+        if beta_bot and beta_bot.status == discord.Status.online:
+            return False
+
+    return True

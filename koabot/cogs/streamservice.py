@@ -4,11 +4,13 @@ from io import BytesIO
 from pathlib import Path
 
 import discord
+from dataclass_wizard import fromdict
 from discord.ext import commands
 
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
 from koabot.cogs.botstatus import BotStatus
+from koabot.cogs.site.picarto import PicartoChannel
 from koabot.kbot import KBot
 
 
@@ -160,19 +162,21 @@ class StreamService(commands.Cog):
             await channel.send(self.botstatus.get_quote('stream_preview_failed'))
             return False
 
-        if not picarto_request['online']:
+        picarto_request = fromdict(PicartoChannel, picarto_request)
+
+        if not picarto_request.online:
             await channel.send(self.botstatus.get_quote('stream_preview_offline'))
             return False
 
-        image = await net_core.fetch_image(picarto_request['thumbnails']['web'])
-        filename: str = net_core.get_url_filename(picarto_request['thumbnails']['web'])
+        image = await net_core.fetch_image(picarto_request.thumbnails.web)
+        filename: str = net_core.get_url_filename(picarto_request.thumbnails.web)
 
         embed = discord.Embed()
         embed.set_author(
             name=channel_name,
             url=f'https://picarto.tv/{channel_name}',
-            icon_url=picarto_request['avatar'])
-        embed.description = f"**{picarto_request['title']}**"
+            icon_url=picarto_request.avatar)
+        embed.description = f"**{picarto_request.title}**"
         embed.set_image(url=f'attachment://{filename}')
         embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "koa-bot"
-version = "0.22.4"
+version = "0.22.5"
 description = ""
 authors = []
 readme = "README.md"
@@ -44,6 +44,7 @@ Brotli = {version = "*", optional = true}
 asyncpraw = "^7.5.0"
 thefuzz = {extras = ["speedup"], version = "^0.19.0"}
 tqdm = "^4.64.0"
+dataclass-wizard = "^0.22.0"
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.6.0"

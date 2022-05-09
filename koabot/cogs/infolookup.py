@@ -4,12 +4,15 @@ import re
 import urllib
 
 import discord
+from dataclass_wizard import fromdict
 from discord.ext import commands
 from mediawiki import MediaWiki
 from mediawiki import exceptions as MediaExceptions
 
 import koabot.core.net as net_core
 from koabot.cogs.botstatus import BotStatus
+from koabot.cogs.site.jisho import JishoResponse
+from koabot.cogs.site.urbandictionary import UrbanDefineTerm
 from koabot.kbot import KBot
 
 
@@ -135,8 +138,10 @@ class InfoLookup(commands.Cog):
             await ctx.send('Error retrieving data from server.')
             return
 
+        js = fromdict(JishoResponse, js)
+
         # Check if there are any results at all
-        if js['meta']['status'] != 200:
+        if js.meta['status'] != 200:
             return await ctx.send(self.botstatus.get_quote('dictionary_no_results'))
 
         embed = discord.Embed()
@@ -144,23 +149,23 @@ class InfoLookup(commands.Cog):
         embed.url = guide['dictionary_url'] + urllib.parse.quote(search_term)
         dictionary_definitions = ""
 
-        for word in js['data'][:4]:
-            japanese_info = word['japanese'][0]
-            senses_info = word['senses'][0]
+        for word in js.data[:4]:
+            japanese_info = word.japanese[0]
+            senses_info = word.senses[0]
 
-            kanji = japanese_info.get('word', japanese_info.get('reading'))
+            kanji = japanese_info.word if japanese_info.word else japanese_info.reading
             # jlpt_level = ', '.join(word['jlpt'])
-            en_definitions = '; '.join(senses_info['english_definitions'])
-            what_it_is = '; '.join(senses_info['parts_of_speech'])
+            en_definitions = '; '.join(senses_info.english_definitions)
+            what_it_is = '; '.join(senses_info.parts_of_speech)
 
             dictionary_definitions += f'►{kanji}'
 
             # The primary kana reading for this word
-            if (primary_reading := japanese_info.get('reading', None)) and primary_reading != kanji:
+            if (primary_reading := japanese_info.reading if japanese_info.reading else None) and primary_reading != kanji:
                 dictionary_definitions += f'【{primary_reading}】'
 
             # The tags attached to the word i.e. Computing, Medicine, Biology
-            if (tags := '; '.join(senses_info['tags'])):
+            if (tags := '; '.join(senses_info.tags)):
                 dictionary_definitions += f'\n*{tags}*'
 
             dictionary_definitions += f'\n{what_it_is}'
@@ -171,7 +176,7 @@ class InfoLookup(commands.Cog):
 
             dictionary_definitions += f': {en_definitions}'
 
-            if 'info' in senses_info and (definition_clarification := ', '.join(senses_info['info'])):
+            if senses_info.info and (definition_clarification := ', '.join(senses_info.info)):
                 dictionary_definitions += f'\n*{definition_clarification}*'
 
             dictionary_definitions += '\n\n'
@@ -197,8 +202,10 @@ class InfoLookup(commands.Cog):
             await ctx.send('Error retrieving data from server.')
             return
 
+        js = fromdict(UrbanDefineTerm, js)
+
         # Check if there are any results at all
-        if not 'list' in js or not js['list']:
+        if not hasattr(js, 'list') or not js.list:
             return await ctx.send(self.botstatus.get_quote('dictionary_no_results'))
 
         definition_embeds: list[discord.Embed] = []
@@ -209,9 +216,9 @@ class InfoLookup(commands.Cog):
         definition_embeds.append(embed)
         index_placeholder = '<<INDEX>>'
 
-        for i, entry in enumerate(js['list'][:3]):
-            definition = entry['definition']
-            example = entry['example']
+        for i, entry in enumerate(js.list[:3]):
+            definition = entry.definition
+            example = entry.example
 
             string_to_add = f"**{index_placeholder}. {self.strip_dictionary_oddities(definition, 'urban')}**\n\n"
             string_to_add += self.strip_dictionary_oddities(example, 'urban') + '\n\n'

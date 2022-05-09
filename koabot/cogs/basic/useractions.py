@@ -1,5 +1,8 @@
 """Get user information"""
+from dataclasses import dataclass
+
 import discord
+from dataclass_wizard import fromlist, json_field
 from discord.ext import commands
 
 import koabot.core.net as net_core
@@ -40,8 +43,15 @@ class UserActions(commands.Cog):
         if not (api_response := (await net_core.http_request("https://zenquotes.io/api/random", json=True)).json):
             return await ctx.send("I cannot channel those energies at the moment... Please try again later")
 
-        quote, author, _ = api_response[0].values()
-        await ctx.send(f">>> \"{quote}\"\nー *{author}*")
+        quote = fromlist(Quote, api_response)[0]
+        await ctx.send(f">>> \"{quote.quote}\"\nー *{quote.author}*")
+
+
+@dataclass
+class Quote():
+    quote: str = json_field("q")
+    author: str = json_field("a")
+    html: str = json_field("h")
 
 
 async def setup(bot: KBot):

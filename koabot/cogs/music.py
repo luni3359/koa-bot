@@ -136,7 +136,7 @@ class Music(commands.Cog):
         # join a voice channel
         await ctx.invoke(self.bot.get_command('join'))
 
-        music_file = Path(self.bot.MODULE_DIR, "assets", self.bot.testing['vc']['music-file'])
+        music_file = Path(self.bot.PROJECT_DIR, "assets", self.bot.testing['vc']['music-file'])
         source = discord.FFmpegPCMAudio(music_file)
         voice_client: discord.VoiceClient = ctx.voice_client
 

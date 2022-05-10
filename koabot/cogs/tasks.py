@@ -31,7 +31,11 @@ class Tasks(commands.Cog):
         return self.bot.get_cog('StreamService')
 
     async def cog_load(self):
-        """The tasks to be run at boot"""
+        self.bot.loop.create_task(self.run_once_when_ready())
+
+    async def run_once_when_ready(self):
+        await self.bot.wait_until_ready()
+        
         self.bot.loop.create_task(self.check_live_streamers())
         self.bot.loop.create_task(self.change_presence_periodically())
 
@@ -53,9 +57,6 @@ class Tasks(commands.Cog):
 
     async def lookup_pending_posts(self) -> None:
         """Every 5 minutes search for danbooru posts"""
-
-        # await self.bot.wait_until_ready()
-
         guide = self.bot.guides['gallery']['danbooru-default']
         pending_posts = []
         channel_categories = {}
@@ -97,9 +98,6 @@ class Tasks(commands.Cog):
 
     async def check_live_streamers(self) -> None:
         """Checks every so often for streamers that have gone online"""
-
-        # await self.bot.wait_until_ready()
-
         online_streamers = []
 
         while not self.bot.is_closed():

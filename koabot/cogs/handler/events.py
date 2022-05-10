@@ -371,8 +371,6 @@ class BotEvents(commands.Cog):
     async def on_ready(self):
         """On bot start"""
         print(f'Logged in to Discord  [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
-
-        # Change play status to something fitting
         await self.bot.change_presence(activity=discord.Game(name=self.botstatus.get_quote('playing_status')))
 
     @commands.Cog.listener()

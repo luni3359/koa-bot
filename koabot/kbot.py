@@ -25,7 +25,7 @@ class KBot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.debug_mode: bool = None
-        self.sqlite_conn: sqlite3.Connection = None
+        self.sqlite_conn: sqlite3.Connection
         self.launch_time: datetime = None
         self.connect_time: datetime = None
         self.isconnected: bool = False
@@ -38,11 +38,12 @@ class KBot(commands.Bot):
         self.CACHE_DIR: Path = None
 
     async def setup_hook(self):
-        print(f'Logged in to Discord  [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
         self.add_check(debug_check)
-        # TODO: For some reason `self.change_presence` is None when this executes
-        # Change play status to something fitting
-        # await self.change_presence(activity=discord.Game(name=self.get_cog('BotStatus').get_quote('playing_status')))
+        self.loop.create_task(self.run_once_when_ready())
+
+    async def run_once_when_ready(self) -> None:
+        await self.wait_until_ready()
+        await self.populate_server_db()
 
     def set_base_directory(self, directory: BaseDirectory, value: str | Path) -> None:
         match directory:
@@ -108,6 +109,26 @@ class KBot(commands.Bot):
                 log_msg += f"\nModule: {name}\n{error}"
 
         print(log_msg)
+
+    async def populate_server_db(self) -> None:
+        with self.sqlite_conn as cursor:
+            query = "INSERT INTO discordServer (serverDId, serverName, dateFirstSeen) VALUES (?, ?, ?)"
+            for guild in self.guilds:
+                try:
+                    cursor.execute(query, (guild.id, guild.name, datetime.now()))
+                except sqlite3.IntegrityError:
+                    print(f"Guild '{guild.name}' is already in the database")
+            cursor.commit()
+
+            query = "INSERT INTO discordUser (userDid, userName, dateFirstSeen) VALUES (?, ? ,?) "
+            for guild in self.guilds:
+                for member in guild.members:
+                    try:
+                        cursor.execute(query, (member.id, member.name, datetime.now()))
+                    except sqlite3.IntegrityError:
+                        print(f"Member '{member.name}' is already in the database")
+
+            cursor.commit()
 
 
 async def debug_check(ctx: commands.Context) -> bool:

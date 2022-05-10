@@ -50,8 +50,10 @@ async def main():
     if bot.debug_mode:
         print('Running in debug mode.')
         data_filenames.insert(0, "beta.jsonc")
+        db_file = Path(CACHE_DIR, "dbBeta.sqlite3")
     else:
         data_filenames.insert(0, "config.jsonc")
+        db_file = Path(CACHE_DIR, "db.sqlite3")
 
     for filename in data_filenames:
         try:
@@ -67,20 +69,19 @@ async def main():
     start_load_time = timeit.default_timer()
 
     try:
-        db_file = Path(CACHE_DIR, "dbBeta.sqlite3")
+        # Generate tables in database
+        with open("db/database.sql", encoding="UTF-8") as file:
+            sql_script = file.read()
+
         bot.sqlite_conn = sqlite3.connect(db_file)
 
-        # Generate tables in database
-        with open("db/database.sql", encoding="UTF-8") as f:
-            sql_script = f.read()
+        with bot.sqlite_conn as cursor:
+            cursor.executescript(sql_script)
+            cursor.commit()
 
-        c = bot.sqlite_conn.cursor()
-        c.executescript(sql_script)
-        bot.sqlite_conn.commit()
-        c.close()
         print(f"To database in {timeit.default_timer() - start_load_time:0.3f}s")
     except sqlite3.Error as e:
-        print(e)
+        print(e.with_traceback)
         print("Could not connect to the database! Functionality will be limited.")
 
     async with bot:

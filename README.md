@@ -2,7 +2,7 @@
 
 ### A Discord bot for our server!
 
-![Koakuma](koabot/assets/avatar.png)  
+![Koakuma](assets/avatar.png)  
 *"Eager to serve the sleepy."*
 
 ## Features

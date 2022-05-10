@@ -3,6 +3,7 @@ import asyncio
 import os
 import sqlite3
 import timeit
+from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 from sys import argv
@@ -70,16 +71,21 @@ async def main():
 
     try:
         # Generate tables in database
-        with open("db/database.sql", encoding="UTF-8") as file:
+        schema = "db/database.sql"
+        with open(schema, encoding="UTF-8") as file:
             sql_script = file.read()
 
         bot.sqlite_conn = sqlite3.connect(db_file)
 
-        with bot.sqlite_conn as cursor:
+        with closing(bot.sqlite_conn.cursor()) as cursor:
             cursor.executescript(sql_script)
-            cursor.commit()
+            bot.sqlite_conn.commit()
 
         print(f"To database in {timeit.default_timer() - start_load_time:0.3f}s")
+    except PermissionError:
+        print(f"Unable to open file {schema}")
+    except FileNotFoundError:
+        print(f"Couldn't find {schema}")
     except sqlite3.Error as e:
         print(e.with_traceback)
         print("Could not connect to the database! Functionality will be limited.")

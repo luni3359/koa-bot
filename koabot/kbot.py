@@ -3,6 +3,7 @@ import os
 import re
 import sqlite3
 import timeit
+from contextlib import closing
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -111,24 +112,41 @@ class KBot(commands.Bot):
         print(log_msg)
 
     async def populate_server_db(self) -> None:
-        with self.sqlite_conn as cursor:
-            query = "INSERT INTO discordServer (serverDId, serverName, dateFirstSeen) VALUES (?, ?, ?)"
+        connection = self.sqlite_conn
+        srv_query = "INSERT INTO discordServer (serverDId, serverName, dateFirstSeen) VALUES (?, ?, ?)"
+        usr_query = "INSERT INTO discordUser (userDid, userName, dateFirstSeen) VALUES (?, ? ,?)"
+        srv_usr_query = "INSERT INTO discordServerUser (userId, serverId, userNickname) VALUES (?, ?, ?)"
+
+        with closing(connection.cursor()) as cursor:
             for guild in self.guilds:
+                guild_id: int
+
                 try:
-                    cursor.execute(query, (guild.id, guild.name, datetime.now()))
+                    cursor.execute(srv_query, (guild.id, guild.name, datetime.now()))
+                    guild_id = cursor.lastrowid
+                    connection.commit()
                 except sqlite3.IntegrityError:
-                    print(f"Guild '{guild.name}' is already in the database")
-            cursor.commit()
+                    # print(f"Guild '{guild.name}' is already in the database")
+                    cursor.execute("SELECT serverId FROM discordServer WHERE serverDId = ?", (guild.id, ))
+                    guild_id,  = cursor.fetchone()
 
-            query = "INSERT INTO discordUser (userDid, userName, dateFirstSeen) VALUES (?, ? ,?) "
-            for guild in self.guilds:
                 for member in guild.members:
-                    try:
-                        cursor.execute(query, (member.id, member.name, datetime.now()))
-                    except sqlite3.IntegrityError:
-                        print(f"Member '{member.name}' is already in the database")
+                    member_id: int
 
-            cursor.commit()
+                    try:
+                        cursor.execute(usr_query, (member.id, member.name, datetime.now()))
+                        member_id = cursor.lastrowid
+                    except sqlite3.IntegrityError:
+                        # print(f"Member '{member.name}' is already in the database")
+                        cursor.execute("SELECT userId FROM discordUser WHERE userDId = ?", (member.id, ))
+                        member_id, = cursor.fetchone()  # unpacking tuple
+
+                    try:
+                        cursor.execute(srv_usr_query, (member_id, guild_id, member.nick))
+                        connection.commit()
+                    except sqlite3.IntegrityError:
+                        ...
+                        # print("This user-guild pair already exists")
 
 
 async def debug_check(ctx: commands.Context) -> bool:

@@ -76,7 +76,8 @@ class ReactionRoles(commands.Cog):
         self.rr_cooldown = {}
         self.spam_limit = 12
 
-        self.migrate_json_to_db()
+        # self.migrate_json_to_db()
+        self.verify_json_integrity()
         self.load_rr_binds()
 
     @property
@@ -98,6 +99,29 @@ class ReactionRoles(commands.Cog):
                 channel_id: int = int(v['channel_id'])
                 links: list[RRLink] = v['links']
                 self.add_rr_watch(message_id, channel_id, links)
+
+    def verify_json_integrity(self):
+        """Makes sure that all keys are of their proper type"""
+        binds_file = Path(self.bot.DATA_DIR, "binds.json")
+
+        if not binds_file.exists():
+            return
+
+        with open(binds_file, 'r+', encoding="UTF-8") as json_file:
+            data: dict = json.load(json_file)
+
+            # turn top level keys to ints
+            for message_id in list(data.keys()):
+                watch = data[message_id]
+                watch['channel_id'] = int(watch['channel_id'])
+
+                if not isinstance(message_id, int):
+                    data[int(message_id)] = watch
+                    data.pop(message_id)
+
+            json_file.seek(0)
+            json_file.write(json.dumps(data, indent=4))
+            json_file.truncate()
 
     def migrate_json_to_db(self):
         """Placeholder for a future port method"""

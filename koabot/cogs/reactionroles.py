@@ -2,13 +2,14 @@
 import json
 import re
 import timeit
-import typing
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
-import dataclass_wizard
 import discord
 import emoji
+from dataclass_wizard import JSONSerializable
+from dataclass_wizard.enums import LetterCase
 from discord.ext import commands
 
 from koabot.cogs.botstatus import BotStatus
@@ -19,7 +20,7 @@ from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 @dataclass
 class RRLink():
     reactions: set
-    roles: list[discord.Role | int]
+    roles: list[int]
 
 
 @dataclass()
@@ -30,7 +31,10 @@ class RRBind():
 
 
 @dataclass
-class RRSavedBind():
+class RRSavedBind(JSONSerializable):
+    class _(JSONSerializable.Meta):
+        key_transform_with_dump = LetterCase.SNAKE
+
     channel_id: str
     links: list[RRLink]
 
@@ -38,8 +42,8 @@ class RRSavedBind():
 @dataclass
 class RRConfirmation():
     bind_tag: str
-    emoji_jist: typing.Any
-    link: typing.Any
+    emoji_jist: Any
+    link: Any
 
 
 @dataclass
@@ -66,7 +70,7 @@ class ReactionRoles(commands.Cog):
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
-        self.rr_temporary_list: dict[RRBind] = {}
+        self.rr_unsaved_binds = {}
         self.rr_confirmations = {}
         self.rr_assignments = {}
         self.rr_cooldown = {}
@@ -89,8 +93,9 @@ class ReactionRoles(commands.Cog):
         with open(binds_file, 'r', encoding="UTF-8") as json_file:
             data = json.load(json_file)
 
-            for message_id, v in data.items():
-                channel_id: int = v['channel_id']
+            for k, v in data.items():
+                message_id: int = int(k)
+                channel_id: int = int(v['channel_id'])
                 links: list[RRLink] = v['links']
                 self.add_rr_watch(message_id, channel_id, links)
 
@@ -220,17 +225,17 @@ class ReactionRoles(commands.Cog):
         # make a queue for the emojis for the current user if it doesn't exist
         author_id = ctx.author.id
 
-        if (bind_tag := f"{author_id}/{server_id}") in self.rr_temporary_list:
+        if (bind_tag := f"{author_id}/{server_id}") in self.rr_unsaved_binds:
             return await ctx.send(self.botstatus.get_quote('rr_assign_already_assigning'))
 
-        self.rr_temporary_list[bind_tag] = RRBind(message_id, channel_id)
+        self.rr_unsaved_binds[bind_tag] = RRBind(message_id, channel_id)
 
         await ctx.send(self.botstatus.get_quote('rr_assign_process_complete'))
 
     @reaction_roles.command()
     async def bind(self, ctx: commands.Context) -> None:
         """Add a new emoji-role binding to the message being currently assigned to"""
-        if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_temporary_list:
+        if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_unsaved_binds:
             return await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
 
         reacted_emojis = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) +
@@ -250,7 +255,7 @@ class ReactionRoles(commands.Cog):
             party_popper = emoji.emojize(":tada:")
             return await ctx.send(f"Please include at least {exit_reason} to bind to. How you arrange them does not matter.\n\nFor example:\n{kusudama} @Party → Reacting with {kusudama} will assign the @Party role.\n{party_popper} @Party @Yay {kusudama} → Reacting with {kusudama} AND {party_popper} will assign the @Party and @Yay roles.")
 
-        bind: RRBind = self.rr_temporary_list[bind_tag]
+        bind: RRBind = self.rr_unsaved_binds[bind_tag]
 
         # prevent duplicate role bindings from being created
         link_to_overwrite = None
@@ -260,7 +265,7 @@ class ReactionRoles(commands.Cog):
 
             roles_are_duplicate = True
             for rl in mentioned_roles:
-                if rl not in link.roles:
+                if rl.id not in link.roles:
                     roles_are_duplicate = False
                     break
 
@@ -285,7 +290,7 @@ class ReactionRoles(commands.Cog):
 
         if link_to_overwrite:
             em_joined = " AND ".join(reacted_emojis)
-            rl_joined = " AND ".join([rl.mention for rl in link_to_overwrite.roles])
+            rl_joined = " AND ".join([ctx.guild.get_role(v).mention for v in link_to_overwrite.roles])
             maru = emoji.emojize(":o:", use_aliases=True)
             batu = emoji.emojize(":x:", use_aliases=True)
             tmp_msg: discord.Message = await ctx.send(f"This binding already exists. Would you like to change it to the following?\n\nReact to {em_joined} to get {rl_joined}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.")
@@ -296,17 +301,17 @@ class ReactionRoles(commands.Cog):
                 await tmp_msg.add_reaction(em)
             return
 
-        bind.links.append(RRLink(reacted_emojis, mentioned_roles))
+        bind.links.append(RRLink(reacted_emojis, [rl.id for rl in mentioned_roles]))
         await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
     @reaction_roles.command()
     async def undo(self, ctx: commands.Context, call_type: str) -> None:
         """Cancel the last issued reaction roles entry"""
-        if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_temporary_list:
+        if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_unsaved_binds:
             await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
             return
 
-        bind: RRBind = self.rr_temporary_list[bind_tag]
+        bind: RRBind = self.rr_unsaved_binds[bind_tag]
 
         match call_type:
             case 'last':
@@ -317,10 +322,10 @@ class ReactionRoles(commands.Cog):
     @reaction_roles.command()
     async def save(self, ctx: commands.Context) -> None:
         """Complete the emoji-role registration"""
-        if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_temporary_list:
+        if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_unsaved_binds:
             return await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
 
-        bind: RRBind = self.rr_temporary_list[bind_tag]
+        bind: RRBind = self.rr_unsaved_binds[bind_tag]
 
         if not bind.links:
             return await ctx.send(self.botstatus.get_quote('rr_save_cannot_save_empty'))
@@ -349,28 +354,23 @@ class ReactionRoles(commands.Cog):
             saved_bind = RRSavedBind(bind.channel_id, bind.links)
 
             j_data = json.load(json_file)
-            j_data[bind.message_id] = saved_bind
+            j_data[bind.message_id] = saved_bind.to_dict()
             print(j_data)
 
-            for link in saved_bind.links:
-                link.reactions = list(link.reactions)
-                link.roles = [r.id for r in link.roles]
-
             json_file.seek(0)
-            json_file.write(json.dumps(dataclass_wizard.asdict(j_data), indent=4))
+            json_file.write(json.dumps(j_data, indent=4))
             json_file.truncate()
 
-        self.rr_temporary_list.pop(bind_tag)
-
+        self.rr_unsaved_binds.pop(bind_tag)
         await ctx.send("Registration complete!")
 
     @reaction_roles.command(aliases=['quit', 'exit', 'stop'])
     async def cancel(self, ctx: commands.Context) -> None:
         """Quit the reaction roles binding process"""
-        if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_temporary_list:
+        if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_unsaved_binds:
             await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
         else:
-            self.rr_temporary_list.pop(bind_tag)
+            self.rr_unsaved_binds.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
     async def reaction_added(self, payload: discord.RawReactionActionEvent, user: discord.abc.User):
@@ -421,12 +421,12 @@ class ReactionRoles(commands.Cog):
             await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
 
     @staticmethod
-    def rr_conflict_response(rr_link: RRLink, emoji_list):
+    def rr_conflict_response(rr_link: RRLink, reactions):
         """Complete or drop the request to assign chosen emoji to a reactionrole link"""
-        if not emoji_list:
+        if not reactions:
             return
 
-        rr_link.reactions = emoji_list
+        rr_link.reactions = reactions
 
     async def manage_rr_cooldown(self, user: discord.User) -> bool:
         """Prevents users from overloading role requests"""

@@ -102,25 +102,25 @@ class ReactionRoles(commands.Cog):
     def migrate_json_to_db(self):
         """Placeholder for a future port method"""
 
-    async def assign_roles(self, emoji_sent: str, user: discord.Member, message_id: int, channel_id: int):
+    async def assign_roles(self, reaction: str, user: discord.Member, message_id: int, channel_id: int):
         """Updates the roles of the given user
         Parameters:
+            reaction::str
             user::discord.Member
             message_id::int
             channel_id::int
         """
         channel = self.bot.get_channel(channel_id)
         message = await channel.fetch_message(message_id)
-        user_id = user.id
-
         message_reactions: set[str] = set()
+
         for em in message.reactions:
             if not isinstance(em, str):
                 em = str(em)
 
             message_reactions.add(em)
 
-        rr_watch: RRWatch = self.rr_assignments[str(message_id)]
+        rr_watch: RRWatch = self.rr_assignments[message_id]
 
         bound_reactions = set()
         for link in rr_watch.links:
@@ -129,17 +129,17 @@ class ReactionRoles(commands.Cog):
         reactions_in_use = bound_reactions.intersection(message_reactions)
         reactions_by_currentuser = []
 
-        for reaction in message.reactions:
-            if not isinstance(reaction.emoji, str):
-                em = str(reaction.emoji)
+        for rct in message.reactions:
+            if not isinstance(rct.emoji, str):
+                em = str(rct.emoji)
             else:
-                em = reaction.emoji
+                em = rct.emoji
 
             if em not in reactions_in_use:
                 continue
 
-            for u in await reaction.users().flatten():
-                if u.id != user_id:
+            async for u in rct.users():
+                if u.id != user.id:
                     continue
 
                 reactions_by_currentuser.append(em)
@@ -151,40 +151,41 @@ class ReactionRoles(commands.Cog):
 
             link_fully_matches = link.reactions.issubset(reactions_by_currentuser)
 
-            if emoji_sent not in link.reactions:
+            if reaction not in link.reactions:
                 continue
 
             role_removal = False
             if not link_fully_matches:
-                reactions_by_currentuser.append(emoji_sent)
+                reactions_by_currentuser.append(reaction)
                 role_removal = link.reactions.issubset(reactions_by_currentuser)
 
                 if not role_removal:
                     continue
 
-            if not isinstance(link.roles[0], discord.Role):
-                link.roles = list(map(channel.guild.get_role, link.roles))
+            roles: list[discord.Role] = list(map(channel.guild.get_role, link.roles))
 
             if len(link.roles) > 1:
-                roles = ', '.join(f"**@{r.name}**" for r in link.roles)
+                role_string = ', '.join(f"**@{r.name}**" for r in roles)
             else:
-                roles = link.roles[0].name
-                roles = f"**@{roles}**"
+                role_string = f"**@{roles[0].name}**"
 
-            singular_or_plural_roles = "roles" if len(link.roles) > 1 else "role"
+            singular_or_plural_roles = "roles" if len(roles) > 1 else "role"
 
-            if role_removal:
-                await user.remove_roles(*link.roles, reason="Requested by the own user by reacting")
-                quote = f"{user.mention}, say goodbye to {roles}..."
-            else:
-                await user.add_roles(*link.roles, reason="Requested by the own user by reacting")
-                quote = f"Congrats, {user.mention}. You get the {roles} {singular_or_plural_roles}!"
+            try:
+                if role_removal:
+                    quote = f"{user.mention}, say goodbye to {role_string}..."
+                    await user.remove_roles(*roles, reason="Requested by the own user by reacting")
+                else:
+                    quote = f"Congrats, {user.mention}. You get the {role_string} {singular_or_plural_roles}!"
+                    await user.add_roles(*roles, reason="Requested by the own user by reacting")
+            except discord.Forbidden:
+                print(f"Missing permissions to grant \"{user.name}\" roles on \"{channel.guild.name}\"")
 
             try:
                 print(quote)
                 await user.send(quote)
             except discord.Forbidden:
-                print(f"I couldn't notify {user.name} about {roles}...")
+                print(f"I couldn't notify {user.name} about {role_string}...")
 
     @commands.group(aliases=['reactionroles', 'reactionrole', 'rr'])
     @commands.check_any(commands.is_owner(), is_guild_owner())
@@ -371,7 +372,7 @@ class ReactionRoles(commands.Cog):
             self.rr_unsaved_binds.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
 
-    async def reaction_added(self, payload: discord.RawReactionActionEvent, user: discord.abc.User):
+    async def reaction_added(self, payload: discord.RawReactionActionEvent, user: discord.Member | discord.User):
         """When a reaction is added to a message"""
         # Handle reaction role
         if payload.message_id in self.rr_assignments:
@@ -407,10 +408,10 @@ class ReactionRoles(commands.Cog):
 
             await message.add_reaction(emoji.emojize(outcome_emoji, use_aliases=True))
 
-    async def reaction_removed(self, payload: discord.RawReactionActionEvent, user: discord.abc.User):
+    async def reaction_removed(self, payload: discord.RawReactionActionEvent, user: discord.Member | discord.User):
         """When a reaction is removed from a message"""
         # Handle reaction role
-        if str(payload.message_id) in self.rr_assignments:
+        if payload.message_id in self.rr_assignments:
             if await self.manage_rr_cooldown(user):
                 return
 

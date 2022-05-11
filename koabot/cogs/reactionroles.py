@@ -35,15 +35,15 @@ class RRSavedBind(JSONSerializable):
     class _(JSONSerializable.Meta):
         key_transform_with_dump = LetterCase.SNAKE
 
-    channel_id: str
+    channel_id: int
     links: list[RRLink]
 
 
 @dataclass
 class RRConfirmation():
     bind_tag: str
-    emoji_jist: Any
-    link: Any
+    reactions: Any
+    link: RRLink
 
 
 @dataclass
@@ -251,8 +251,7 @@ class ReactionRoles(commands.Cog):
             exit_reason = "one role"
 
         if exit_reason:
-            kusudama = emoji.emojize(":confetti_ball:")
-            party_popper = emoji.emojize(":tada:")
+            kusudama, party_popper = [emoji.emojize(em) for em in [":confetti_ball:", ":tada:"]]
             return await ctx.send(f"Please include at least {exit_reason} to bind to. How you arrange them does not matter.\n\nFor example:\n{kusudama} @Party → Reacting with {kusudama} will assign the @Party role.\n{party_popper} @Party @Yay {kusudama} → Reacting with {kusudama} AND {party_popper} will assign the @Party and @Yay roles.")
 
         bind: RRBind = self.rr_unsaved_binds[bind_tag]
@@ -291,8 +290,7 @@ class ReactionRoles(commands.Cog):
         if link_to_overwrite:
             em_joined = " AND ".join(reacted_emojis)
             rl_joined = " AND ".join([ctx.guild.get_role(v).mention for v in link_to_overwrite.roles])
-            maru = emoji.emojize(":o:", use_aliases=True)
-            batu = emoji.emojize(":x:", use_aliases=True)
+            maru, batu = [emoji.emojize(em, use_aliases=True) for em in [":o:", ":x:"]]
             tmp_msg: discord.Message = await ctx.send(f"This binding already exists. Would you like to change it to the following?\n\nReact to {em_joined} to get {rl_joined}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.")
 
             self.add_rr_confirmation(tmp_msg.id, bind_tag, link_to_overwrite, reacted_emojis)
@@ -382,23 +380,19 @@ class ReactionRoles(commands.Cog):
 
             await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
         # Handle confirmation
-        elif str(payload.message_id) in self.rr_confirmations:
-            tmp_root: RRConfirmation = self.rr_confirmations[payload.message_id]
+        elif payload.message_id in self.rr_confirmations:
+            confirmation: RRConfirmation = self.rr_confirmations[payload.message_id]
 
-            if str(payload.user_id) != tmp_root.bind_tag.split('/')[0]:
+            if payload.user_id != confirmation.bind_tag.split('/')[0]:
                 return
 
-            reaction = payload.emoji
+            valid_options = [emoji.emojize(em, use_aliases=True) for em in [":o:", ":x:"]]
 
-            valid_options = [emoji.emojize(':o:', use_aliases=True), emoji.emojize(':x:', use_aliases=True)]
-
-            if str(reaction) not in valid_options:
+            if (reaction := str(payload.emoji)) not in valid_options:
                 return
 
-            if str(reaction) == emoji.emojize(':o:', use_aliases=True):
-                self.rr_conflict_response(tmp_root.link, tmp_root.emoji_jist)
-            else:
-                self.rr_conflict_response(None, None)
+            if reaction == emoji.emojize(':o:', use_aliases=True):
+                confirmation.link.reactions = confirmation.reactions
 
             self.rr_confirmations.pop(payload.message_id)
 
@@ -406,10 +400,12 @@ class ReactionRoles(commands.Cog):
             message = await channel.fetch_message(payload.message_id)
             await message.clear_reactions()
 
-            if str(reaction) == emoji.emojize(':o:', use_aliases=True):
-                await message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
+            if reaction == emoji.emojize(':o:', use_aliases=True):
+                outcome_emoji = ":white_check_mark:"
             else:
-                await message.add_reaction(emoji.emojize(':stop_sign:', use_aliases=True))
+                outcome_emoji = ":stop_sign:"
+
+            await message.add_reaction(emoji.emojize(outcome_emoji, use_aliases=True))
 
     async def reaction_removed(self, payload: discord.RawReactionActionEvent, user: discord.abc.User):
         """When a reaction is removed from a message"""
@@ -420,56 +416,46 @@ class ReactionRoles(commands.Cog):
 
             await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
 
-    @staticmethod
-    def rr_conflict_response(rr_link: RRLink, reactions):
-        """Complete or drop the request to assign chosen emoji to a reactionrole link"""
-        if not reactions:
-            return
-
-        rr_link.reactions = reactions
-
     async def manage_rr_cooldown(self, user: discord.User) -> bool:
         """Prevents users from overloading role requests"""
         current_time = timeit.default_timer()
-        user_id = str(user.id)
 
-        if user_id not in self.rr_cooldown:
-            tmp_obj = RRCooldown(current_time, 0)
-            self.rr_cooldown[user_id] = tmp_obj
+        if user.id not in self.rr_cooldown:
+            self.rr_cooldown[user.id] = RRCooldown(current_time, 0)
 
-        tmp_root: RRCooldown = self.rr_cooldown[user_id]
-        time_diff = current_time - tmp_root.cooldown_start
+        user_cooldown: RRCooldown = self.rr_cooldown[user.id]
+        time_diff = current_time - user_cooldown.cooldown_start
 
         # if too many reactions were sent
-        if tmp_root.change_count > self.spam_limit:
+        if user_cooldown.change_count > self.spam_limit:
             if time_diff < 60:
                 return True
 
-            tmp_root.cooldown_start = current_time
-            tmp_root.change_count = 0
+            user_cooldown.cooldown_start = current_time
+            user_cooldown.change_count = 0
 
         # refresh cooldown if two minutes have passed
         if time_diff > 120:
-            tmp_root.cooldown_start = current_time
-            tmp_root.change_count = 0
+            user_cooldown.cooldown_start = current_time
+            user_cooldown.change_count = 0
         elif time_diff < 1:
-            tmp_root.change_count += 3
+            user_cooldown.change_count += 3
         elif time_diff < 5:
-            tmp_root.change_count += 2
+            user_cooldown.change_count += 2
         else:
-            tmp_root.change_count += 1
+            user_cooldown.change_count += 1
 
-        # send a warning and freeze
-        if tmp_root.change_count > self.spam_limit:
-            tmp_root.cooldown_start = current_time
+        # send a warning and freeze if spammed
+        if user_cooldown.change_count > self.spam_limit:
+            user_cooldown.cooldown_start = current_time
             await user.send("Please wait a few moments and try again.")
             return True
 
         return False
 
-    def add_rr_confirmation(self, message_id: int, bind_tag: str, single_link: list, emoji_list: list) -> None:
+    def add_rr_confirmation(self, message_id: int, bind_tag: str, single_link: list, reactions: list) -> None:
         """Creates an entry pending to be handled for reaction roles overwrite request"""
-        rr_confirmation = RRConfirmation(bind_tag, emoji_list, single_link)
+        rr_confirmation = RRConfirmation(bind_tag, reactions, single_link)
         self.rr_confirmations[message_id] = rr_confirmation
 
     def add_rr_watch(self, message_id: int, channel_id: int, links: list[RRLink]) -> None:

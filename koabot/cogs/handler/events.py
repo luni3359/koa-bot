@@ -92,18 +92,16 @@ class BotEvents(commands.Cog):
         if payload.user_id == self.bot.user.id:
             return
 
-        guild: discord.Guild = self.bot.get_guild(payload.guild_id)
+        # exclusive of on_raw_reaction_add:
+        # payload contains Member if done in a server
+        # in the future we might want to listen to reactions
+        # from direct messages too
+        member: discord.Member | None = payload.member
 
-        if payload.member:
-            user = payload.member
-        else:
-            user: discord.abc.User = guild.get_member(payload.user_id)
-
-        # might get false positives in the future... if the user isn't cached
-        if user is None or user.bot:
+        if not member or member.bot:
             return
 
-        await self.reactionroles.reaction_added(payload, user)
+        await self.reactionroles.reaction_added(payload, member)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
@@ -111,14 +109,16 @@ class BotEvents(commands.Cog):
         if payload.user_id == self.bot.user.id:
             return
 
-        guild = self.bot.get_guild(payload.guild_id)
-        user = guild.get_member(payload.user_id)
-
-        # might get false positives in the future... if the user isn't cached
-        if user is None or user.bot:
+        if not payload.guild_id:
             return
 
-        await self.reactionroles.reaction_removed(payload, user)
+        guild: discord.Guild = self.bot.get_guild(payload.guild_id)
+        member: discord.Member = guild.get_member(payload.user_id)
+
+        if member.bot:
+            return
+
+        await self.reactionroles.reaction_removed(payload, member)
 
     # TODO: General error handler: https://gist.github.com/EvieePy/7822af90858ef65012ea500bcecf1612
     @commands.Cog.listener()

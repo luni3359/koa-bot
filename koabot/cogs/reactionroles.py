@@ -40,7 +40,7 @@ class RRWatch(JSONSerializable):
 
 @dataclass
 class RRConfirmation():
-    bind_tag: str
+    user_id: int
     reactions: set[str]
     link: RRLink
 
@@ -63,10 +63,10 @@ class ReactionRoles(commands.Cog):
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
-        self.rr_active_binds = {}
-        self.rr_unsaved_binds = {}
-        self.rr_confirmations = {}
-        self.rr_cooldown = {}
+        self.rr_active_binds: dict[int, RRWatch] = {}
+        self.rr_unsaved_binds: dict[int, RRBind] = {}
+        self.rr_confirmations: dict[int, RRConfirmation] = {}
+        self.rr_cooldown: dict[int, RRCooldown] = {}
         self.spam_limit = 12
 
         # self.migrate_json_to_db()
@@ -259,8 +259,8 @@ class ReactionRoles(commands.Cog):
         if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_unsaved_binds:
             return await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
 
-        reacted_emojis = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) +
-                             re.findall(emoji.get_emoji_regexp(), ctx.message.content))
+        reacted_emojis: set[str] = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) +
+                                       re.findall(emoji.get_emoji_regexp(), ctx.message.content))
         mentioned_roles = ctx.message.role_mentions
 
         exit_reason = None
@@ -278,46 +278,43 @@ class ReactionRoles(commands.Cog):
         bind: RRBind = self.rr_unsaved_binds[bind_tag]
 
         # prevent duplicate role bindings from being created
-        link_to_overwrite = None
+        link_to_overwrite: RRLink | None = None
         for link in bind.links:
+            # check if roles are identical: quick length check
             if len(mentioned_roles) != len(link.roles):
                 continue
 
+            # check if roles are identical: slower thorough check
             roles_are_duplicate = True
             for rl in mentioned_roles:
                 if rl.id not in link.roles:
                     roles_are_duplicate = False
                     break
 
-            if roles_are_duplicate:
-                # check if the emojis are also identical
-                if len(reacted_emojis) != len(link.reactions):
+            if not roles_are_duplicate:
+                continue
+
+            # check if the emojis are also identical: quick length check
+            if len(reacted_emojis) != len(link.reactions):
+                link_to_overwrite = link
+                break
+
+            # check if the emojis are also identical: slower thorough check
+            for em in reacted_emojis:
+                if em not in link.reactions:
                     link_to_overwrite = link
                     break
 
-                for em in reacted_emojis:
-                    if em not in link.reactions:
-                        link_to_overwrite = link
-                        break
+            # if both roles and reactions are identical
+            if not link_to_overwrite:
+                await ctx.message.add_reaction(emoji.emojize(":interrobang:", use_aliases=True))
+                await ctx.send("You've already made this binding before!")
+                return
 
-                # if reactions are also identical
-                if not link_to_overwrite:
-                    await ctx.message.add_reaction(emoji.emojize(":interrobang:", use_aliases=True))
-                    await ctx.send("You've already made this binding before!")
-                    return
-
-                break
+            break
 
         if link_to_overwrite:
-            em_joined = " AND ".join(reacted_emojis)
-            rl_joined = " AND ".join([ctx.guild.get_role(v).mention for v in link_to_overwrite.roles])
-            maru, batu = [emoji.emojize(em, use_aliases=True) for em in [":o:", ":x:"]]
-            tmp_msg: discord.Message = await ctx.send(f"This binding already exists. Would you like to change it to the following?\n\nReact to {em_joined} to get {rl_joined}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.")
-
-            self.add_rr_confirmation(tmp_msg.id, bind_tag, link_to_overwrite, reacted_emojis)
-
-            for em in [maru, batu]:
-                await tmp_msg.add_reaction(em)
+            await self.ask_to_overwrite_link(ctx, reacted_emojis, link_to_overwrite)
             return
 
         bind.links.append(RRLink(reacted_emojis, [rl.id for rl in mentioned_roles]))
@@ -403,7 +400,7 @@ class ReactionRoles(commands.Cog):
         elif payload.message_id in self.rr_confirmations:
             confirmation: RRConfirmation = self.rr_confirmations[payload.message_id]
 
-            if payload.user_id != confirmation.bind_tag.split('/')[0]:
+            if payload.user_id != confirmation.user_id:
                 return
 
             valid_options = [emoji.emojize(em, use_aliases=True) for em in [":o:", ":x:"]]
@@ -473,9 +470,21 @@ class ReactionRoles(commands.Cog):
 
         return False
 
-    def add_rr_confirmation(self, message_id: int, bind_tag: str, single_link: list, reactions: list) -> None:
+    async def ask_to_overwrite_link(self, ctx: commands.Context, reactions: set[str], link: RRLink):
+        new_em = " AND ".join(reactions)
+        old_em = " AND ".join(link.reactions)
+        roles = " AND ".join([ctx.guild.get_role(v).mention for v in link.roles])
+        maru, batu = [emoji.emojize(em, use_aliases=True) for em in [":o:", ":x:"]]
+        tmp_msg: discord.Message = await ctx.send(f"This binding already exists. Would you like to change it to the following?\n\nCurrently:\nReact to {old_em} to get {roles}\n\nNEW:\nReact to {new_em} to get {roles}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.")
+
+        self.add_rr_confirmation(tmp_msg.id, ctx.author.id, reactions, link)
+
+        for em in [maru, batu]:
+            await tmp_msg.add_reaction(em)
+
+    def add_rr_confirmation(self, conf_message_id: int, user_id: int, reactions: set[str], foreign_link: RRLink) -> None:
         """Creates an entry pending to be handled for reaction roles overwrite request"""
-        self.rr_confirmations[message_id] = RRConfirmation(bind_tag, reactions, single_link)
+        self.rr_confirmations[conf_message_id] = RRConfirmation(user_id, reactions, foreign_link)
 
     def add_rr_watch(self, message_id: int, channel_id: int, links: list[RRLink]) -> None:
         """Starts keeping track of what messages have bound actions"""

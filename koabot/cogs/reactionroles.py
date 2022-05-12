@@ -4,7 +4,6 @@ import re
 import timeit
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import discord
 import emoji
@@ -19,7 +18,7 @@ from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 
 @dataclass
 class RRLink():
-    reactions: set
+    reactions: set[str]
     roles: list[int]
 
 
@@ -31,7 +30,7 @@ class RRBind():
 
 
 @dataclass
-class RRSavedBind(JSONSerializable):
+class RRWatch(JSONSerializable):
     class _(JSONSerializable.Meta):
         key_transform_with_dump = LetterCase.SNAKE
 
@@ -42,14 +41,8 @@ class RRSavedBind(JSONSerializable):
 @dataclass
 class RRConfirmation():
     bind_tag: str
-    reactions: Any
+    reactions: set[str]
     link: RRLink
-
-
-@dataclass
-class RRWatch():
-    channel_id: int
-    links: list[RRLink]
 
 
 @dataclass
@@ -70,9 +63,9 @@ class ReactionRoles(commands.Cog):
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
+        self.rr_active_binds = {}
         self.rr_unsaved_binds = {}
         self.rr_confirmations = {}
-        self.rr_assignments = {}
         self.rr_cooldown = {}
         self.spam_limit = 12
 
@@ -126,32 +119,33 @@ class ReactionRoles(commands.Cog):
     def migrate_json_to_db(self):
         """Placeholder for a future port method"""
 
-    async def assign_roles(self, reaction: str, user: discord.Member, message_id: int, channel_id: int):
+    async def manage_roles(self, user: discord.Member, reaction: str,  message_id: int, channel_id: int):
         """Updates the roles of the given user
         Parameters:
-            reaction::str
             user::discord.Member
+            reaction::str
             message_id::int
             channel_id::int
         """
         channel = self.bot.get_channel(channel_id)
-        message = await channel.fetch_message(message_id)
-        message_reactions: set[str] = set()
+        message: discord.Message = await channel.fetch_message(message_id)
+        unique_message_reactions: set[str] = set()
 
-        for em in message.reactions:
+        for rct in message.reactions:
+            em: str = rct.emoji
             if not isinstance(em, str):
                 em = str(em)
 
-            message_reactions.add(em)
+            unique_message_reactions.add(em)
 
-        rr_watch: RRWatch = self.rr_assignments[message_id]
+        watch: RRWatch = self.rr_active_binds[message_id]
 
-        bound_reactions = set()
-        for link in rr_watch.links:
-            bound_reactions.update(link.reactions)
+        unique_watch_reactions = set()
+        for link in watch.links:
+            unique_watch_reactions.update(link.reactions)
 
-        reactions_in_use = bound_reactions.intersection(message_reactions)
-        reactions_by_currentuser = []
+        reactions_in_use = unique_watch_reactions.intersection(unique_message_reactions)
+        reactions_by_currentuser: list[str] = []
 
         for rct in message.reactions:
             if not isinstance(rct.emoji, str):
@@ -163,22 +157,21 @@ class ReactionRoles(commands.Cog):
                 continue
 
             async for u in rct.users():
-                if u.id != user.id:
-                    continue
-
-                reactions_by_currentuser.append(em)
+                if u.id == user.id:
+                    reactions_by_currentuser.append(em)
+                    break
 
         # match with links
-        for link in rr_watch.links:
+        for link in watch.links:
             if not isinstance(link.reactions, set):
                 link.reactions = set(link.reactions)
-
-            link_fully_matches = link.reactions.issubset(reactions_by_currentuser)
 
             if reaction not in link.reactions:
                 continue
 
+            link_fully_matches = link.reactions.issubset(reactions_by_currentuser)
             role_removal = False
+
             if not link_fully_matches:
                 reactions_by_currentuser.append(reaction)
                 role_removal = link.reactions.issubset(reactions_by_currentuser)
@@ -187,29 +180,32 @@ class ReactionRoles(commands.Cog):
                     continue
 
             roles: list[discord.Role] = list(map(channel.guild.get_role, link.roles))
+            await self.reassign_roles(user, role_removal, roles)
 
-            if len(link.roles) > 1:
-                role_string = ', '.join(f"**@{r.name}**" for r in roles)
+    async def reassign_roles(self, user: discord.Member,  remove_roles: bool, roles: list[discord.Role]):
+        """Given a list of roles, remove or grant them to a user"""
+        if len(roles) > 1:
+            role_string = ', '.join(f"**@{r.name}**" for r in roles)
+            singular_or_plural_roles = "roles"
+        else:
+            role_string = f"**@{roles[0].name}**"
+            singular_or_plural_roles = "role"
+
+        try:
+            if remove_roles:
+                quote = f"{user.mention}, say goodbye to {role_string}..."
+                await user.remove_roles(*roles, reason="Requested by the own user by reacting")
             else:
-                role_string = f"**@{roles[0].name}**"
+                quote = f"Congrats, {user.mention}. You get the {role_string} {singular_or_plural_roles}!"
+                await user.add_roles(*roles, reason="Requested by the own user by reacting")
+        except discord.Forbidden:
+            print(f"Missing permissions to grant \"{user.name}\" roles on \"{user.guild.name}\"")
 
-            singular_or_plural_roles = "roles" if len(roles) > 1 else "role"
-
-            try:
-                if role_removal:
-                    quote = f"{user.mention}, say goodbye to {role_string}..."
-                    await user.remove_roles(*roles, reason="Requested by the own user by reacting")
-                else:
-                    quote = f"Congrats, {user.mention}. You get the {role_string} {singular_or_plural_roles}!"
-                    await user.add_roles(*roles, reason="Requested by the own user by reacting")
-            except discord.Forbidden:
-                print(f"Missing permissions to grant \"{user.name}\" roles on \"{channel.guild.name}\"")
-
-            try:
-                print(quote)
-                await user.send(quote)
-            except discord.Forbidden:
-                print(f"I couldn't notify {user.name} about {role_string}...")
+        try:
+            print(quote)
+            await user.send(quote)
+        except discord.Forbidden:
+            print(f"I couldn't notify {user.name} about {role_string}...")
 
     @commands.group(aliases=['reactionroles', 'reactionrole', 'rr'])
     @commands.check_any(commands.is_owner(), is_guild_owner())
@@ -374,14 +370,13 @@ class ReactionRoles(commands.Cog):
                 json_file.write("{}")
 
         with open(binds_file, 'r+', encoding="UTF-8") as json_file:
-            saved_bind = RRSavedBind(bind.channel_id, bind.links)
+            new_watch = RRWatch(bind.channel_id, bind.links)
 
-            j_data = json.load(json_file)
-            j_data[bind.message_id] = saved_bind.to_dict()
-            print(j_data)
+            data = json.load(json_file)
+            data[bind.message_id] = new_watch.to_dict()
 
             json_file.seek(0)
-            json_file.write(json.dumps(j_data, indent=4))
+            json_file.write(json.dumps(data, indent=4))
             json_file.truncate()
 
         self.rr_unsaved_binds.pop(bind_tag)
@@ -399,11 +394,11 @@ class ReactionRoles(commands.Cog):
     async def reaction_added(self, payload: discord.RawReactionActionEvent, user: discord.Member | discord.User):
         """When a reaction is added to a message"""
         # Handle reaction role
-        if payload.message_id in self.rr_assignments:
+        if payload.message_id in self.rr_active_binds:
             if await self.manage_rr_cooldown(user):
                 return
 
-            await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
+            await self.manage_roles(user, str(payload.emoji), payload.message_id, payload.channel_id)
         # Handle confirmation
         elif payload.message_id in self.rr_confirmations:
             confirmation: RRConfirmation = self.rr_confirmations[payload.message_id]
@@ -435,11 +430,11 @@ class ReactionRoles(commands.Cog):
     async def reaction_removed(self, payload: discord.RawReactionActionEvent, user: discord.Member | discord.User):
         """When a reaction is removed from a message"""
         # Handle reaction role
-        if payload.message_id in self.rr_assignments:
+        if payload.message_id in self.rr_active_binds:
             if await self.manage_rr_cooldown(user):
                 return
 
-            await self.assign_roles(str(payload.emoji), user, payload.message_id, payload.channel_id)
+            await self.manage_roles(user, str(payload.emoji), payload.message_id, payload.channel_id)
 
     async def manage_rr_cooldown(self, user: discord.User) -> bool:
         """Prevents users from overloading role requests"""
@@ -485,8 +480,8 @@ class ReactionRoles(commands.Cog):
 
     def add_rr_watch(self, message_id: int, channel_id: int, links: list[RRLink]) -> None:
         """Starts keeping track of what messages have bound actions"""
-        rr_watch = RRWatch(channel_id, links)
-        self.rr_assignments[message_id] = rr_watch
+        watch = RRWatch(channel_id, links)
+        self.rr_active_binds[message_id] = watch
 
 
 async def setup(bot: KBot):

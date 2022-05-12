@@ -7,7 +7,7 @@ from pathlib import Path
 
 import discord
 import emoji
-from dataclass_wizard import JSONSerializable
+from dataclass_wizard import JSONSerializable, fromlist
 from dataclass_wizard.enums import LetterCase
 from discord.ext import commands
 
@@ -19,7 +19,7 @@ from koabot.patterns import CHANNEL_URL_PATTERN, DISCORD_EMOJI_PATTERN
 @dataclass
 class RRLink():
     reactions: set[str]
-    roles: list[int]
+    roles: list[int] = field(default_factory=list)
 
 
 @dataclass()
@@ -35,7 +35,7 @@ class RRWatch(JSONSerializable):
         key_transform_with_dump = LetterCase.SNAKE
 
     channel_id: int
-    links: list[RRLink]
+    links: list[RRLink] = field(default_factory=list)
 
 
 @dataclass
@@ -85,12 +85,12 @@ class ReactionRoles(commands.Cog):
             return
 
         with open(binds_file, 'r', encoding="UTF-8") as json_file:
-            data = json.load(json_file)
+            data: dict = json.load(json_file)
 
             for k, v in data.items():
                 message_id: int = int(k)
                 channel_id: int = int(v['channel_id'])
-                links: list[RRLink] = v['links']
+                links: list[RRLink] = fromlist(RRLink, v['links'])
                 self.add_rr_watch(message_id, channel_id, links)
 
     def verify_json_integrity(self):
@@ -372,7 +372,7 @@ class ReactionRoles(commands.Cog):
         with open(binds_file, 'r+', encoding="UTF-8") as json_file:
             new_watch = RRWatch(bind.channel_id, bind.links)
 
-            data = json.load(json_file)
+            data: dict = json.load(json_file)
             data[bind.message_id] = new_watch.to_dict()
 
             json_file.seek(0)
@@ -475,13 +475,11 @@ class ReactionRoles(commands.Cog):
 
     def add_rr_confirmation(self, message_id: int, bind_tag: str, single_link: list, reactions: list) -> None:
         """Creates an entry pending to be handled for reaction roles overwrite request"""
-        rr_confirmation = RRConfirmation(bind_tag, reactions, single_link)
-        self.rr_confirmations[message_id] = rr_confirmation
+        self.rr_confirmations[message_id] = RRConfirmation(bind_tag, reactions, single_link)
 
     def add_rr_watch(self, message_id: int, channel_id: int, links: list[RRLink]) -> None:
         """Starts keeping track of what messages have bound actions"""
-        watch = RRWatch(channel_id, links)
-        self.rr_active_binds[message_id] = watch
+        self.rr_active_binds[message_id] = RRWatch(channel_id, links)
 
 
 async def setup(bot: KBot):

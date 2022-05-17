@@ -1,6 +1,7 @@
 """Koakuma bot"""
 import asyncio
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 from sys import argv
@@ -45,6 +46,14 @@ async def create_database_schema(conn: aiosqlite.Connection) -> None:
         await conn.commit()
 
 
+def db_migration_setup(db_name: str) -> None:
+    """Fixes the location of the database to DATA_DIR"""
+    if (source := Path(CACHE_DIR, db_name)).is_file():
+        destination = Path(DATA_DIR, db_name)
+        print(f"The database has been moved from \"{CACHE_DIR}\" to \"{destination}\"")
+        shutil.move(source, Path(DATA_DIR, db_name))
+
+
 async def main():
     print(f"Starting {PROJECT_NAME}...")
     bot.launch_time = datetime.utcnow()
@@ -58,16 +67,19 @@ async def main():
     ]
 
     if bot.debug_mode:
-        print('Running in debug mode.')
-        data_filenames.insert(0, "beta.jsonc")
-        db_file = Path(CACHE_DIR, "dbBeta.sqlite3")
+        print("Running in debug mode.")
+        config_name = "beta.jsonc"
+        db_name = "dbBeta.sqlite3"
     else:
-        data_filenames.insert(0, "config.jsonc")
-        db_file = Path(CACHE_DIR, "db.sqlite3")
+        config_name = "config.jsonc"
+        db_name = "db.sqlite3"
+
+    db_migration_setup(db_name)
+    db_file = Path(DATA_DIR, db_name)
+    data_filenames.insert(0, config_name)
 
     for filename in data_filenames:
-        config_file = Path(CONFIG_DIR, filename)
-        with open(config_file, encoding="UTF-8") as json_file:
+        with open(Path(CONFIG_DIR, filename), encoding="UTF-8") as json_file:
             bot_data.update(commentjson.load(json_file))
     bot.__dict__.update(bot_data)
 

@@ -201,11 +201,11 @@ class ReactionRoles(commands.Cog):
         except discord.Forbidden:
             print(f"Missing permissions to grant \"{user.name}\" roles on \"{user.guild.name}\"")
 
-        try:
-            print(quote)
-            await user.send(quote)
-        except discord.Forbidden:
-            print(f"I couldn't notify {user.name} about {role_string}...")
+        # try:
+        #     print(quote)
+        #     await user.send(quote)
+        # except discord.Forbidden:
+        #     print(f"I couldn't notify {user.name} about {role_string}...")
 
     @commands.group(aliases=['reactionroles', 'reactionrole', 'rr'])
     @commands.check_any(commands.is_owner(), is_guild_owner())

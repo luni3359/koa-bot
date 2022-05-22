@@ -22,7 +22,7 @@ class RRLink():
     roles: list[int] = field(default_factory=list)
 
 
-@dataclass()
+@dataclass
 class RRBind():
     message_id: int
     channel_id: int
@@ -69,22 +69,23 @@ class ReactionRoles(commands.Cog):
         self.rr_cooldown: dict[int, RRCooldown] = {}
         self.spam_limit = 12
 
-        # self.migrate_json_to_db()
-        self.verify_json_integrity()
-        self.load_rr_binds()
+        self.binds_file = Path(self.bot.DATA_DIR, "binds.json")
 
     @property
     def botstatus(self) -> BotStatus:
         return self.bot.get_cog('BotStatus')
 
-    def load_rr_binds(self):
-        binds_file = Path(self.bot.DATA_DIR, "binds.json")
+    async def cog_load(self):
+        await self.migrate_json_data()
+        self.verify_json_integrity()
+        self.load_rr_binds()
 
-        if not binds_file.exists():
-            binds_file.touch()
+    def load_rr_binds(self):
+        if not self.binds_file.exists():
+            self.binds_file.touch()
             return
 
-        with open(binds_file, 'r', encoding="UTF-8") as json_file:
+        with open(self.binds_file, 'r', encoding="UTF-8") as json_file:
             data: dict = json.load(json_file)
 
             for k, v in data.items():
@@ -95,12 +96,10 @@ class ReactionRoles(commands.Cog):
 
     def verify_json_integrity(self):
         """Makes sure that all keys are of their proper type"""
-        binds_file = Path(self.bot.DATA_DIR, "binds.json")
-
-        if not binds_file.exists():
+        if not self.binds_file.exists():
             return
 
-        with open(binds_file, 'r+', encoding="UTF-8") as json_file:
+        with open(self.binds_file, 'r+', encoding="UTF-8") as json_file:
             data: dict = json.load(json_file)
 
             # turn top level keys to ints
@@ -116,8 +115,8 @@ class ReactionRoles(commands.Cog):
             json_file.write(json.dumps(data, indent=4))
             json_file.truncate()
 
-    def migrate_json_to_db(self):
-        """Placeholder for a future port method"""
+    async def migrate_json_data(self):
+        """Migrates all existing json data, if any"""
 
     async def manage_roles(self, user: discord.Member, reaction: str,  message_id: int, channel_id: int):
         """Updates the roles of the given user
@@ -360,13 +359,11 @@ class ReactionRoles(commands.Cog):
 
         # TODO: Possible optimization: don't open the file twice if possible
         # create file if it doesn't exist
-        binds_file = Path(self.bot.DATA_DIR, "binds.json")
-
-        if not binds_file.exists():
-            with open(binds_file, 'w', encoding="UTF-8") as json_file:
+        if not self.binds_file.exists():
+            with open(self.binds_file, 'w', encoding="UTF-8") as json_file:
                 json_file.write("{}")
 
-        with open(binds_file, 'r+', encoding="UTF-8") as json_file:
+        with open(self.binds_file, 'r+', encoding="UTF-8") as json_file:
             new_watch = RRWatch(bind.channel_id, bind.links)
 
             data: dict = json.load(json_file)

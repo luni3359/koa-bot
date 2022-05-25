@@ -1,20 +1,16 @@
 CREATE TABLE IF NOT EXISTS reactionRoles (
     rrId INTEGER NOT NULL,
+    isEnabled INTEGER DEFAULT TRUE,
     dateCreated TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_reactRole PRIMARY KEY (rrId)
 );
 
-CREATE TABLE IF NOT EXISTS strEmoji (
-    emojiId INTEGER NOT NULL,
-    emojiStr TEXT NOT NULL,
-    CONSTRAINT pk_strEmoji PRIMARY KEY (emojiId)
-);
-
-CREATE TABLE IF NOT EXISTS discordEmoji (
-    emojiId INTEGER NOT NULL,
-    emojiDId INTEGER NOT NULL UNIQUE,
-    dateCreated TEXT,
-    CONSTRAINT pk_discEmoji PRIMARY KEY (emojiId)
+CREATE TABLE IF NOT EXISTS discordServerRR (
+    rrId INTEGER NOT NULL,
+    serverId INTEGER NOT NULL,
+    CONSTRAINT pk_discServRR PRIMARY KEY (rrId, serverId),
+    CONSTRAINT fk_discRRid_discServRR FOREIGN KEY (rrId) REFERENCES reactionRoles(rrId),
+    CONSTRAINT fk_discServid_discServRR FOREIGN KEY (serverId) REFERENCES discordServer(serverId)
 );
 
 CREATE TABLE IF NOT EXISTS discordRole (

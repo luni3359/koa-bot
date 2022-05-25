@@ -42,6 +42,13 @@ CREATE TABLE IF NOT EXISTS discordServerUser (
     CONSTRAINT fk_discServid_discServUser FOREIGN KEY (serverId) REFERENCES discordServer(serverId)
 );
 
+CREATE TABLE IF NOT EXISTS discordEmoji (
+    emojiId INTEGER NOT NULL,
+    emojiDId INTEGER NOT NULL UNIQUE,
+    dateCreated TEXT,
+    CONSTRAINT pk_discEmoji PRIMARY KEY (emojiId)
+);
+
 CREATE TABLE IF NOT EXISTS userAvatar (
     avatarId INTEGER NOT NULL,
     userId INTEGER NOT NULL,
@@ -50,6 +57,14 @@ CREATE TABLE IF NOT EXISTS userAvatar (
     CONSTRAINT fk_userUserAvat FOREIGN KEY (userId) REFERENCES discordUser(userId)
 );
 
+-- Glaring issue: wouldn't this too many entries?
+-- CREATE TABLE IF NOT EXISTS serverEmojiUsage (
+--     emusId integer NOT NULL,
+--     serverId INTEGER NOT NULL,
+--     emojiId integer NOT NULL,
+--     userId integer NOT NULL,
+--     dateUsed text NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
 -- CREATE TABLE IF NOT EXISTS botPreview (botPreviewId INTEGER NOT NULL,);
 -- CREATE TABLE IF NOT EXISTS botEmbed ();
 -- CREATE TABLE IF NOT EXISTS artist (

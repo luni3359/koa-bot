@@ -48,10 +48,16 @@ async def create_database_schema(conn: aiosqlite.Connection) -> None:
 
 def db_migration_setup(db_name: str) -> None:
     """Fixes the location of the database to DATA_DIR"""
-    if (source := Path(CACHE_DIR, db_name)).is_file():
-        destination = Path(DATA_DIR, db_name)
+    source = Path(CACHE_DIR, db_name)
+    destination = Path(DATA_DIR, db_name)
+
+    if source.is_file():
+        if destination.is_file():
+            return print("ERROR: Unable to move database. A database already exists at destination."
+                         f"\nSource: {source}\nDestination:{destination}\n")
+
         print(f"The database has been moved from \"{CACHE_DIR}\" to \"{destination}\"")
-        shutil.move(source, Path(DATA_DIR, db_name))
+        shutil.move(source, destination)
 
 
 async def main():

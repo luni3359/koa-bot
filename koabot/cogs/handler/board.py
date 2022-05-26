@@ -108,7 +108,8 @@ class Board(commands.Cog):
         }
 
         if random:
-            data_arg['random'] = random
+            # data_arg['random'] = random
+            data_arg['tags'] += " order:random"
 
         if limit and limit > 0:
             data_arg['limit'] = limit

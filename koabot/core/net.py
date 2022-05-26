@@ -38,19 +38,22 @@ async def http_request(url: str, **kwargs) -> NetResponse:
             Stringified json object
         post::bool
             whether or not the request is a POST request
+        jdata::dict
+            a dict containing the json data to be sent
     """
     auth: aiohttp.BasicAuth = kwargs.get('auth')
     headers: dict = kwargs.get('headers')
     params: dict = kwargs.get('params', None)
     data: dict = kwargs.get('data', None)
     post: bool = kwargs.get('post', None)
+    jdata: dict = kwargs.get('jdata', None)
 
     async with aiohttp.ClientSession(auth=auth) as session:
         if post:
-            async with session.post(url, headers=headers, params=params, data=data) as response:
+            async with session.post(url, headers=headers, params=params, data=data, json=jdata) as response:
                 return await handle_request(response, **kwargs)
         else:
-            async with session.get(url, headers=headers, params=params, data=data) as response:
+            async with session.get(url, headers=headers, params=params, data=data, json=jdata) as response:
                 return await handle_request(response, **kwargs)
 
 

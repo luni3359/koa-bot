@@ -51,6 +51,7 @@ class Board(commands.Cog):
             hide_posts_remaining::bool
                 Omit the final remaining count on the final post. False by default.
         """
+        tags = tags.strip()
         print(f"User searching for: {tags}")
 
         posts = None
@@ -90,43 +91,42 @@ class Board(commands.Cog):
             json::dict
         """
         post_id = kwargs.get('post_id')
-        tags = kwargs.get('tags')
+        tags: str = kwargs.get('tags')
         limit = kwargs.get('limit', 0)
         random = kwargs.get('random', False)
-        params = {}
+        jdata = {}
 
         if tags:
-            params['tags'] = tags
-
-        if random:
-            params['random'] = random
+            if random:
+                jdata['tags'] = tags + " order:random"
+            else:
+                jdata['tags'] = tags
 
         if limit and limit > 0:
-            params['limit'] = limit
+            jdata['limit'] = limit
 
         match board:
             case 'danbooru':
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)
-                    return await net_core.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
+                    return await net_core.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f"error fetching post #{post_id}")
                 elif tags:
-                    return await net_core.http_request(guide['api']['tag_search_url'], auth=self.danbooru_auth, params=params, headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(guide['api']['tag_search_url'], auth=self.danbooru_auth, jdata=jdata, headers={'Content-Type': 'application/json'}, json=True, err_msg=f"error fetching search: {tags}")
             case 'e621':
                 headers = guide['api']['headers']  # e621 requires to know the User-Agent
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)
-                    return await net_core.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
+                    return await net_core.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f"error fetching post #{post_id}")
                 elif tags:
-                    headers['Content-Type'] = 'application/json'
-                    return await net_core.http_request(guide['api']['tag_search_url'], auth=self.e621_auth, params=params, headers=headers, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(guide['api']['tag_search_url'], auth=self.e621_auth, jdata=jdata, headers=headers, json=True, err_msg=f"error fetching search: {tags}")
             case 'sankaku':
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)
-                    return await net_core.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
+                    return await net_core.http_request(url, json=True, err_msg=f"error fetching post #{post_id}")
                 elif tags:
                     search_query = '+'.join(tags.split(' '))
                     url = guide['api']['tag_search_url'].format(search_query)
-                    return await net_core.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(url, json=True, err_msg=f"error fetching search: {tags}")
             case _:
                 raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
 

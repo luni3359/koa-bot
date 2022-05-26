@@ -43,14 +43,14 @@ async def http_request(url: str, **kwargs) -> NetResponse:
     headers: dict = kwargs.get('headers')
     params: dict = kwargs.get('params', None)
     data: dict = kwargs.get('data', None)
-    post: bool = kwargs.get('post')
+    post: bool = kwargs.get('post', None)
 
     async with aiohttp.ClientSession(auth=auth) as session:
         if post:
-            async with session.post(url, params=params, data=data, headers=headers) as response:
+            async with session.post(url, headers=headers, params=params, data=data) as response:
                 return await handle_request(response, **kwargs)
         else:
-            async with session.get(url, params=params, data=data, headers=headers) as response:
+            async with session.get(url, headers=headers, params=params, data=data) as response:
                 return await handle_request(response, **kwargs)
 
 

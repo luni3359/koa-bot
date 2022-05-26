@@ -2,7 +2,6 @@
 import re
 
 import aiohttp
-import commentjson
 import discord
 from discord.ext import commands
 
@@ -52,16 +51,11 @@ class Board(commands.Cog):
             hide_posts_remaining::bool
                 Omit the final remaining count on the final post. False by default.
         """
-        on_nsfw_channel = ctx.channel.is_nsfw()
-
-        print(f'User searching for: {tags}')
+        print(f"User searching for: {tags}")
 
         posts = None
         async with ctx.typing():
-            try:
-                posts = (await self.search_query(board=board, guide=guide, tags=tags, random=True, include_nsfw=on_nsfw_channel)).json
-            except aiohttp.TooManyRedirects as e:
-                return print("There's too many redirects: ", e)
+            posts = (await self.search_query(board=board, guide=guide, tags=tags, random=True)).json
 
         if not posts:
             return await ctx.send('Sorry, nothing found!')
@@ -91,8 +85,6 @@ class Board(commands.Cog):
                 Setting limit to 0 returns as many results as possible.
             random::bool
                 Pick at random from results. Default is False
-            include_nsfw::bool
-                Whether or not the search will use safe versions of boards. Default is False
 
         Returns:
             json::dict
@@ -101,11 +93,10 @@ class Board(commands.Cog):
         tags = kwargs.get('tags')
         limit = kwargs.get('limit', 0)
         random = kwargs.get('random', False)
-        include_nsfw = kwargs.get('include_nsfw', False)
+        params = {}
 
-        params = {
-            'tags': tags
-        }
+        if tags:
+            params['tags'] = tags
 
         if random:
             params['random'] = random
@@ -119,27 +110,15 @@ class Board(commands.Cog):
                     url = guide['api']['id_search_url'].format(post_id)
                     return await net_core.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
                 elif tags:
-                    if include_nsfw:
-                        url = 'https://danbooru.donmai.us'
-                    else:
-                        url = 'https://safebooru.donmai.us'
-
-                    return await net_core.http_request(f'{url}/posts.json', auth=self.danbooru_auth, params=commentjson.dumps(params), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(guide['api']['tag_search_url'], auth=self.danbooru_auth, params=params, headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
             case 'e621':
-                # e621 requires to know the User-Agent
-                headers = guide['api']['headers']
-
+                headers = guide['api']['headers']  # e621 requires to know the User-Agent
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)
                     return await net_core.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
                 elif tags:
-                    if include_nsfw:
-                        url = 'https://e621.net'
-                    else:
-                        url = 'https://e926.net'
-
                     headers['Content-Type'] = 'application/json'
-                    return await net_core.http_request(f'{url}/posts.json', auth=self.e621_auth, params=commentjson.dumps(params), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(guide['api']['tag_search_url'], auth=self.e621_auth, params=params, headers=headers, json=True, err_msg=f'error fetching search: {tags}')
             case 'sankaku':
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)

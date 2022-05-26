@@ -57,14 +57,27 @@ class ImageBoard(commands.Cog):
         return self.bot.get_cog('SiteReddit')
 
     @commands.command(name='danbooru', aliases=['dan'])
-    async def search_danbooru(self, ctx, *, tags: str):
-        """Search on danbooru!"""
-        await self.board.search_board(ctx, tags, guide=self.bot.guides['gallery']['danbooru-default'])
+    async def search_danbooru(self, ctx: commands.Context, *, tags: str):
+        """Search anime art on danbooru!"""
+        if ctx.channel.is_nsfw:
+            guide = self.bot.guides['gallery']['danbooru-default']
+        else:
+            guide = self.bot.guides['gallery']['donmai-safe']
+        await self.board.search_board(ctx, tags, guide=guide)
+
+    @commands.command(name='donmai')
+    async def search_donmai(self, ctx, *, tags: str):
+        """Search family-friendly art on donmai!"""
+        await self.board.search_board(ctx, tags, guide=self.bot.guides['gallery']['donmai-safe'])
 
     @commands.command(name='e621', aliases=['e6'])
-    async def search_e621(self, ctx, *, tags: str):
+    async def search_e621(self, ctx: commands.Context, *, tags: str):
         """Search on e621!"""
-        await self.board.search_board(ctx, tags, board='e621', guide=self.bot.guides['gallery']['e621-default'])
+        if ctx.channel.is_nsfw:
+            guide = self.bot.guides['gallery']['e621-default']
+        else:
+            guide = self.bot.guides['gallery']['e621-safe']
+        await self.board.search_board(ctx, tags, board='e621', guide=guide)
 
     # Might as well use pixiv
     @commands.command(name='sankaku', enabled=False)

@@ -41,10 +41,11 @@ class UserActions(commands.Cog):
         # Thanks for the idea freecodecamp!
 
         if not (api_response := (await net_core.http_request("https://zenquotes.io/api/random", json=True)).json):
-            return await ctx.send("I cannot channel those energies at the moment... Please try again later")
+            return await ctx.reply("I cannot channel those energies at the moment..."
+                                   " Please try again later", mention_author=False)
 
         quote = fromlist(Quote, api_response)[0]
-        await ctx.send(f">>> \"{quote.quote}\"\nー *{quote.author}*")
+        await ctx.reply(f">>> \"{quote.quote}\"\nー *{quote.author}*", mention_author=False)
 
 
 @dataclass

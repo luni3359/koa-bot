@@ -118,7 +118,7 @@ class Converter(commands.Cog):
             conversion_str += f'\n{calculation_str}'
 
         conversion_str += '```'
-        await ctx.send(conversion_str)
+        await ctx.reply(conversion_str, mention_author=False)
 
 
 async def setup(bot: KBot):

@@ -34,7 +34,7 @@ class TimeZone(commands.Cog):
             # https://strftime.org
             tz_result += (f"{label}: ").ljust(8) + tz_time.strftime('%a, %b %d %H:%M:%S\n')
 
-        await ctx.send(tz_result + '```')
+        await ctx.reply(tz_result + '```', mention_author=False)
 
 
 async def setup(bot: KBot):

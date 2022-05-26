@@ -29,7 +29,7 @@ class Forums(commands.Cog):
             max_posts = 5
 
             if not (thread := board.get_thread(thread_id)):
-                return await ctx.send(self.botstatus.get_quote('thread_missing'))
+                return await ctx.reply(self.botstatus.get_quote('thread_missing'), mention_author=False)
 
             posts_ready = []
             for post in thread.posts:

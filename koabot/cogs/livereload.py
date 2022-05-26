@@ -79,9 +79,9 @@ class LiveReload(commands.Cog):
             await self.bot.unload_extension(extension)
             await self.bot.load_extension(extension)
         except Exception as e:
-            await ctx.send(f"{type(e).__name__}: {e}")
+            await ctx.reply(f"{type(e).__name__}: {e}", mention_author=False)
         else:
-            await ctx.send(f"Reloaded '{extension}' @ {datetime.today()}")
+            await ctx.reply(f"Reloaded '{extension}' @ {datetime.today()}", mention_author=False)
 
     @commands.command(name="autoreload", hidden=True)
     @commands.is_owner()

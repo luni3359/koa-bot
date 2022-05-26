@@ -119,11 +119,11 @@ class Game(commands.Cog):
                 i = pattern_match.end()
                 continue
 
-            return await ctx.send("Invalid syntax!")
+            return await ctx.reply("Invalid syntax!", mention_author=False)
 
         # there should always be at least one roll - never do raw math
         if roll_count == 0:
-            return await ctx.send("Please roll something!")
+            return await ctx.reply("Please roll something!", mention_author=False)
 
         total_sum = 0
         logic_string = ""
@@ -246,12 +246,12 @@ class Game(commands.Cog):
     async def roll_error(self, ctx: commands.Context, exception: commands.CommandError):
         """Roll exception handler"""
         if isinstance(exception, commands.MissingRequiredArgument):
-            return await ctx.send("Please specify what you want to roll.")
+            return await ctx.reply("Please specify what you want to roll.", mention_author=False)
 
     @commands.command()
     async def flip(self, ctx: commands.Context):
         """Flip a coin"""
-        await ctx.send(random.getrandbits(1) and "Heads!" or "Tails!")
+        await ctx.reply(random.getrandbits(1) and "Heads!" or "Tails!", mention_author=False)
 
 
 async def setup(bot: KBot):

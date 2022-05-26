@@ -64,15 +64,16 @@ class BotStatus(commands.Cog):
             cpu_temp = float(cpu_temp)
 
             print(f"CPU Temp: {cpu_temp:0.1f} °C")
-            await ctx.send(f"I'm at {cpu_temp:0.1f} °C.")
+            await ctx.reply(f"I'm at {cpu_temp:0.1f} °C.", mention_author=False)
         except NameError:
             print("Unable to report temperature.")
-            await ctx.send("I can't get the CPU's temperature...")
+            await ctx.reply("I can't get the CPU's temperature...", mention_author=False)
 
-    @commands.command(name='last')
+    @commands.command(name="last", hidden=True)
+    @commands.is_owner()
     async def talk_status(self, ctx: commands.Context, /):
         """Mention a brief summary of the last used channel"""
-        await ctx.send(f'Last channel: {self.bot.last_channel}\nCurrent count there: {self.bot.last_channel_message_count}')
+        await ctx.reply(f"Last channel: {self.bot.last_channel}\nCurrent count there: {self.bot.last_channel_message_count}", mention_author=False)
 
     @commands.command()
     async def uptime(self, ctx: commands.Context, /):
@@ -82,13 +83,13 @@ class BotStatus(commands.Cog):
         (hours, remainder) = divmod(int(delta_uptime.total_seconds()), 3600)
         (minutes, seconds) = divmod(remainder, 60)
         (days, hours) = divmod(hours, 24)
-        await ctx.send(f"I've been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.")
+        await ctx.reply(f"I've been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.", mention_author=False)
 
     @commands.command()
     async def version(self, ctx: commands.Context, /):
         """Show bot's version"""
         version = get_version(self.bot.PROJECT_NAME, self.bot.PROJECT_DIR)
-        await ctx.send(f"On version `{version}`.")
+        await ctx.reply(f"On version `{version}`.", mention_author=False)
 
     async def typing_a_message(self, ctx: commands.Context, /, **kwargs):
         """Make Koakuma seem alive with a 'is typing' delay

@@ -103,16 +103,15 @@ class Board(commands.Cog):
         random = kwargs.get('random', False)
         include_nsfw = kwargs.get('include_nsfw', False)
 
-        data_arg = {
+        params = {
             'tags': tags
         }
 
         if random:
-            # data_arg['random'] = random
-            data_arg['tags'] += " order:random"
+            params['random'] = random
 
         if limit and limit > 0:
-            data_arg['limit'] = limit
+            params['limit'] = limit
 
         match board:
             case 'danbooru':
@@ -125,7 +124,7 @@ class Board(commands.Cog):
                     else:
                         url = 'https://safebooru.donmai.us'
 
-                    return await net_core.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(f'{url}/posts.json', auth=self.danbooru_auth, params=commentjson.dumps(params), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
             case 'e621':
                 # e621 requires to know the User-Agent
                 headers = guide['api']['headers']
@@ -140,7 +139,7 @@ class Board(commands.Cog):
                         url = 'https://e926.net'
 
                     headers['Content-Type'] = 'application/json'
-                    return await net_core.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(f'{url}/posts.json', auth=self.e621_auth, params=commentjson.dumps(params), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
             case 'sankaku':
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)

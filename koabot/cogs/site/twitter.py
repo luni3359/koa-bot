@@ -59,21 +59,22 @@ class SiteTwitter(Site):
         if len((tweet_media := tweet.includes['media'])) == 1:
             match tweet_media[0]['type']:
                 case 'photo':
-                    if not hasattr(tweet.data, 'possibly_sensitive') or not tweet.data.possibly_sensitive:
+                    if not tweet.data.possibly_sensitive:
                         print("Twitter preview not applicable. (Media is sfw)")
                         return False
 
                     # TODO: There's got to be a better way...
-                    if guide['embed']['footer_text'] == "TwitFix":
-                        print("Twitter preview not applicable. (Handled by TwitFix)")
+                    if guide['embed']['footer_text'] == "vxTwitter":
+                        print("Twitter preview not applicable. (Handled by vxTwitter)")
                         return False
 
                 case _:  # 'video' or 'animated_gif'
-                    if guide['embed']['footer_text'] == "TwitFix":
-                        print("Twitter preview not applicable. (Handled by TwitFix)")
+                    if guide['embed']['footer_text'] == "vxTwitter":
+                        print("Twitter preview not applicable. (Handled by vxTwitter)")
+                        return False
 
-                    if hasattr(tweet.data, 'possibly_sensitive') and tweet.data.possibly_sensitive:
-                        fixed_url = url.replace("twitter", "fxtwitter", 1)
+                    if tweet.data.possibly_sensitive:
+                        fixed_url = url.replace("twitter", "vxtwitter", 1)
                         await msg.reply(content=fixed_url, mention_author=False)
                     return False
         return True
@@ -104,7 +105,14 @@ class SiteTwitter(Site):
         gallery_pics = [f"{picture['url']}:orig" for picture in tweet.includes['media']]
 
         embed_group = EmbedGroup()
-        embed_group.color = discord.Colour(int(guide['embed']['color'], 16))
+
+        if guide['embed']['footer_text'] == "vxTwitter":
+            if tweet.data.possibly_sensitive:
+                embed_group.color = discord.Colour(int("0x800020", 16))
+            else:
+                embed_group.color = discord.Colour(int("0x7FFFD4", 16))
+        else:
+            embed_group.color = discord.Colour(int(guide['embed']['color'], 16))
 
         # If it's the first picture to show then add author, body, and counters
         tweet_author = tweet.includes['users'][0]

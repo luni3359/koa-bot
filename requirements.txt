@@ -23,7 +23,7 @@ colorama==0.4.4; python_version >= "2.7" and python_full_version < "3.0.0" and p
 commentjson==0.9.0
 dataclass-wizard==0.22.1
 deprecated==1.2.13; python_full_version >= "3.5.3"
-discord.py @ git+https://github.com/Rapptz/discord.py@77baa06 ; python_full_version >= "3.8.0"
+discord.py @ git+https://github.com/Rapptz/discord.py@36f039a ; python_full_version >= "3.8.0"
 docopt==0.6.2
 emoji==1.7.0
 filelock==3.7.0; python_version >= "3.7"

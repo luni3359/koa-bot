@@ -177,11 +177,11 @@ class SiteReddit(Site):
 
         embed = discord.Embed()
         embed.set_author(name=subreddit.display_name_prefixed,
-                                url=subreddit_url,
-                                icon_url=self.get_subreddit_icon(subreddit))
-        embed.title = subreddit.display_name
+                                url=subreddit_url)
+        embed.title = subreddit.title
         embed.url = subreddit_url
         embed.description = subreddit.public_description
+        embed.set_thumbnail(url=self.get_subreddit_icon(subreddit))
         embed.add_field(name='Members', value=f"{subreddit.subscribers:,}")
         embed.add_field(name='Online', value=f"{subreddit.active_user_count:,}")
         embed.set_footer(text=guide['embed']['footer_text'], icon_url=guide['embed']['favicon']['size192'])

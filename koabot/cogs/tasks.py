@@ -17,7 +17,7 @@ class Tasks(commands.Cog):
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
-        self.tasks: list[asyncio.Task] = []
+        self.loops: list[tasks.Loop] = []
 
         self.online_streamers = []
 
@@ -37,9 +37,10 @@ class Tasks(commands.Cog):
         self.bot.loop.create_task(self.run_once_when_ready())
 
     async def cog_unload(self) -> None:
-        for task in self.tasks:
-            print(f"Ending task \"{task.get_name()}\"")
-            task.stop()
+        for loop in self.loops:
+            task_name = loop.get_task().get_name()
+            print(f"Ending task \"{task_name}\"")
+            loop.stop()
 
     async def run_once_when_ready(self):
         await self.bot.wait_until_ready()
@@ -50,7 +51,8 @@ class Tasks(commands.Cog):
         ]
 
         for loop in loops:
-            self.tasks.append(loop.start())
+            loop.start()
+            self.loops.append(loop)
 
     @tasks.loop(hours=24)
     async def change_presence_periodically(self) -> None:

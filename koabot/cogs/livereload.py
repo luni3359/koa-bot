@@ -3,19 +3,27 @@ https://gist.github.com/AXVin/08ed554a458fc7aee4da162f4c53d086"""
 # pylint: disable=no-member,unused-argument
 import os
 from datetime import datetime
-from pathlib import Path
 
 from discord.ext import commands, tasks
 
+from koabot.core.utils import calculate_sha1, path_from_extension
 from koabot.kbot import KBot
+
+
+class ReloadableExt():
+    def __init__(self, extension: str = None) -> None:
+        self.last_modified_time: float
+        self.file_hash: str
+
+        if extension:
+            path = path_from_extension(extension)
+            self.last_modified_time = os.path.getmtime(path)
+            self.file_hash = calculate_sha1(path)
+
 
 # put your extension names in this list
 # if you don't want them to be reloaded
 IGNORE_EXTENSIONS: list[str] = []
-
-
-def path_from_extension(extension: str) -> Path:
-    return Path(extension.replace('.', os.sep)+'.py')
 
 
 class LiveReload(commands.Cog):
@@ -24,7 +32,7 @@ class LiveReload(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
         self.enabled = True
-        self.last_modified_time = {}
+        self.extension_list: dict[str, ReloadableExt] = {}
 
     async def cog_load(self):
         self.live_reload_loop.start()
@@ -38,13 +46,23 @@ class LiveReload(commands.Cog):
             if extension in IGNORE_EXTENSIONS:
                 continue
             path = path_from_extension(extension)
-            time = os.path.getmtime(path)
+            modified_time = os.path.getmtime(path)
 
-            try:
-                if self.last_modified_time[extension] == time:
-                    continue
-            except KeyError:
-                self.last_modified_time[extension] = time
+            if extension not in self.extension_list:
+                new_ext = ReloadableExt()
+                new_ext.last_modified_time = modified_time
+                new_ext.file_hash = calculate_sha1(path)
+                self.extension_list[extension] = new_ext
+
+            current_ext = self.extension_list[extension]
+
+            if current_ext.last_modified_time == modified_time:
+                continue
+
+            if (sha1_hash := calculate_sha1(path)) == current_ext.file_hash:
+                print(f"Unable to reload '{extension}' (Hashes are identical)")
+                current_ext.last_modified_time = modified_time
+                continue
 
             try:
                 await self.bot.reload_extension(extension)
@@ -54,19 +72,17 @@ class LiveReload(commands.Cog):
                 print(f"Unable to reload '{extension}'")
             else:
                 print(f"Reloaded '{extension}' @ {datetime.today()}")
-
             finally:
-                self.last_modified_time[extension] = time
+                current_ext.last_modified_time = modified_time
+                current_ext.file_hash = sha1_hash
 
     @live_reload_loop.before_loop
     async def cache_last_modified_time(self):
-        # Mapping = {extension: timestamp}
+        # Mapping = {extension: ReloadableExt}
         for extension in self.bot.extensions.keys():
             if extension in IGNORE_EXTENSIONS:
                 continue
-            path = path_from_extension(extension)
-            time = os.path.getmtime(path)
-            self.last_modified_time[extension] = time
+            self.extension_list[extension] = ReloadableExt(extension)
 
     @commands.command(name="reload", hidden=True)
     @commands.is_owner()

@@ -17,6 +17,7 @@ class Tasks(commands.Cog):
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
+        self.tasks: list[asyncio.Task] = []
 
     @property
     def board(self) -> Board:
@@ -33,11 +34,17 @@ class Tasks(commands.Cog):
     async def cog_load(self):
         self.bot.loop.create_task(self.run_once_when_ready())
 
+    async def cog_unload(self) -> None:
+        for task in self.tasks:
+            print(f"Ending task \"{task.get_name()}\"")
+            task.cancel()
+        return await super().cog_unload()
+
     async def run_once_when_ready(self):
         await self.bot.wait_until_ready()
-        
-        self.bot.loop.create_task(self.check_live_streamers())
-        self.bot.loop.create_task(self.change_presence_periodically())
+
+        self.tasks.append(self.bot.loop.create_task(self.check_live_streamers()))
+        self.tasks.append(self.bot.loop.create_task(self.change_presence_periodically()))
 
     async def change_presence_periodically(self) -> None:
         """Changes presence at X time, once per day"""

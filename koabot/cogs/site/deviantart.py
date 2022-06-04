@@ -54,6 +54,7 @@ class SiteDeviantArt(Site):
 
     async def get_deviantart_posts(self, msg: discord.Message, urls: list[str]):
         """Automatically fetch multiple posts from deviantart"""
+        MAX_EMBEDS = 5
         title_to_test_against = urls[0].split('/')[-1].rsplit('-', maxsplit=1)[0]
         similarity_ratio = 0
         for url in urls[1:]:
@@ -61,11 +62,15 @@ class SiteDeviantArt(Site):
             similarity_ratio += fuzz.ratio(title, title_to_test_against)
             print(f"{title}: {title_to_test_against} ({fuzz.ratio(title, title_to_test_against)})")
 
+        display_as_singles = False
         similarity_ratio /= len(urls) - 1
         print(f"Url similarity ratio: {similarity_ratio}")
         if similarity_ratio < 90:
-            return
+            print("Urls seem unrelated from each other. Sending each embed individually.")
+            display_as_singles = True
 
+        # Check what type the first post is and if subsequent posts are of different types, 
+        # send them in one batch, but using different embed groups
         base_type: str = None
         api_results = []
         for url in urls:
@@ -83,15 +88,19 @@ class SiteDeviantArt(Site):
                 base_type = deviation_type
 
             if deviation_type != base_type:
-                print("Preview not available. Deviation types differ.")
-                return None
+                print("Deviation types differ. Sending each embed individually.")
+                display_as_singles = True
 
             api_results.append(api_result)
 
         embeds: list[discord.Embed] = []
         total_da_count = len(api_results)
-        last_embed_index = min(4, total_da_count - 1)
-        for i, deviation in enumerate([d['deviation'] for d in api_results[:5]]):
+        last_embed_index = min(MAX_EMBEDS - 1, total_da_count - 1)
+        for i, deviation in enumerate([d['deviation'] for d in api_results[:MAX_EMBEDS]]):
+            if display_as_singles:
+                embed = self.build_deviantart_embed(urls[i], deviation)
+                embeds.append(embed)
+                continue
             if i != last_embed_index:
                 if i == 0:
                     embed = self.build_deviantart_embed(urls[i], deviation)
@@ -103,8 +112,8 @@ class SiteDeviantArt(Site):
                 embed.description = ""
                 embed.remove_author()
                 embed.clear_fields()
-                if total_da_count > 5:
-                    embed.set_footer(text=f"{total_da_count - 5}+ remaining", icon_url=embed.footer.icon_url)
+                if total_da_count > MAX_EMBEDS:
+                    embed.set_footer(text=f"{total_da_count - MAX_EMBEDS}+ remaining", icon_url=embed.footer.icon_url)
 
             embeds.append(embed)
 

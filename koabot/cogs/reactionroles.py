@@ -141,6 +141,7 @@ class ReactionRoles(commands.Cog):
     async def list(self, ctx: commands.Context) -> None:
         """Lists all reaction roles in the server"""
         embed = discord.Embed()
+        embed.title = "Reaction roles"
         embed.description = ""
 
         i = 0

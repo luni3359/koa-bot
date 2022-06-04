@@ -126,7 +126,7 @@ class ReactionRoles(commands.Cog):
 
             try:
                 print(quote)
-                await user.send(quote)
+                # await user.send(quote)
             except discord.Forbidden:
                 print(f"I couldn't notify {user.name} about {roles}...")
 
@@ -136,6 +136,33 @@ class ReactionRoles(commands.Cog):
         """Grant users roles upon reacting to a message"""
         if ctx.invoked_subcommand is None:
             await ctx.reply('Invalid command!', mention_author=False)
+
+    @reaction_roles.command()
+    async def list(self, ctx: commands.Context) -> None:
+        """Lists all reaction roles in the server"""
+        embed = discord.Embed()
+        embed.description = ""
+
+        i = 0
+        for message_id, bind in self.rr_assignments.items():
+            channel_id: int = bind['channel_id']
+            if not (channel := ctx.guild.get_channel_or_thread(channel_id)):
+                continue
+
+            i += 1
+            message: discord.PartialMessage = channel.get_partial_message(message_id)
+            embed.description += f"**Message #{i}:** [GO]({message.jump_url})\n"
+
+            for j, link in enumerate(bind['links']):
+                role_ids: list[int] = link['roles']
+                roles: list[discord.Role] = list(map(ctx.guild.get_role, role_ids))
+                role_mentions = [r.mention for r in roles]
+
+                embed.description += (f"__Link #{j + 1}__\n"
+                                      f"   Reactions: {' '.join(link['reactions'])}\n"
+                                      f"   Roles: {' '.join(role_mentions)}\n")
+
+        await ctx.reply(embed=embed, mention_author=False)
 
     @reaction_roles.command()
     async def assign(self, ctx: commands.Context, url: str) -> None:
@@ -437,7 +464,7 @@ class ReactionRoles(commands.Cog):
         # send a warning and freeze
         if tmp_root['change_count'] > self.spam_limit:
             tmp_root['cooldown_start'] = current_time
-            await user.send("Please wait a few moments and try again.")
+            # await user.send("Please wait a few moments and try again.")
             return True
 
         return False

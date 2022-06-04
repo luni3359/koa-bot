@@ -130,7 +130,7 @@ class ReactionRoles(commands.Cog):
             except discord.Forbidden:
                 print(f"I couldn't notify {user.name} about {roles}...")
 
-    @commands.group(aliases=['reactionroles', 'reactionrole', 'rr'])
+    @commands.hybrid_group(aliases=['reactionroles', 'reactionrole', 'rr'])
     @commands.check_any(commands.is_owner(), is_guild_owner())
     async def reaction_roles(self, ctx: commands.Context):
         """Grant users roles upon reacting to a message"""

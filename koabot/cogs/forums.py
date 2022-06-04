@@ -20,7 +20,7 @@ class Forums(commands.Cog):
     def botstatus(self) -> BotStatus:
         return self.bot.get_cog('BotStatus')
 
-    @commands.command(name='4chan', aliases=['4c', '4ch'])
+    @commands.hybrid_command(name='4chan', aliases=['4c', '4ch'])
     async def get_4chan_posts(self, ctx: commands.Context, user_board: str = 'u', thread_id: int = 0):
         """Get posts from a specific board, mostly those with pictures"""
 

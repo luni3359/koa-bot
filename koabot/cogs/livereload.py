@@ -84,7 +84,7 @@ class LiveReload(commands.Cog):
                 continue
             self.extension_list[extension] = ReloadableExt(extension)
 
-    @commands.command(name="reload", hidden=True)
+    @commands.hybrid_command(name="reload", hidden=True)
     @commands.is_owner()
     async def reload_extension(self, ctx: commands.Context, *, extension: str):
         """Reloads a module"""
@@ -99,7 +99,7 @@ class LiveReload(commands.Cog):
         else:
             await ctx.reply(f"Reloaded '{extension}' @ {datetime.today()}", mention_author=False)
 
-    @commands.command(name="autoreload", hidden=True)
+    @commands.hybrid_command(name="autoreload", hidden=True)
     @commands.is_owner()
     async def autoreload_extensions(self, ctx: commands.Context, mode: str):
         """Toggles autoreload on or off"""

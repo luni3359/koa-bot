@@ -20,7 +20,7 @@ class Converter(commands.Cog):
         self.quantity = self.ureg.Quantity
         self.rates = forex_api.CurrencyRates()
 
-    @commands.command(name='convert', aliases=['conv', 'cv'])
+    @commands.hybrid_command(name='convert', aliases=['conv', 'cv'])
     async def unit_convert(self, ctx: commands.Context, *, units: str = ""):
         """Convert units"""
 
@@ -51,7 +51,7 @@ class Converter(commands.Cog):
         if unit_matches:
             await self.convert_units(ctx, unit_matches)
 
-    @commands.command(name='exchange', aliases=['currency', 'xc'])
+    @commands.hybrid_command(name='exchange', aliases=['currency', 'xc'])
     async def convert_currency(self, ctx: commands.Context, amount: float, src_code: str, _, dst_code: str):
         """Convert an amount from one currency to another"""
         src_code = src_code.upper()

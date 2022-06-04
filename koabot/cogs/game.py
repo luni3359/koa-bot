@@ -94,7 +94,7 @@ class Game(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-    @commands.command(aliases=['r'])
+    @commands.hybrid_command(aliases=['r'])
     async def roll(self, ctx: commands.Context, *, roll_string: str):
         """Rolls one or many dice"""
         matches_found: list[RollMatch] = []
@@ -248,7 +248,7 @@ class Game(commands.Cog):
         if isinstance(exception, commands.MissingRequiredArgument):
             return await ctx.reply("Please specify what you want to roll.", mention_author=False)
 
-    @commands.command()
+    @commands.hybrid_command()
     async def flip(self, ctx: commands.Context):
         """Flip a coin"""
         await ctx.reply(random.getrandbits(1) and "Heads!" or "Tails!", mention_author=False)

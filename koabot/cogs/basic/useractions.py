@@ -15,7 +15,7 @@ class UserActions(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-    @commands.command(aliases=['ava'])
+    @commands.hybrid_command(aliases=['ava'])
     async def avatar(self, ctx: commands.Context):
         """Display an user's avatar"""
         embeds: list[discord.Embed] = []
@@ -35,7 +35,7 @@ class UserActions(commands.Cog):
 
         await ctx.send(embeds=embeds)
 
-    @commands.command()
+    @commands.hybrid_command()
     async def inspire(self, ctx: commands.Context):
         """Get a random inspirational quote"""
         # Thanks for the idea freecodecamp!

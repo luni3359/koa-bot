@@ -70,7 +70,7 @@ class InfoLookup(commands.Cog):
 
                 return txt
 
-    @commands.command(name='wikipedia', aliases=['wk', 'wp'])
+    @commands.hybrid_command(name='wikipedia', aliases=['wk', 'wp'])
     async def search_wikipedia(self, ctx: commands.Context, *, search_term: str):
         """Search for articles in Wikipedia"""
         MAX_SUMMARY_LENGTH = 2000
@@ -125,7 +125,7 @@ class InfoLookup(commands.Cog):
 
             await ctx.send(bot_msg)
 
-    @commands.command(name='jisho', aliases=['j'])
+    @commands.hybrid_command(name='jisho', aliases=['j'])
     async def search_jisho(self, ctx: commands.Context, *, search_term: str):
         """Search a term in the japanese dictionary jisho"""
         MAX_DEFINITION_LENGTH = 2048
@@ -189,7 +189,7 @@ class InfoLookup(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name='urbandictionary', aliases=['wu', 'udictionary', 'ud'])
+    @commands.hybrid_command(name='urbandictionary', aliases=['wu', 'udictionary', 'ud'])
     async def search_urbandictionary(self, ctx: commands.Context, *, search_term: str):
         """Search a term in urbandictionary"""
         MAX_DEFINITION_LENGTH = 2048
@@ -246,7 +246,7 @@ class InfoLookup(commands.Cog):
                     break
             await ctx.send(embed=embed)
 
-    @commands.command(name='dictionary', aliases=['d', 'word', 'w'])
+    @commands.hybrid_command(name='dictionary', aliases=['d', 'word', 'w'])
     async def search_english_word(self, ctx: commands.Context, *, search_term: str):
         """Search a term in merriam-webster's dictionary"""
         MAX_DEFINITION_LENGTH = 2048

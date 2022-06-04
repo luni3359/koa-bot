@@ -93,7 +93,7 @@ class StreamService(commands.Cog):
 
         return twitch_access_token
 
-    @commands.command(name='twitch')
+    @commands.hybrid_command(name='twitch')
     async def search_twitch(self, ctx: commands.Context, *args):
         """Search on Twitch"""
         guide = self.bot.assets['twitch']

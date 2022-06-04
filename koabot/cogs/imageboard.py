@@ -56,7 +56,7 @@ class ImageBoard(commands.Cog):
     def reddit(self) -> SiteReddit:
         return self.bot.get_cog('SiteReddit')
 
-    @commands.command(name='danbooru', aliases=['dan'])
+    @commands.hybrid_command(name='danbooru', aliases=['dan'])
     async def search_danbooru(self, ctx: commands.Context, *, tags: str):
         """Search anime art on danbooru!"""
         if ctx.channel.is_nsfw:
@@ -65,12 +65,12 @@ class ImageBoard(commands.Cog):
             guide = self.bot.guides['gallery']['donmai-safe']
         await self.board.search_board(ctx, tags, guide=guide)
 
-    @commands.command(name='donmai')
+    @commands.hybrid_command(name='donmai')
     async def search_donmai(self, ctx, *, tags: str):
         """Search family-friendly art on donmai!"""
         await self.board.search_board(ctx, tags, guide=self.bot.guides['gallery']['donmai-safe'])
 
-    @commands.command(name='e621', aliases=['e6'])
+    @commands.hybrid_command(name='e621', aliases=['e6'])
     async def search_e621(self, ctx: commands.Context, *, tags: str):
         """Search on e621!"""
         if ctx.channel.is_nsfw:
@@ -80,7 +80,7 @@ class ImageBoard(commands.Cog):
         await self.board.search_board(ctx, tags, board='e621', guide=guide)
 
     # Might as well use pixiv
-    @commands.command(name='sankaku', enabled=False)
+    @commands.hybrid_command(name='sankaku', enabled=False)
     async def search_sankaku(self, ctx, *, tags: str):
         """Search on sankaku!"""
         await self.board.search_board(ctx, tags, board='sankaku', guide=self.bot.guides['gallery']['sankaku-show'], hide_posts_remaining=True)

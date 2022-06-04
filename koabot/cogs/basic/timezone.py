@@ -15,7 +15,7 @@ class TimeZone(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-    @commands.command(aliases=['t'])
+    @commands.hybrid_command(aliases=['t'])
     async def time(self, ctx: commands.Context, *, region_or_country: str = ""):
         """Provide time zones"""
 

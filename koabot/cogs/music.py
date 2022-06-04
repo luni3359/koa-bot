@@ -54,7 +54,7 @@ class Music(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-    @commands.command()
+    @commands.hybrid_command()
     async def join(self, ctx: commands.Context):
         """Joins a voice channel"""
         voice_client: discord.VoiceClient = ctx.voice_client
@@ -81,7 +81,7 @@ class Music(commands.Cog):
                 else:
                     await ctx.send(f"I'm already in **\"{author_voicestate.channel.name}\"** (your voice channel)!")
 
-    @commands.command()
+    @commands.hybrid_command()
     async def leave(self, ctx: commands.Context):
         """Leaves a voice channel"""
         voice_client: discord.VoiceClient = ctx.voice_client
@@ -92,7 +92,7 @@ class Music(commands.Cog):
         else:
             await ctx.send("No voice channel to disconnect from...")
 
-    @commands.command()
+    @commands.hybrid_command()
     async def play(self, ctx: commands.Context, *, search_or_url: str = ""):
         """Plays a track (overrides current track)"""
         # TODO https://stackoverflow.com/a/62360149/7688278
@@ -117,7 +117,7 @@ class Music(commands.Cog):
             print(e)
             await ctx.send("Can't play!")
 
-    @commands.command()
+    @commands.hybrid_command()
     async def stop(self, ctx: commands.Context):
         """Stops the current track"""
         voice_client: discord.VoiceClient = ctx.voice_client
@@ -125,11 +125,11 @@ class Music(commands.Cog):
         if voice_client and voice_client.is_playing():
             voice_client.stop()
 
-    @commands.command()
+    @commands.hybrid_command()
     async def echo(self, ctx: commands.Context):
         """Echoes sound"""
 
-    @commands.command()
+    @commands.hybrid_command()
     async def test(self, ctx: commands.Context):
         """Music test"""
 

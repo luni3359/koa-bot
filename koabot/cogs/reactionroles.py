@@ -146,7 +146,7 @@ class ReactionRoles(commands.Cog):
 
         i = 0
         for message_id, bind in self.rr_assignments.items():
-            channel_id: int = bind['channel_id']
+            channel_id: int = int(bind['channel_id'])
             if not (channel := ctx.guild.get_channel_or_thread(channel_id)):
                 continue
 

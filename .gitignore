@@ -3,6 +3,7 @@ __pycache__
 .vscode
 .python-version
 poetry.lock
+tests/
 
 # Legacy files
 *.webm

@@ -3,6 +3,7 @@
 # You can define the environmental variables either in ./.env or at ~/.profile
 
 MIN_PYTHON_VERSION="3.10"
+VENV_NAME="koa-bot"
 
 # Checking XDG variables
 # https://stackoverflow.com/questions/40223060/home-vs-for-use-in-bash-scripts
@@ -12,7 +13,7 @@ XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
 
 # Loading .env file
 if [ -f .env ]; then
-    export $(echo $(cat .env | sed 's/#.*//g'| xargs) | envsubst)
+    export $(sed 's/#.*//g' .env | xargs | envsubst)
 fi
 
 function show_help() {
@@ -24,6 +25,7 @@ Usage: ${0##*/} [OPTION...]
   -U, --update-dependencies
   -r, --restart
 EOF
+    exit 1
 }
 
 function var_is_defined() {
@@ -138,13 +140,13 @@ function run() {
     if ! command_exists pyenv; then
         local possible_pyenv_paths=()
 
-        if ! var_is_defined PYENV_ROOT; then
-            possible_pyenv_paths+="${PYENV_ROOT}"
+        if var_is_defined PYENV_ROOT; then
+            possible_pyenv_paths+=("${PYENV_ROOT}")
         fi
             
         possible_pyenv_paths+=(
-            $XDG_DATA_HOME/pyenv
-            $HOME/.pyenv
+            "$XDG_DATA_HOME/pyenv"
+            "$HOME/.pyenv"
         )
 
         for path in "${possible_pyenv_paths[@]}"; do
@@ -163,7 +165,10 @@ function run() {
         eval "$(pyenv init --path)"
         eval "$(pyenv init -)"
         eval "$(pyenv virtualenv-init -)"
-        pyenv activate koa-bot
+
+        if [ "$(pyenv version-name)" != $VENV_NAME ]; then
+            pyenv activate koa-bot
+        fi
     fi
 
     python3 -m koabot
@@ -182,6 +187,7 @@ function install() {
 
     if ! var_is_empty "$pckgs"; then
         # TODO: check if user cancels or apt errors out
+        echo "Installing ${pckgs}"
         sudo apt install "${pckgs}" -y
     else
         echo "Required system dependencies met."
@@ -207,10 +213,10 @@ function install() {
         exit 1
     fi
 
-    PYTHON_VERSION=($(echo $($PYTHON_BIN -c 'import platform; print(platform.python_version())')))
+    PYTHON_VERSION=$($PYTHON_BIN -c 'import platform; print(platform.python_version())')
     PV_VERSION_NUMBERS=($(echo "$PYTHON_VERSION" | grep -o -E '[0-9]+'))
     for (( i=0; i<${#MPV_VERSION_NUMBERS[@]}; i++ )); do
-        if [ ${PV_VERSION_NUMBERS[i]} -lt ${MPV_VERSION_NUMBERS[i]} ]; then
+        if [ "${PV_VERSION_NUMBERS[i]}" -lt "${MPV_VERSION_NUMBERS[i]}" ]; then
             echo "You need at least version $MIN_PYTHON_VERSION to run this program."
             echo "You are running python $PYTHON_VERSION"
             echo "Minimum python version requirement not met. Exiting."

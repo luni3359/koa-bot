@@ -147,10 +147,10 @@ class SiteDeviantArt(Site):
                 valid_types = ["gif", "preview"]
                 for media_type in deviation_media['types']:
                     match media_type['t']:
-                        case "gif" if "gif" not in valid_types:
+                        case "gif" if "gif" in valid_types:
                             valid_types = valid_types[:valid_types.index("gif")]
                             image_url = media_type['b']
-                        case "preview" if "preview" not in valid_types:
+                        case "preview" if "preview" in valid_types:
                             valid_types = valid_types[:valid_types.index("preview")]
                             preview_url = media_type['c'].replace('<prettyName>', pretty_name)
                             preview_url = preview_url.replace(',q_80', ',q_100')
@@ -161,9 +161,8 @@ class SiteDeviantArt(Site):
                 if 'description' in deviation['extended'] and not image_only:
                     embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
                                                deviation['extended']['description']).strip()
-
-                if embed.description and len(embed.description) > 200:
-                    embed.description = embed.description[:200] + "..."
+                    if embed.description and len(embed.description) > 200:
+                        embed.description = embed.description[:200] + "..."
 
                 embed.set_image(url=image_url)
             case 'image':
@@ -180,9 +179,8 @@ class SiteDeviantArt(Site):
                 if 'description' in deviation['extended'] and not image_only:
                     embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
                                                deviation['extended']['description']).strip()
-
-                if len(embed.description) > 200:
-                    embed.description = embed.description[:200] + "..."
+                    if len(embed.description) > 200:
+                        embed.description = embed.description[:200] + "..."
 
                 embed.set_image(url=image_url)
             case 'literature':

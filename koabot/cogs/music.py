@@ -13,10 +13,8 @@ from koabot.patterns import URL_PATTERN
 
 ydl_opts = {
     'format': "bestaudio/best",
+    'restrictfilenames': True,
     'source_address': "0.0.0.0"
-}
-ffmpeg_opts = {
-    'options': "-vn"
 }
 ytdl = youtube_dl.YoutubeDL(ydl_opts)
 
@@ -29,16 +27,19 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     def __init__(self, source: discord.AudioSource, *, data, volume=0.5) -> None:
         super().__init__(source, volume)
-
         self.data = data
         self.title = data.get('title')
         self.url = data.get('url')
 
     @classmethod
-    async def from_url(cls, url, *, loop=None):
+    async def from_url(cls, url, *, loop=None, timestamp=0):
         """Retrieve audio stream from an url"""
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+
+        ffmpeg_opts = {
+            'options': f"-vn -ss {timestamp}"
+        }
 
         if 'entries' in data:
             # take first item from a playlist
@@ -53,6 +54,12 @@ class Music(commands.Cog):
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
+
+    def get_timestamp(self, url: str) -> int:
+        timestamp = re.search(r'\?t=([0-9]+)', url)
+        if not timestamp:
+            return 0
+        return int(timestamp.group(1))
 
     @commands.hybrid_command()
     async def join(self, ctx: commands.Context):
@@ -107,9 +114,10 @@ class Music(commands.Cog):
             url = random.choice(self.bot.testing['vc']['yt-suggestions'])
         else:
             # assuming it's always an url for now
-            url = re.findall(URL_PATTERN, search_or_url)[0]
+            url = URL_PATTERN.findall(search_or_url)[0]
 
-        stream = await YTDLSource.from_url(url, loop=self.bot.loop)
+        timestamp = self.get_timestamp(url)
+        stream = await YTDLSource.from_url(url, loop=self.bot.loop, timestamp=timestamp)
 
         try:
             voice_client.play(stream, after=lambda e: print("Stream error.") if e else None)
@@ -117,13 +125,19 @@ class Music(commands.Cog):
             print(e)
             await ctx.send("Can't play!")
 
+        if voice_client.is_playing:
+            await ctx.message.edit(suppress=True)
+
     @commands.hybrid_command()
     async def stop(self, ctx: commands.Context):
         """Stops the current track"""
         voice_client: discord.VoiceClient = ctx.voice_client
 
         if voice_client and voice_client.is_playing():
+            await ctx.reply("Stopping track.", mention_author=False)
             voice_client.stop()
+        else:
+            await ctx.reply("No track is playing.", mention_author=False)
 
     @commands.hybrid_command()
     async def echo(self, ctx: commands.Context):
@@ -132,7 +146,6 @@ class Music(commands.Cog):
     @commands.hybrid_command()
     async def test(self, ctx: commands.Context):
         """Music test"""
-
         # join a voice channel
         await ctx.invoke(self.bot.get_command('join'))
 

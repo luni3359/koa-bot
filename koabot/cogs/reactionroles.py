@@ -81,7 +81,7 @@ class ReactionRoles(commands.Cog):
             if em not in reactions_in_use:
                 continue
 
-            for u in await reaction.users().flatten():
+            async for u in reaction.users():
                 if u.id != user_id:
                     continue
 
@@ -155,9 +155,14 @@ class ReactionRoles(commands.Cog):
             embed.description += f"**Message #{i}:** [GO]({message.jump_url})\n"
 
             for j, link in enumerate(bind['links']):
-                role_ids: list[int] = link['roles']
-                roles: list[discord.Role] = list(map(ctx.guild.get_role, role_ids))
-                role_mentions = [r.mention for r in roles]
+                link_roles: list[int | discord.Role] = link['roles']
+                role_mentions: list[str] = []
+
+                for link_role in link_roles:
+                    if isinstance(link_role, int):
+                        role_mentions.append(ctx.guild.get_role(link_role).mention)
+                        continue
+                    role_mentions.append(link_role.mention)
 
                 embed.description += (f"__Link #{j + 1}__\n"
                                       f"   Reactions: {' '.join(link['reactions'])}\n"

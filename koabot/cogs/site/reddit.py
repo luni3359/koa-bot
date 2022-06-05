@@ -50,20 +50,13 @@ class SiteReddit(Site):
     def get_subreddit_icon(self, subreddit: Subreddit):
         return subreddit.community_icon if subreddit.community_icon else subreddit.icon_img
 
-    async def get_post(self, url: str) -> Submission:
+    async def get_submission(self, url: str) -> Submission:
         id_start = "comments/"
         id_end = "/"
 
         if not (post_id := post_core.get_name_or_id(url, start=id_start, end=id_end)):
             return None
-
-        submission: Submission = await self.reddit_api.submission(id=post_id)
-
-        # Don't override videos
-        if self.submission_is_video(submission):
-            return None
-
-        return submission
+        return await self.reddit_api.submission(id=post_id)
 
     async def get_subreddit(self, url: str) -> Subreddit:
         id_start = "/r/"
@@ -76,7 +69,10 @@ class SiteReddit(Site):
 
     async def get_reddit_gallery(self, msg: discord.Message, url: str, /, *, guide: dict):
         """Automatically post Reddit galleries whenever possible"""
-        if (post := await self.get_post(url)):
+        if (post := await self.get_submission(url)):
+            # Don't override videos
+            if self.submission_is_video(post):
+                return
             await self.preview_submission(msg, post, guide)
         elif (subreddit := await self.get_subreddit(url)):
             await self.preview_subreddit(msg, subreddit, guide)
@@ -177,7 +173,7 @@ class SiteReddit(Site):
 
         embed = discord.Embed()
         embed.set_author(name=subreddit.display_name_prefixed,
-                                url=subreddit_url)
+                         url=subreddit_url)
         embed.title = subreddit.title
         embed.url = subreddit_url
         embed.description = subreddit.public_description

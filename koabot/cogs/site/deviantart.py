@@ -174,8 +174,8 @@ class SiteDeviantArt(Site):
 
                 image_url = f"{image_url}?token={token}"
 
-                if 'description' in deviation['extended'] and not image_only:
-                    html_description = deviation['extended']['description']
+                if 'descriptionText' in deviation['extended'] and not image_only:
+                    html_description = deviation['extended']['descriptionText']['html']['markup']
                     embed.description = self.get_description_from_html(html_description)
 
                 embed.set_image(url=image_url)
@@ -190,8 +190,8 @@ class SiteDeviantArt(Site):
                         image_url = f"{preview_url}?token={token}"
                         break
 
-                if 'description' in deviation['extended'] and not image_only:
-                    html_description = deviation['extended']['description']
+                if 'descriptionText' in deviation['extended'] and not image_only:
+                    html_description = deviation['extended']['descriptionText']['html']['markup']
                     embed.description = self.get_description_from_html(html_description)
 
                 embed.set_image(url=image_url)

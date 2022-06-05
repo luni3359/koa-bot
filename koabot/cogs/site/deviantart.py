@@ -6,6 +6,7 @@ from thefuzz import fuzz
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
 from koabot.core.base import Site
+from koabot.core.utils import trim_within_length
 from koabot.kbot import KBot
 from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
@@ -22,7 +23,7 @@ class SiteDeviantArt(Site):
     def get_description_from_html(self, html_description: str, max_length: int = 200) -> str:
         description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', html_description).strip()
         if len(description) > max_length:
-            description = description[:max_length] + "..."
+            description = trim_within_length(description, max_length, True) + "..."
         return description
 
     async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:

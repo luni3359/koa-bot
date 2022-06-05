@@ -25,3 +25,20 @@ def calculate_sha1(file: str | Path) -> str:
             sha1_hash.update(data)
 
     return sha1_hash.hexdigest()
+
+
+def trim_within_length(string: str, length: int, inclusive: bool = False) -> str:
+    """Trims a string without harshly cutting off words"""
+    # Max length is irrelevant
+    if length > len(string):
+        return string.strip()
+
+    i = length
+    if inclusive:
+        l = len(string)
+        while i < l and string[i] != ' ':
+            i += 1
+    else:
+        while i > 0 and string[i] != ' ':
+            i -= 1
+    return string[:i].strip()

@@ -19,6 +19,12 @@ class SiteDeviantArt(Site):
     def get_id(self, url: str) -> str:
         return post_core.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')
 
+    def get_description_from_html(self, html_description: str, max_length: int = 200) -> str:
+        description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', html_description).strip()
+        if len(description) > max_length:
+            description = description[:max_length] + "..."
+        return description
+
     async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:
         """Automatically fetch post from deviantart"""
 
@@ -34,7 +40,7 @@ class SiteDeviantArt(Site):
         deviation = api_result['deviation']
 
         match (deviation_type := deviation['type']):
-            case 'image' | 'literature':
+            case 'image' | 'literature' | 'pdf':
                 embed = self.build_deviantart_embed(url, deviation)
             case _:
                 print(f"Incapable of handling DeviantArt url (type: {deviation_type}):\n{url}")
@@ -69,7 +75,7 @@ class SiteDeviantArt(Site):
             print("Urls seem unrelated from each other. Sending each embed individually.")
             display_as_singles = True
 
-        # Check what type the first post is and if subsequent posts are of different types, 
+        # Check what type the first post is and if subsequent posts are of different types,
         # send them in one batch, but using different embed groups
         base_type: str = None
         api_results = []
@@ -168,10 +174,8 @@ class SiteDeviantArt(Site):
                 image_url = f"{image_url}?token={token}"
 
                 if 'description' in deviation['extended'] and not image_only:
-                    embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
-                                               deviation['extended']['description']).strip()
-                    if embed.description and len(embed.description) > 200:
-                        embed.description = embed.description[:200] + "..."
+                    html_description = deviation['extended']['description']
+                    embed.description = self.get_description_from_html(html_description)
 
                 embed.set_image(url=image_url)
             case 'image':
@@ -186,14 +190,16 @@ class SiteDeviantArt(Site):
                         break
 
                 if 'description' in deviation['extended'] and not image_only:
-                    embed.description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ',
-                                               deviation['extended']['description']).strip()
-                    if len(embed.description) > 200:
-                        embed.description = embed.description[:200] + "..."
+                    html_description = deviation['extended']['description']
+                    embed.description = self.get_description_from_html(html_description)
 
                 embed.set_image(url=image_url)
             case 'literature':
                 embed.description = deviation['textContent']['excerpt'] + "..."
+            case 'pdf':
+                if 'descriptionText' in deviation['extended']:
+                    html_description = deviation['extended']['descriptionText']['html']['markup']
+                    embed.description = self.get_description_from_html(html_description, 650)
             case _:
                 raise ValueError("Unknown DeviantArt embed type!")
 

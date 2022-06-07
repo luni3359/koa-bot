@@ -5,8 +5,8 @@ import tweepy
 import tweepy.asynchronous
 
 import koabot.core.posts as post_core
-from koabot.core.base import Site
 from koabot.core.embed import EmbedGroup
+from koabot.core.site import Site
 from koabot.kbot import KBot
 
 

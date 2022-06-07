@@ -2,7 +2,7 @@ import discord
 
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
-from koabot.core.base import Site
+from koabot.core.site import Site
 from koabot.kbot import KBot
 
 

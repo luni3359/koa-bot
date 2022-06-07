@@ -3,7 +3,7 @@ import discord
 from asyncpraw.reddit import Submission, Subreddit
 
 import koabot.core.posts as post_core
-from koabot.core.base import Site
+from koabot.core.site import Site
 from koabot.kbot import KBot
 
 

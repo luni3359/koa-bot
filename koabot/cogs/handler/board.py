@@ -119,14 +119,6 @@ class Board(commands.Cog):
                     return await net_core.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f"error fetching post #{post_id}")
                 elif tags:
                     return await net_core.http_request(guide['api']['tag_search_url'], auth=self.e621_auth, jdata=jdata, headers=headers, json=True, err_msg=f"error fetching search: {tags}")
-            case 'sankaku':
-                if post_id:
-                    url = guide['api']['id_search_url'].format(post_id)
-                    return await net_core.http_request(url, json=True, err_msg=f"error fetching post #{post_id}")
-                elif tags:
-                    search_query = '+'.join(tags.split(' '))
-                    url = guide['api']['tag_search_url'].format(search_query)
-                    return await net_core.http_request(url, json=True, err_msg=f"error fetching search: {tags}")
             case _:
                 raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
 
@@ -202,7 +194,7 @@ class Board(commands.Cog):
                             await ctx.send(f'<{embed.url}>', embed=embed)
                         else:
                             await ctx.send(embed.url)
-                    case 'e621' | 'sankaku':
+                    case 'e621':
                         await ctx.send(f'<{embed.url}>', embed=embed)
                     case _:
                         raise ValueError('Board embed send not configured.')
@@ -255,8 +247,6 @@ class Board(commands.Cog):
                 embed.title = embed_post_title
             case 'e621':
                 embed.title = f"#{post_id}: {post_core.combine_tags(post['tags']['artist'])} - e621"
-            case 'sankaku':
-                embed.title = f"Post {post_id}"
             case _:
                 raise ValueError('Board embed title not configured.')
 
@@ -293,8 +283,6 @@ class Board(commands.Cog):
         match board:
             case 'e621':
                 return list_contains(post['tags']['general'], self.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
-            case 'sankaku':
-                return True
             case _:
                 return list_contains(post['tag_string_general'].split(), self.bot.rules['no_preview_tags'][board]) or post['is_banned']
 

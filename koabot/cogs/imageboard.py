@@ -79,12 +79,6 @@ class ImageBoard(commands.Cog):
             guide = self.bot.guides['gallery']['e621-safe']
         await self.board.search_board(ctx, tags, board='e621', guide=guide)
 
-    # Might as well use pixiv
-    @commands.hybrid_command(name='sankaku', enabled=False)
-    async def search_sankaku(self, ctx, *, tags: str):
-        """Search on sankaku!"""
-        await self.board.search_board(ctx, tags, board='sankaku', guide=self.bot.guides['gallery']['sankaku-show'], show_posts_remaining=False)
-
     async def show_preview(self, msg: discord.Message, url: str, /, *, board: str, guide: dict, only_if_missing: bool = False):
         """Show a preview"""
         match board:
@@ -96,8 +90,6 @@ class ImageBoard(commands.Cog):
                 await self.twitter.get_twitter_gallery(msg, url, guide=guide)
             case 'pixiv':
                 await self.pixiv.get_pixiv_gallery(msg, url, only_if_missing=only_if_missing)
-            case 'sankaku':
-                await self.gallery.display_static(msg.channel, url, board='sankaku', guide=guide, only_if_missing=only_if_missing)
             case 'deviantart':
                 await self.deviantart.get_deviantart_post(msg, url)
             case 'imgur':

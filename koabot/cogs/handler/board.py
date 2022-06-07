@@ -36,7 +36,7 @@ class Board(commands.Cog):
 
         return self._e621_auth
 
-    async def search_board(self, ctx: commands.Context, tags: str, /,  *, board: str = 'danbooru', guide: dict, hide_posts_remaining: bool = False) -> None:
+    async def search_board(self, ctx: commands.Context, tags: str, /,  *, board: str = 'danbooru', guide: dict, show_posts_remaining: bool = True) -> None:
         """Search on image boards!
         Arguments:
             ctx::comands.Context
@@ -48,8 +48,8 @@ class Board(commands.Cog):
                 The board to manage. Default is 'danbooru'
             guide::dict
                 The data which holds the board information
-            hide_posts_remaining::bool
-                Omit the final remaining count on the final post. False by default.
+            show_posts_remaining::bool
+                Show how many posts remain to preview on the final embed. True by default.
         """
         tags = tags.strip()
         print(f"User searching for: {tags}")
@@ -68,7 +68,7 @@ class Board(commands.Cog):
         if 'id' not in posts[0]:
             return await ctx.send('Sorry, nothing found!')
 
-        await self.send_posts(ctx, posts[:3], board=board, guide=guide, hide_posts_remaining=hide_posts_remaining)
+        await self.send_posts(ctx, posts[:3], board=board, guide=guide, show_posts_remaining=show_posts_remaining)
 
     async def search_query(self, *, board: str = 'danbooru', guide: dict, **kwargs):
         """Handle searching in boards
@@ -130,7 +130,7 @@ class Board(commands.Cog):
             case _:
                 raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
 
-    async def send_posts(self, ctx: commands.Context, posts, /, *, board: str = 'danbooru', guide: dict, show_nsfw: bool = True, max_posts: int = 4, hide_posts_remaining: bool = False) -> None:
+    async def send_posts(self, ctx: commands.Context, posts, /, *, board: str = 'danbooru', guide: dict, show_nsfw: bool = True, max_posts: int = 4, show_posts_remaining: bool = True) -> None:
         """Handle sending posts retrieved from image boards
         Arguments:
             ctx
@@ -148,8 +148,8 @@ class Board(commands.Cog):
             max_posts::int
                 How many posts should be shown before showing how many of them were cut-off.
                 If max_posts is set to 0 then no footer will be shown and no posts will be omitted.
-            hide_posts_remaining::bool
-                Omit the final remaining count on the final post. False by default.
+            show_posts_remaining::bool
+                Show how many posts remain to preview on the final embed. True by default.
         """
         if not isinstance(posts, list):
             posts = [posts]
@@ -179,7 +179,7 @@ class Board(commands.Cog):
                 if posts_processed >= min(max_posts, total_posts):
                     last_post = True
 
-                    if total_posts > max_posts and not hide_posts_remaining:
+                    if total_posts > max_posts and show_posts_remaining:
                         embed.set_footer(
                             text=f'{total_posts - max_posts}+ remaining',
                             icon_url=self.bot.assets[board]['favicon']['size16'])

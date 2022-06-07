@@ -83,7 +83,7 @@ class ImageBoard(commands.Cog):
     @commands.hybrid_command(name='sankaku', enabled=False)
     async def search_sankaku(self, ctx, *, tags: str):
         """Search on sankaku!"""
-        await self.board.search_board(ctx, tags, board='sankaku', guide=self.bot.guides['gallery']['sankaku-show'], hide_posts_remaining=True)
+        await self.board.search_board(ctx, tags, board='sankaku', guide=self.bot.guides['gallery']['sankaku-show'], show_posts_remaining=False)
 
     async def show_preview(self, msg: discord.Message, url: str, /, *, board: str, guide: dict, only_if_missing: bool = False):
         """Show a preview"""

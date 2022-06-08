@@ -67,6 +67,12 @@ class SitePixiv(Site):
             return True
         return False
 
+    def restore_site_shortcuts(self, text: str) -> str:
+        """Converts pixiv-specific shortcuts into valid urls"""
+        text = re.sub(r'(user/([0-9]+))', r'[\1](https://www.pixiv.net/users/\2)', text)
+        text = re.sub(r'(illust/([0-9]+))', r'[\1](https://www.pixiv.net/artworks/\2)', text)
+        return text
+
     async def cache_image(self, url: str, filename: str, pixiv_helper: PixivHelper) -> None:
         # create if pixiv cache directory if it doesn't exist
         file_cache_dir = Path(self.bot.CACHE_DIR, "pixiv", "files")
@@ -146,7 +152,8 @@ class SitePixiv(Site):
 
                     embed.url = url
                     description = re.sub(r'<br \/>', '\n', illust.caption)
-                    description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', description)
+                    description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, '', description)
+                    description = self.restore_site_shortcuts(description)
                     embed.description = description.strip()
 
                     if (px_bookmarks := illust.total_bookmarks) > 0:

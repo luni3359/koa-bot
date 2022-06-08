@@ -1,4 +1,4 @@
-"""Base classes"""
+"""Site cog"""
 from discord.ext import commands
 
 from koabot.cogs.botstatus import BotStatus

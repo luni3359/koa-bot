@@ -1,6 +1,7 @@
 """Handles the use of imageboard galleries"""
 import shutil
 from pathlib import Path
+from typing import Literal
 
 import discord
 import imagehash
@@ -38,11 +39,11 @@ class Gallery(commands.Cog):
     def botstatus(self) -> BotStatus:
         return self.bot.get_cog('BotStatus')
 
-    async def display_static(self, channel: discord.TextChannel, url: str, /, *, board: str = 'danbooru', guide: dict, only_if_missing: bool = False) -> None:
+    async def display_static(self, msg: discord.Message, url: str, /, *, board: str = 'danbooru', guide: dict, only_if_missing: bool = False) -> None:
         """Display posts from a gallery in separate unmodifiable embeds
         Arguments:
-            channel::discord.TextChannel
-                Channel the message is in
+            msg::discord.Message
+                The message that sent the link
             url::str
                 Url to get a gallery from
         Keywords:
@@ -53,6 +54,8 @@ class Gallery(commands.Cog):
             only_if_missing::bool
                 Only shows a preview if the native embed is missing from the original link. Default is False
         """
+        channel = msg.channel
+
         if not guide:
             raise ValueError("The 'guide' keyword argument is not defined.")
 
@@ -67,19 +70,25 @@ class Gallery(commands.Cog):
         if not (post := (await board_cog.search_query(board=board, guide=guide, post_id=post_id)).json):
             return
 
-        # e621 fix for broken API
-        if 'post' in post:
-            post = post['post']
+        safe_rating: list[Literal['g', 's']] = ['s']
 
-        post_id = post['id']
+        # board-specific changes
+        match board:
+            case 'danbooru':
+                safe_rating = ['g', 's']
+            case 'e621':
+                post = post['post']  # e621 fix for broken API
+
+        post_id: int = post['id']
 
         botstatus_cog = self.botstatus
         on_nsfw_channel = channel.is_nsfw()
         first_post_missing_preview = board_cog.post_is_missing_preview(post, board=board)
         posts = []
 
-        if post['rating'] != 's' and not on_nsfw_channel:
+        if post['rating'] not in safe_rating and not on_nsfw_channel:
             # Silently ignore
+            print(f"{board.capitalize()} post #{post_id} is nsfw and cannot be shown in sfw channel")
             return
             # embed = discord.Embed()
             # if 'nsfw_placeholder' in self.bot.assets[board]:
@@ -106,8 +115,8 @@ class Gallery(commands.Cog):
                 p_search = f'parent:{parent_id} order:id -id:{post_id}'
 
         if only_if_missing:
-            if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
-                await board_cog.send_posts(channel, post, board=board, guide=guide)
+            if first_post_missing_preview and (post['rating'] in safe_rating or on_nsfw_channel):
+                await board_cog.send_posts(msg, post, board=board, guide=guide, reply=only_if_missing)
             return
 
         if has_children:
@@ -115,8 +124,8 @@ class Gallery(commands.Cog):
         elif parent_id:
             search = p_search
         else:
-            if first_post_missing_preview and (post['rating'] == 's' or on_nsfw_channel):
-                await board_cog.send_posts(channel, post, board=board, guide=guide)
+            if first_post_missing_preview and (post['rating'] in safe_rating or on_nsfw_channel):
+                await board_cog.send_posts(msg, post, board=board, guide=guide, reply=only_if_missing)
             return
 
         if isinstance(search, str):
@@ -138,7 +147,7 @@ class Gallery(commands.Cog):
         if not on_nsfw_channel:
             # filters all safe results into the posts variable
             total_posts_count = len(posts)
-            posts = [post for post in posts if post['rating'] == 's']
+            posts = [post for post in posts if post['rating'] in safe_rating]
 
             if len(posts) != total_posts_count:
                 nsfw_culled = True
@@ -203,19 +212,19 @@ class Gallery(commands.Cog):
                     posts = posts[1:]
 
         if first_post_missing_preview:
-            if post['rating'] == 's' or on_nsfw_channel:
+            if post['rating'] in safe_rating or on_nsfw_channel:
                 posts.insert(0, post)
 
         if posts:
             if first_post_missing_preview:
-                await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel, max_posts=5)
+                await board_cog.send_posts(msg, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel, max_posts=5)
             else:
-                await board_cog.send_posts(channel, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
+                await board_cog.send_posts(msg, posts, board=board, guide=guide, show_nsfw=on_nsfw_channel)
         else:
             match post['rating']:
-                case 's' if not nsfw_culled or on_nsfw_channel:
+                case 'g' | 's' if not nsfw_culled or on_nsfw_channel:
                     return print('Removed all duplicates')
-                case 's':
+                case 'g' | 's':
                     content = botstatus_cog.get_quote('cannot_show_nsfw_gallery')
                 case _:
                     content = botstatus_cog.get_quote('rude_cannot_show_nsfw_gallery')

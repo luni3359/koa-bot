@@ -122,11 +122,11 @@ class Board(commands.Cog):
             case _:
                 raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
 
-    async def send_posts(self, ctx: commands.Context, posts, /, *, board: str = 'danbooru', guide: dict, show_nsfw: bool = True, max_posts: int = 4, show_posts_remaining: bool = True) -> None:
+    async def send_posts(self, msg: discord.Message, posts, /, *, board: str = 'danbooru', guide: dict, show_nsfw: bool = True, max_posts: int = 4, show_posts_remaining: bool = True, reply: bool = False) -> None:
         """Handle sending posts retrieved from image boards
         Arguments:
-            ctx
-                The context to interact with the discord API
+            msg::discord.Message
+                The message that sent the link
             posts::list | dict (json)
                 The post(s) to be sent to a channel
 
@@ -142,9 +142,29 @@ class Board(commands.Cog):
                 If max_posts is set to 0 then no footer will be shown and no posts will be omitted.
             show_posts_remaining::bool
                 Show how many posts remain to preview on the final embed. True by default.
+            reply::bool
+                Replies to the original message. Only works when len(posts) == 1.
         """
+        channel = msg.channel
+
         if not isinstance(posts, list):
             posts = [posts]
+
+        if self.post_is_missing_preview(posts[0], board=board) and len(posts) == 1:
+            embed = self.generate_embed(posts[0], board=board, guide=guide)
+            embed.set_footer(text=guide['embed']['footer_text'],
+                             icon_url=self.bot.assets[board]['favicon']['size16'])
+            await msg.reply(embed=embed, mention_author=False)
+            try:
+                await msg.edit(suppress=True)
+            except discord.errors.Forbidden as e:
+                # Missing Permissions
+                match e.code:
+                    case 50013:
+                        print("Missing Permissions: Cannot suppress embed from sender's message")
+                    case _:
+                        print(f"Forbidden: Status {e.status} (code {e.code}")
+            return
 
         total_posts = len(posts)
         posts_processed = 0
@@ -164,7 +184,7 @@ class Board(commands.Cog):
 
             # if there's no image file or image url, send a link
             if not embed.image.url:
-                await ctx.send(embed.url)
+                await channel.send(embed.url)
                 continue
 
             if max_posts > 0:
@@ -186,16 +206,16 @@ class Board(commands.Cog):
                 else:
                     embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-                await ctx.send(f'<{embed.url}>', embed=embed)
+                await channel.send(f'<{embed.url}>', embed=embed)
             else:
                 match board:
                     case 'danbooru':
                         if self.post_is_missing_preview(post, board=board) or last_post:
-                            await ctx.send(f'<{embed.url}>', embed=embed)
+                            await channel.send(f'<{embed.url}>', embed=embed)
                         else:
-                            await ctx.send(embed.url)
+                            await channel.send(embed.url)
                     case 'e621':
-                        await ctx.send(f'<{embed.url}>', embed=embed)
+                        await channel.send(f'<{embed.url}>', embed=embed)
                     case _:
                         raise ValueError('Board embed send not configured.')
 

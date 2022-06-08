@@ -83,9 +83,9 @@ class ImageBoard(commands.Cog):
         """Show a preview"""
         match board:
             case 'danbooru':
-                await self.gallery.display_static(msg.channel, url, guide=guide, only_if_missing=only_if_missing)
+                await self.gallery.display_static(msg, url, guide=guide, only_if_missing=only_if_missing)
             case 'e621':
-                await self.gallery.display_static(msg.channel, url, board='e621', guide=guide, only_if_missing=only_if_missing)
+                await self.gallery.display_static(msg, url, board='e621', guide=guide, only_if_missing=only_if_missing)
             case 'twitter':
                 await self.twitter.get_twitter_gallery(msg, url, guide=guide)
             case 'pixiv':

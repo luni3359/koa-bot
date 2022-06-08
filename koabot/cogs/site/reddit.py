@@ -4,6 +4,7 @@ from asyncpraw.reddit import Submission, Subreddit
 
 import koabot.core.posts as post_core
 from koabot.core.site import Site
+from koabot.core.utils import trim_within_length
 from koabot.kbot import KBot
 
 
@@ -94,12 +95,10 @@ class SiteReddit(Site):
         if submission.selftext:
             max_post_length = 350   # arbitrary maximum
             if len(submission.selftext) > max_post_length:
-                # TODO: Even though the output is nicer, this removes newlines.
-                # header_embed.description = textwrap.shorten(
-                # submission.selftext, width=max_post_length, placeholder="...")
                 # TODO: Disjointed markdown is not cleaned up
                 # i.e. the closing ** is cut off
-                header_embed.description = submission.selftext[:max_post_length - 1] + "…"
+                description = trim_within_length(submission.selftext, max_post_length, True)
+                header_embed.description = description + "…"
             else:
                 header_embed.description = submission.selftext
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "koa-bot"
-version = "0.23.4"
+version = "0.30.5"
 description = ""
 authors = []
 readme = "README.md"
@@ -23,18 +23,18 @@ python = "^3.10"
 appdirs = "^1.4.4"
 BASC-py4chan = "^0.6.6"
 commentjson = "^0.9.0"
-"discord.py" = {git = "https://github.com/Rapptz/discord.py", extras = ["voice", "speed"], rev="40176bb"}
+"discord.py" = {git = "https://github.com/Rapptz/discord.py", extras = ["voice", "speed"], rev="36f039a"}
 emoji = "^1.7.0"
 forex-python = "^1.8"
 ImageHash = "^4.2.1"
 mergedeep = "^1.3.4"
 num2words = "^0.5.10"
 Pint = "^0.18"
-PixivPy-Async = "^1.2.14"
+PixivPy-Async = {extras = ["speedups"], version = "^1.2.14"}
 pymediawiki = "^0.7.1"
 pytz = "^2022.1"
 tldextract = "^3.3.0"
-tweepy = "^4.9.0"
+tweepy = {extras = ["async"], version = "^4.10.0"}
 single-source = "^0.3.0"
 yt-dlp = "^2022.3.8"
 uvloop = {platform = "linux", version = "*", optional = true}

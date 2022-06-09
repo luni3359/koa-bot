@@ -56,35 +56,40 @@ class ImageBoard(commands.Cog):
     def reddit(self) -> SiteReddit:
         return self.bot.get_cog('SiteReddit')
 
-    @commands.command(name='danbooru', aliases=['dan'])
-    async def search_danbooru(self, ctx, *, tags: str):
-        """Search on danbooru!"""
-        await self.board.search_board(ctx, tags, guide=self.bot.guides['gallery']['danbooru-default'])
+    @commands.hybrid_command(name='danbooru', aliases=['dan'])
+    async def search_danbooru(self, ctx: commands.Context, *, tags: str):
+        """Search anime art on danbooru!"""
+        if ctx.channel.is_nsfw:
+            guide = self.bot.guides['gallery']['danbooru-default']
+        else:
+            guide = self.bot.guides['gallery']['donmai-safe']
+        await self.board.search_board(ctx, tags, guide=guide)
 
-    @commands.command(name='e621', aliases=['e6'])
-    async def search_e621(self, ctx, *, tags: str):
+    @commands.hybrid_command(name='donmai')
+    async def search_donmai(self, ctx, *, tags: str):
+        """Search family-friendly art on donmai!"""
+        await self.board.search_board(ctx, tags, guide=self.bot.guides['gallery']['donmai-safe'])
+
+    @commands.hybrid_command(name='e621', aliases=['e6'])
+    async def search_e621(self, ctx: commands.Context, *, tags: str):
         """Search on e621!"""
-        await self.board.search_board(ctx, tags, board='e621', guide=self.bot.guides['gallery']['e621-default'])
-
-    # Might as well use pixiv
-    @commands.command(name='sankaku', enabled=False)
-    async def search_sankaku(self, ctx, *, tags: str):
-        """Search on sankaku!"""
-        await self.board.search_board(ctx, tags, board='sankaku', guide=self.bot.guides['gallery']['sankaku-show'], hide_posts_remaining=True)
+        if ctx.channel.is_nsfw:
+            guide = self.bot.guides['gallery']['e621-default']
+        else:
+            guide = self.bot.guides['gallery']['e621-safe']
+        await self.board.search_board(ctx, tags, board='e621', guide=guide)
 
     async def show_preview(self, msg: discord.Message, url: str, /, *, board: str, guide: dict, only_if_missing: bool = False):
         """Show a preview"""
         match board:
             case 'danbooru':
-                await self.gallery.display_static(msg.channel, url, guide=guide, only_if_missing=only_if_missing)
+                await self.gallery.display_static(msg, url, guide=guide, only_if_missing=only_if_missing)
             case 'e621':
-                await self.gallery.display_static(msg.channel, url, board='e621', guide=guide, only_if_missing=only_if_missing)
+                await self.gallery.display_static(msg, url, board='e621', guide=guide, only_if_missing=only_if_missing)
             case 'twitter':
                 await self.twitter.get_twitter_gallery(msg, url, guide=guide)
             case 'pixiv':
                 await self.pixiv.get_pixiv_gallery(msg, url, only_if_missing=only_if_missing)
-            case 'sankaku':
-                await self.gallery.display_static(msg.channel, url, board='sankaku', guide=guide, only_if_missing=only_if_missing)
             case 'deviantart':
                 await self.deviantart.get_deviantart_post(msg, url)
             case 'imgur':

@@ -1,8 +1,6 @@
 """Bot-related commands and features"""
 import asyncio
 import random
-import re
-import subprocess
 from datetime import datetime, timedelta
 
 import discord
@@ -18,63 +16,7 @@ class BotStatus(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-    @commands.command(name='temperature', aliases=['temp'])
-    async def report_bot_temp(self, ctx: commands.Context, /):
-        """Show the bot's current temperature"""
-
-        temperature_cmds = ['vcgencmd measure_temp', 'sensors']
-        for cmd in temperature_cmds:
-            cmd_parts = cmd.split()
-            temperature_cmd = cmd_parts[0]
-
-            try:
-                current_temp = subprocess.run(cmd_parts, stdout=subprocess.PIPE, check=True, universal_newlines=True)
-                print(f'Using "{temperature_cmd}".')
-                break
-            except FileNotFoundError:
-                print(f'"{temperature_cmd}" is missing in system.')
-
-        try:
-            match temperature_cmd:
-                case 'vcgencmd':
-                    cpu_temp = re.findall(r'([0-9]+\.[0-9]?)\'C', current_temp.stdout)[0]
-                case 'sensors':
-                    cpu_found = False
-                    adapter_found = False
-
-                    for line in current_temp.stdout.splitlines():
-                        if re.search(r'coretemp', line):
-                            cpu_found = True
-                            continue
-
-                        if re.search(r'Adapter', line):
-                            if not cpu_found:
-                                continue
-
-                            adapter_found = True
-                            continue
-
-                        if re.search(r'Package id|Core 0', line):
-                            if not cpu_found or not adapter_found:
-                                continue
-
-                            cpu_temp = re.findall(r'([0-9]+\.[0-9]?)°C', line)[0]
-                            break
-
-            cpu_temp = float(cpu_temp)
-
-            print(f"CPU Temp: {cpu_temp:0.1f} °C")
-            await ctx.send(f"I'm at {cpu_temp:0.1f} °C.")
-        except NameError:
-            print("Unable to report temperature.")
-            await ctx.send("I can't get the CPU's temperature...")
-
-    @commands.command(name='last')
-    async def talk_status(self, ctx: commands.Context, /):
-        """Mention a brief summary of the last used channel"""
-        await ctx.send(f'Last channel: {self.bot.last_channel}\nCurrent count there: {self.bot.last_channel_message_count}')
-
-    @commands.command()
+    @commands.hybrid_command()
     async def uptime(self, ctx: commands.Context, /):
         """Mention the current uptime"""
 
@@ -82,13 +24,13 @@ class BotStatus(commands.Cog):
         (hours, remainder) = divmod(int(delta_uptime.total_seconds()), 3600)
         (minutes, seconds) = divmod(remainder, 60)
         (days, hours) = divmod(hours, 24)
-        await ctx.send(f"I've been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.")
+        await ctx.reply(f"I've been running for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.", mention_author=False)
 
-    @commands.command()
+    @commands.hybrid_command()
     async def version(self, ctx: commands.Context, /):
         """Show bot's version"""
         version = get_version(self.bot.PROJECT_NAME, self.bot.PROJECT_DIR)
-        await ctx.send(f"On version `{version}`.")
+        await ctx.reply(f"On version `{version}`.", mention_author=False)
 
     async def typing_a_message(self, ctx: commands.Context, /, **kwargs):
         """Make Koakuma seem alive with a 'is typing' delay

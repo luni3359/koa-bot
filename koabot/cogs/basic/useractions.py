@@ -15,7 +15,7 @@ class UserActions(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-    @commands.command(aliases=['ava'])
+    @commands.hybrid_command(aliases=['ava'])
     async def avatar(self, ctx: commands.Context):
         """Display an user's avatar"""
         embeds: list[discord.Embed] = []
@@ -35,16 +35,17 @@ class UserActions(commands.Cog):
 
         await ctx.send(embeds=embeds)
 
-    @commands.command()
+    @commands.hybrid_command()
     async def inspire(self, ctx: commands.Context):
         """Get a random inspirational quote"""
         # Thanks for the idea freecodecamp!
 
         if not (api_response := (await net_core.http_request("https://zenquotes.io/api/random", json=True)).json):
-            return await ctx.send("I cannot channel those energies at the moment... Please try again later")
+            return await ctx.reply("I cannot channel those energies at the moment..."
+                                   " Please try again later", mention_author=False)
 
         quote = fromlist(Quote, api_response)[0]
-        await ctx.send(f">>> \"{quote.quote}\"\nー *{quote.author}*")
+        await ctx.reply(f">>> \"{quote.quote}\"\nー *{quote.author}*", mention_author=False)
 
 
 @dataclass

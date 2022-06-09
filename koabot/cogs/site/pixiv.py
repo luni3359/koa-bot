@@ -8,9 +8,9 @@ import pixivpy_async
 
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
-from koabot.core.base import Site
+from koabot.core.site import Site
+from koabot.core.utils import strip_html_markup
 from koabot.kbot import KBot
-from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
 
 class PixivHelper():
@@ -66,6 +66,12 @@ class SitePixiv(Site):
             await botstatus_cog.typing_a_message(msg.channel, content=content, embed=embed, rnd_duration=[1, 2])
             return True
         return False
+
+    def restore_site_shortcuts(self, text: str) -> str:
+        """Converts pixiv-specific shortcuts into valid urls"""
+        text = re.sub(r'(user/([0-9]+))', r'[\1](https://www.pixiv.net/users/\2)', text)
+        text = re.sub(r'(illust/([0-9]+))', r'[\1](https://www.pixiv.net/artworks/\2)', text)
+        return text
 
     async def cache_image(self, url: str, filename: str, pixiv_helper: PixivHelper) -> None:
         # create if pixiv cache directory if it doesn't exist
@@ -146,7 +152,8 @@ class SitePixiv(Site):
 
                     embed.url = url
                     description = re.sub(r'<br \/>', '\n', illust.caption)
-                    description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', description)
+                    description = strip_html_markup(description)
+                    description = self.restore_site_shortcuts(description)
                     embed.description = description.strip()
 
                     if (px_bookmarks := illust.total_bookmarks) > 0:

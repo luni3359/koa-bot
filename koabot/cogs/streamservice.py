@@ -93,10 +93,11 @@ class StreamService(commands.Cog):
 
         return twitch_access_token
 
-    @commands.command(name='twitch')
-    async def search_twitch(self, ctx: commands.Context, *args):
+    @commands.hybrid_command(name='twitch')
+    async def search_twitch(self, ctx: commands.Context, *, args: str):
         """Search on Twitch"""
         guide = self.bot.assets['twitch']
+        args = ' '.split(args)
 
         if len(args) < 1:
             print('well it worked...')

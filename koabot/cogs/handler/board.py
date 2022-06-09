@@ -2,7 +2,6 @@
 import re
 
 import aiohttp
-import commentjson
 import discord
 from discord.ext import commands
 
@@ -37,7 +36,7 @@ class Board(commands.Cog):
 
         return self._e621_auth
 
-    async def search_board(self, ctx: commands.Context, tags: str, /,  *, board: str = 'danbooru', guide: dict, hide_posts_remaining: bool = False) -> None:
+    async def search_board(self, ctx: commands.Context, tags: str, /,  *, board: str = 'danbooru', guide: dict, show_posts_remaining: bool = True) -> None:
         """Search on image boards!
         Arguments:
             ctx::comands.Context
@@ -49,19 +48,15 @@ class Board(commands.Cog):
                 The board to manage. Default is 'danbooru'
             guide::dict
                 The data which holds the board information
-            hide_posts_remaining::bool
-                Omit the final remaining count on the final post. False by default.
+            show_posts_remaining::bool
+                Show how many posts remain to preview on the final embed. True by default.
         """
-        on_nsfw_channel = ctx.channel.is_nsfw()
-
-        print(f'User searching for: {tags}')
+        tags = tags.strip()
+        print(f"User searching for: {tags}")
 
         posts = None
         async with ctx.typing():
-            try:
-                posts = (await self.search_query(board=board, guide=guide, tags=tags, random=True, include_nsfw=on_nsfw_channel)).json
-            except aiohttp.TooManyRedirects as e:
-                return print("There's too many redirects: ", e)
+            posts = (await self.search_query(board=board, guide=guide, tags=tags, random=True)).json
 
         if not posts:
             return await ctx.send('Sorry, nothing found!')
@@ -73,7 +68,7 @@ class Board(commands.Cog):
         if 'id' not in posts[0]:
             return await ctx.send('Sorry, nothing found!')
 
-        await self.send_posts(ctx, posts[:3], board=board, guide=guide, hide_posts_remaining=hide_posts_remaining)
+        await self.send_posts(ctx, posts[:3], board=board, guide=guide, show_posts_remaining=show_posts_remaining)
 
     async def search_query(self, *, board: str = 'danbooru', guide: dict, **kwargs):
         """Handle searching in boards
@@ -91,71 +86,47 @@ class Board(commands.Cog):
                 Setting limit to 0 returns as many results as possible.
             random::bool
                 Pick at random from results. Default is False
-            include_nsfw::bool
-                Whether or not the search will use safe versions of boards. Default is False
 
         Returns:
             json::dict
         """
         post_id = kwargs.get('post_id')
-        tags = kwargs.get('tags')
+        tags: str = kwargs.get('tags')
         limit = kwargs.get('limit', 0)
         random = kwargs.get('random', False)
-        include_nsfw = kwargs.get('include_nsfw', False)
+        jdata = {}
 
-        data_arg = {
-            'tags': tags
-        }
-
-        if random:
-            data_arg['random'] = random
+        if tags:
+            if random:
+                jdata['tags'] = tags + " order:random"
+            else:
+                jdata['tags'] = tags
 
         if limit and limit > 0:
-            data_arg['limit'] = limit
+            jdata['limit'] = limit
 
         match board:
             case 'danbooru':
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)
-                    return await net_core.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f'error fetching post #{post_id}')
+                    return await net_core.http_request(url, auth=self.danbooru_auth, json=True, err_msg=f"error fetching post #{post_id}")
                 elif tags:
-                    if include_nsfw:
-                        url = 'https://danbooru.donmai.us'
-                    else:
-                        url = 'https://safebooru.donmai.us'
-
-                    return await net_core.http_request(f'{url}/posts.json', auth=self.danbooru_auth, data=commentjson.dumps(data_arg), headers={'Content-Type': 'application/json'}, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(guide['api']['tag_search_url'], auth=self.danbooru_auth, jdata=jdata, headers={'Content-Type': 'application/json'}, json=True, err_msg=f"error fetching search: {tags}")
             case 'e621':
-                # e621 requires to know the User-Agent
-                headers = guide['api']['headers']
-
+                headers = guide['api']['headers']  # e621 requires to know the User-Agent
                 if post_id:
                     url = guide['api']['id_search_url'].format(post_id)
-                    return await net_core.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f'error fetching post #{post_id}')
+                    return await net_core.http_request(url, auth=self.e621_auth, json=True, headers=headers, err_msg=f"error fetching post #{post_id}")
                 elif tags:
-                    if include_nsfw:
-                        url = 'https://e621.net'
-                    else:
-                        url = 'https://e926.net'
-
-                    headers['Content-Type'] = 'application/json'
-                    return await net_core.http_request(f'{url}/posts.json', auth=self.e621_auth, data=commentjson.dumps(data_arg), headers=headers, json=True, err_msg=f'error fetching search: {tags}')
-            case 'sankaku':
-                if post_id:
-                    url = guide['api']['id_search_url'].format(post_id)
-                    return await net_core.http_request(url, json=True, err_msg=f'error fetching post #{post_id}')
-                elif tags:
-                    search_query = '+'.join(tags.split(' '))
-                    url = guide['api']['tag_search_url'].format(search_query)
-                    return await net_core.http_request(url, json=True, err_msg=f'error fetching search: {tags}')
+                    return await net_core.http_request(guide['api']['tag_search_url'], auth=self.e621_auth, jdata=jdata, headers=headers, json=True, err_msg=f"error fetching search: {tags}")
             case _:
                 raise ValueError(f"Board \"{board}\" can't be handled by the post searcher.")
 
-    async def send_posts(self, ctx: commands.Context, posts, /, *, board: str = 'danbooru', guide: dict, show_nsfw: bool = True, max_posts: int = 4, hide_posts_remaining: bool = False) -> None:
+    async def send_posts(self, msg: discord.Message, posts, /, *, board: str = 'danbooru', guide: dict, show_nsfw: bool = True, max_posts: int = 4, show_posts_remaining: bool = True, reply: bool = False) -> None:
         """Handle sending posts retrieved from image boards
         Arguments:
-            ctx
-                The context to interact with the discord API
+            msg::discord.Message
+                The message that sent the link
             posts::list | dict (json)
                 The post(s) to be sent to a channel
 
@@ -169,11 +140,31 @@ class Board(commands.Cog):
             max_posts::int
                 How many posts should be shown before showing how many of them were cut-off.
                 If max_posts is set to 0 then no footer will be shown and no posts will be omitted.
-            hide_posts_remaining::bool
-                Omit the final remaining count on the final post. False by default.
+            show_posts_remaining::bool
+                Show how many posts remain to preview on the final embed. True by default.
+            reply::bool
+                Replies to the original message. Only works when len(posts) == 1.
         """
+        channel = msg.channel
+
         if not isinstance(posts, list):
             posts = [posts]
+
+        if self.post_is_missing_preview(posts[0], board=board) and len(posts) == 1:
+            embed = self.generate_embed(posts[0], board=board, guide=guide)
+            embed.set_footer(text=guide['embed']['footer_text'],
+                             icon_url=self.bot.assets[board]['favicon']['size16'])
+            await msg.reply(embed=embed, mention_author=False)
+            try:
+                await msg.edit(suppress=True)
+            except discord.errors.Forbidden as e:
+                # Missing Permissions
+                match e.code:
+                    case 50013:
+                        print("Missing Permissions: Cannot suppress embed from sender's message")
+                    case _:
+                        print(f"Forbidden: Status {e.status} (code {e.code}")
+            return
 
         total_posts = len(posts)
         posts_processed = 0
@@ -193,14 +184,14 @@ class Board(commands.Cog):
 
             # if there's no image file or image url, send a link
             if not embed.image.url:
-                await ctx.send(embed.url)
+                await channel.send(embed.url)
                 continue
 
             if max_posts > 0:
                 if posts_processed >= min(max_posts, total_posts):
                     last_post = True
 
-                    if total_posts > max_posts and not hide_posts_remaining:
+                    if total_posts > max_posts and show_posts_remaining:
                         embed.set_footer(
                             text=f'{total_posts - max_posts}+ remaining',
                             icon_url=self.bot.assets[board]['favicon']['size16'])
@@ -215,16 +206,16 @@ class Board(commands.Cog):
                 else:
                     embed.set_image(url=self.bot.assets['default']['nsfw_placeholder'])
 
-                await ctx.send(f'<{embed.url}>', embed=embed)
+                await channel.send(f'<{embed.url}>', embed=embed)
             else:
                 match board:
                     case 'danbooru':
                         if self.post_is_missing_preview(post, board=board) or last_post:
-                            await ctx.send(f'<{embed.url}>', embed=embed)
+                            await channel.send(f'<{embed.url}>', embed=embed)
                         else:
-                            await ctx.send(embed.url)
-                    case 'e621' | 'sankaku':
-                        await ctx.send(f'<{embed.url}>', embed=embed)
+                            await channel.send(embed.url)
+                    case 'e621':
+                        await channel.send(f'<{embed.url}>', embed=embed)
                     case _:
                         raise ValueError('Board embed send not configured.')
 
@@ -276,8 +267,6 @@ class Board(commands.Cog):
                 embed.title = embed_post_title
             case 'e621':
                 embed.title = f"#{post_id}: {post_core.combine_tags(post['tags']['artist'])} - e621"
-            case 'sankaku':
-                embed.title = f"Post {post_id}"
             case _:
                 raise ValueError('Board embed title not configured.')
 
@@ -314,8 +303,6 @@ class Board(commands.Cog):
         match board:
             case 'e621':
                 return list_contains(post['tags']['general'], self.bot.rules['no_preview_tags'][board]) and post['rating'] != 's'
-            case 'sankaku':
-                return True
             case _:
                 return list_contains(post['tag_string_general'].split(), self.bot.rules['no_preview_tags'][board]) or post['is_banned']
 

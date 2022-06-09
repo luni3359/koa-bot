@@ -2,7 +2,9 @@ import asyncpraw
 import discord
 from asyncpraw.reddit import Submission, Subreddit
 
-from koabot.core.base import Site
+import koabot.core.posts as post_core
+from koabot.core.site import Site
+from koabot.core.utils import smart_truncate
 from koabot.kbot import KBot
 
 
@@ -26,6 +28,11 @@ class SiteReddit(Site):
                                             user_agent=credentials['headers']['User-Agent'])
         return self._reddit_api
 
+    async def cog_unload(self) -> None:
+        print(f"Safely closing {self.qualified_name}")
+        await self.reddit_api.close()
+        return await super().cog_unload()
+
     def submission_is_video(self, submission: Submission):
         is_video = False
         if submission.is_video:
@@ -44,24 +51,43 @@ class SiteReddit(Site):
     def get_subreddit_icon(self, subreddit: Subreddit):
         return subreddit.community_icon if subreddit.community_icon else subreddit.icon_img
 
+    async def get_submission(self, url: str) -> Submission:
+        id_start = "comments/"
+        id_end = "/"
+
+        if not (post_id := post_core.get_name_or_id(url, start=id_start, end=id_end)):
+            return None
+        return await self.reddit_api.submission(id=post_id)
+
+    async def get_subreddit(self, url: str) -> Subreddit:
+        id_start = "/r/"
+        id_end = "/"
+
+        if not (subreddit_name := post_core.get_name_or_id(url, start=id_start, end=id_end)):
+            return None
+
+        return await self.reddit_api.subreddit(display_name=subreddit_name)
+
     async def get_reddit_gallery(self, msg: discord.Message, url: str, /, *, guide: dict):
         """Automatically post Reddit galleries whenever possible"""
-        reddit_url_prefix = "https://" + guide['post']['url']
-        submission: Submission = await self.reddit_api.submission(url=url)
+        if (post := await self.get_submission(url)):
+            # Don't override videos
+            if self.submission_is_video(post):
+                return
+            await self.preview_submission(msg, post, guide)
+        elif (subreddit := await self.get_subreddit(url)):
+            await self.preview_subreddit(msg, subreddit, guide)
 
-        # Don't override videos
-        if self.submission_is_video(submission):
-            return
-
+    async def preview_submission(self, msg: discord.Message, submission: Submission, guide: dict):
         subreddit: Subreddit = submission.subreddit
         await subreddit.load()
 
         header_embed = discord.Embed()
         header_embed.set_author(name=submission.subreddit_name_prefixed,
-                                url=f"{reddit_url_prefix}/{submission.subreddit_name_prefixed}",
+                                url=f"{guide['post']['url']}/{submission.subreddit_name_prefixed}",
                                 icon_url=self.get_subreddit_icon(subreddit))
         header_embed.title = submission.title
-        header_embed.url = f"{reddit_url_prefix}{submission.permalink}"
+        header_embed.url = f"{guide['post']['url']}{submission.permalink}"
         header_embed.add_field(name='Score', value=f"{submission.score:,}")
         header_embed.add_field(name='Comments', value=f"{submission.num_comments:,}")
         footer_text = guide['embed']['footer_text']
@@ -69,12 +95,10 @@ class SiteReddit(Site):
         if submission.selftext:
             max_post_length = 350   # arbitrary maximum
             if len(submission.selftext) > max_post_length:
-                # TODO: Even though the output is nicer, this removes newlines.
-                # header_embed.description = textwrap.shorten(
-                # submission.selftext, width=max_post_length, placeholder="...")
                 # TODO: Disjointed markdown is not cleaned up
                 # i.e. the closing ** is cut off
-                header_embed.description = submission.selftext[:max_post_length - 1] + "…"
+                description = smart_truncate(submission.selftext, max_post_length, True)
+                header_embed.description = description + "…"
             else:
                 header_embed.description = submission.selftext
 
@@ -131,6 +155,33 @@ class SiteReddit(Site):
         embeds[-1].set_footer(text=footer_text, icon_url=guide['embed']['favicon']['size192'])
 
         await msg.reply(embeds=embeds, mention_author=False)
+
+        try:
+            await msg.edit(suppress=True)
+        except discord.errors.Forbidden as e:
+            # Missing Permissions
+            match e.code:
+                case 50013:
+                    print("Missing Permissions: Cannot suppress embed from sender's message")
+                case _:
+                    print(f"Forbidden: Status {e.status} (code {e.code}")
+
+    async def preview_subreddit(self, msg: discord.Message, subreddit: Subreddit, guide: dict):
+        await subreddit.load()
+        subreddit_url = f"{guide['post']['url']}/{subreddit.display_name_prefixed}"
+
+        embed = discord.Embed()
+        embed.set_author(name=subreddit.display_name_prefixed,
+                         url=subreddit_url)
+        embed.title = subreddit.title
+        embed.url = subreddit_url
+        embed.description = subreddit.public_description
+        embed.set_thumbnail(url=self.get_subreddit_icon(subreddit))
+        embed.add_field(name='Members', value=f"{subreddit.subscribers:,}")
+        embed.add_field(name='Online', value=f"{subreddit.active_user_count:,}")
+        embed.set_footer(text=guide['embed']['footer_text'], icon_url=guide['embed']['favicon']['size192'])
+
+        await msg.reply(embed=embed, mention_author=False)
 
         try:
             await msg.edit(suppress=True)

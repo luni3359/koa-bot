@@ -206,18 +206,51 @@ class ReactionRoles(commands.Cog):
         # except discord.Forbidden:
         #     print(f"I couldn't notify {user.name} about {role_string}...")
 
-    @commands.group(aliases=['reactionroles', 'reactionrole', 'rr'])
+    @commands.hybrid_group(aliases=['reactionroles', 'reactionrole', 'rr'])
     @commands.check_any(commands.is_owner(), is_guild_owner())
     async def reaction_roles(self, ctx: commands.Context):
         """Grant users roles upon reacting to a message"""
         if ctx.invoked_subcommand is None:
-            await ctx.send('Invalid command!')
+            await ctx.reply('Invalid command!', mention_author=False)
+
+    @reaction_roles.command(name="list")
+    async def list_roles(self, ctx: commands.Context) -> None:
+        """Lists all reaction roles in the server"""
+        embed = discord.Embed()
+        embed.title = "Reaction roles"
+        embed.description = ""
+
+        i = 0
+        for message_id, bind in self.rr_active_binds.items():
+            channel_id: int = int(bind.channel_id)
+            if not (channel := ctx.guild.get_channel_or_thread(channel_id)):
+                continue
+
+            i += 1
+            message: discord.PartialMessage = channel.get_partial_message(message_id)
+            embed.description += f"**Message #{i}:** [GO]({message.jump_url})\n"
+
+            for j, link in enumerate(bind.links):
+                link_roles: list[int | discord.Role] = link.roles
+                role_mentions: list[str] = []
+
+                for link_role in link_roles:
+                    if isinstance(link_role, int):
+                        role_mentions.append(ctx.guild.get_role(link_role).mention)
+                        continue
+                    role_mentions.append(link_role.mention)
+
+                embed.description += (f"__Link #{j + 1}__\n"
+                                      f"   Reactions: {' '.join(link.reactions)}\n"
+                                      f"   Roles: {' '.join(role_mentions)}\n")
+
+        await ctx.reply(embed=embed, mention_author=False)
 
     @reaction_roles.command()
     async def assign(self, ctx: commands.Context, url: str = "") -> None:
         """Initialize the reaction roles binding process"""
         if not (url_matches := CHANNEL_URL_PATTERN.match(url)):
-            return await ctx.send(self.botstatus.get_quote('rr_assign_missing_or_invalid_message_url'))
+            return await ctx.reply(self.botstatus.get_quote('rr_assign_missing_or_invalid_message_url'), mention_author=False)
 
         url_components = url_matches.group(0).split('/')
         message_id: int = int(url_components[-1])
@@ -233,30 +266,30 @@ class ReactionRoles(commands.Cog):
         try:
             message = await target_channel.fetch_message(message_id)
         except discord.NotFound:
-            await ctx.send(self.botstatus.get_quote('rr_assign_message_url_not_found'))
+            error_message = self.botstatus.get_quote('rr_assign_message_url_not_found')
         except discord.Forbidden:
-            await ctx.send("I don't have permissions to interact with that message...")
+            error_message = "I don't have permissions to interact with that message..."
         except discord.HTTPException:
-            await ctx.send("Network issues. Please try again in a few moments.")
+            error_message = "Network issues. Please try again in a few moments."
 
         if not message:
-            return
+            return await ctx.reply(error_message, mention_author=False)
 
         # make a queue for the emojis for the current user if it doesn't exist
         author_id = ctx.author.id
 
         if (bind_tag := f"{author_id}/{server_id}") in self.rr_unsaved_binds:
-            return await ctx.send(self.botstatus.get_quote('rr_assign_already_assigning'))
+            return await ctx.reply(self.botstatus.get_quote('rr_assign_already_assigning'), mention_author=False)
 
         self.rr_unsaved_binds[bind_tag] = RRBind(message_id, channel_id)
 
-        await ctx.send(self.botstatus.get_quote('rr_assign_process_complete'))
+        await ctx.reply(self.botstatus.get_quote('rr_assign_process_complete'), mention_author=False)
 
     @reaction_roles.command()
     async def bind(self, ctx: commands.Context) -> None:
         """Add a new emoji-role binding to the message being currently assigned to"""
         if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_unsaved_binds:
-            return await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
+            return await ctx.reply(self.botstatus.get_quote('rr_message_target_missing'), mention_author=False)
 
         reacted_emojis: set[str] = set(re.findall(DISCORD_EMOJI_PATTERN, ctx.message.content) +
                                        re.findall(emoji.get_emoji_regexp(), ctx.message.content))
@@ -272,7 +305,12 @@ class ReactionRoles(commands.Cog):
 
         if exit_reason:
             kusudama, party_popper = [emoji.emojize(em) for em in [":confetti_ball:", ":tada:"]]
-            return await ctx.send(f"Please include at least {exit_reason} to bind to. How you arrange them does not matter.\n\nFor example:\n{kusudama} @Party → Reacting with {kusudama} will assign the @Party role.\n{party_popper} @Party @Yay {kusudama} → Reacting with {kusudama} AND {party_popper} will assign the @Party and @Yay roles.")
+            return await ctx.reply(f"Please include at least {exit_reason} to bind to."
+                                   f" How you arrange them does not matter.\n\nFor example:\n{kusudama}"
+                                   f" @Party → Reacting with {kusudama} will assign the @Party role."
+                                   f"\n{party_popper} @Party @Yay {kusudama} → Reacting with {kusudama}"
+                                   f" AND {party_popper} will assign the @Party and @Yay roles.",
+                                   mention_author=False)
 
         bind: RRBind = self.rr_unsaved_binds[bind_tag]
 
@@ -323,8 +361,7 @@ class ReactionRoles(commands.Cog):
     async def undo(self, ctx: commands.Context, call_type: str) -> None:
         """Cancel the last issued reaction roles entry"""
         if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_unsaved_binds:
-            await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
-            return
+            return await ctx.reply(self.botstatus.get_quote('rr_message_target_missing'), mention_author=False)
 
         bind: RRBind = self.rr_unsaved_binds[bind_tag]
 
@@ -338,12 +375,12 @@ class ReactionRoles(commands.Cog):
     async def save(self, ctx: commands.Context) -> None:
         """Complete the emoji-role registration"""
         if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_unsaved_binds:
-            return await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
+            return await ctx.reply(self.botstatus.get_quote('rr_message_target_missing'), mention_author=False)
 
         bind: RRBind = self.rr_unsaved_binds[bind_tag]
 
         if not bind.links:
-            return await ctx.send(self.botstatus.get_quote('rr_save_cannot_save_empty'))
+            return await ctx.reply(self.botstatus.get_quote('rr_save_cannot_save_empty'), mention_author=False)
 
         print("Saving bind...")
 
@@ -374,13 +411,13 @@ class ReactionRoles(commands.Cog):
             json_file.truncate()
 
         self.rr_unsaved_binds.pop(bind_tag)
-        await ctx.send("Registration complete!")
+        await ctx.reply("Registration complete!", mention_author=False)
 
     @reaction_roles.command(aliases=['quit', 'exit', 'stop'])
     async def cancel(self, ctx: commands.Context) -> None:
         """Quit the reaction roles binding process"""
         if (bind_tag := f"{ctx.message.author.id}/{ctx.guild.id}") not in self.rr_unsaved_binds:
-            await ctx.send(self.botstatus.get_quote('rr_message_target_missing'))
+            await ctx.reply(self.botstatus.get_quote('rr_message_target_missing'), mention_author=False)
         else:
             self.rr_unsaved_binds.pop(bind_tag)
             await ctx.message.add_reaction(emoji.emojize(':white_check_mark:', use_aliases=True))
@@ -462,7 +499,7 @@ class ReactionRoles(commands.Cog):
         # send a warning and freeze if spammed
         if user_cooldown.change_count > self.spam_limit:
             user_cooldown.cooldown_start = current_time
-            await user.send("Please wait a few moments and try again.")
+            # await user.send("Please wait a few moments and try again.")
             return True
 
         return False
@@ -472,8 +509,10 @@ class ReactionRoles(commands.Cog):
         old_em = " AND ".join(link.reactions)
         roles = " AND ".join([ctx.guild.get_role(v).mention for v in link.roles])
         maru, batu = [emoji.emojize(em, use_aliases=True) for em in [":o:", ":x:"]]
-        tmp_msg: discord.Message = await ctx.send(f"This binding already exists. Would you like to change it to the following?\n\nCurrently:\nReact to {old_em} to get {roles}\n\nNEW:\nReact to {new_em} to get {roles}\n\nSelect {maru} to overwrite, or {batu} to ignore this binding.")
-
+        tmp_msg: discord.Message = await ctx.reply(f"This binding already exists. Would you like to change it to"
+                                                   f" the following?\n\nCurrently:\nReact to {old_em} to get {roles}\n\n"
+                                                   f"NEW:\nReact to {new_em} to get {roles}\n\nSelect {maru} to"
+                                                   f" overwrite, or {batu} to ignore this binding.")
         self.add_rr_confirmation(tmp_msg.id, ctx.author.id, reactions, link)
 
         for em in [maru, batu]:

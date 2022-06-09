@@ -1,45 +1,46 @@
 aiodns==3.0.0
 aiofiles==0.6.0; python_full_version >= "3.5.3" and python_version >= "3.6"
-aiohttp==3.8.1; python_version >= "3.6" and python_full_version >= "3.8.0"
-aiosignal==1.2.0; python_version >= "3.6" and python_full_version >= "3.8.0"
+aiohttp==3.8.1; python_version >= "3.7" and python_full_version >= "3.8.0"
+aiosignal==1.2.0; python_version >= "3.7" and python_full_version >= "3.8.0"
 aiosqlite==0.17.0; python_version >= "3.6"
 appdirs==1.4.4
 async-generator==1.10; python_version >= "3.6"
-async-timeout==4.0.2; python_version >= "3.6" and python_full_version >= "3.8.0"
+async-lru==1.0.3; python_version >= "3.7"
+async-timeout==4.0.2; python_version >= "3.7" and python_full_version >= "3.8.0"
 asyncio-extras==1.3.2; python_version >= "3.6"
 asyncpraw==7.5.0; python_version >= "3.6"
 asyncprawcore==2.3.0; python_version >= "3.6"
-attrs==21.4.0; python_version >= "3.6" and python_full_version >= "3.8.0"
+attrs==21.4.0; python_version >= "3.7" and python_full_version >= "3.8.0"
 basc-py4chan==0.6.6
 beautifulsoup4==4.11.1; python_full_version >= "3.6.0"
 brotli==1.0.9
 brotlicffi==1.0.9.2; platform_python_implementation != "CPython" and python_version >= "3.6"
 cchardet==2.1.7
-certifi==2021.10.8; python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version >= "3.7"
+certifi==2022.5.18.1; python_version >= "3.7" and python_version < "4"
 cffi==1.15.0
-charset-normalizer==2.0.12; python_full_version >= "3.8.0" and python_version >= "3.7"
+charset-normalizer==2.0.12; python_version >= "3.7" and python_version < "4" and python_full_version >= "3.8.0"
 colorama==0.4.4; python_version >= "2.7" and python_full_version < "3.0.0" and platform_system == "Windows" or python_full_version >= "3.5.0" and platform_system == "Windows"
 commentjson==0.9.0
-dataclass-wizard==0.22.0
+dataclass-wizard==0.22.1
 deprecated==1.2.13; python_full_version >= "3.5.3"
-discord.py @ git+https://github.com/Rapptz/discord.py@40176bb ; python_full_version >= "3.8.0"
+discord.py @ git+https://github.com/Rapptz/discord.py@36f039a ; python_full_version >= "3.8.0"
 docopt==0.6.2
 emoji==1.7.0
-filelock==3.6.0; python_version >= "3.7"
+filelock==3.7.1; python_version >= "3.7"
 forex-python==1.8
 frozenlist==1.3.0; python_version >= "3.7" and python_full_version >= "3.8.0"
-idna==3.3; python_full_version >= "3.8.0" and python_version >= "3.7"
+idna==3.3; python_version >= "3.7" and python_version < "4" and python_full_version >= "3.8.0"
 imagehash==4.2.1
 lark-parser==0.7.8
 mergedeep==1.3.4; python_version >= "3.6"
 multidict==6.0.2; python_version >= "3.7" and python_full_version >= "3.8.0"
 mutagen==1.45.1; python_version >= "3.6" and python_version < "4"
 num2words==0.5.10
-numpy==1.22.3; python_version >= "3.8"
+numpy==1.22.4; python_version >= "3.8"
 oauthlib==3.2.0; python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.7"
-orjson==3.6.8; python_full_version >= "3.8.0" and python_version >= "3.7"
+orjson==3.7.2; python_full_version >= "3.8.0" and python_version >= "3.7"
 packaging==21.3; python_version >= "3.7"
-pillow==9.1.0; python_version >= "3.7"
+pillow==9.1.1; python_version >= "3.7"
 pint==0.18; python_version >= "3.7"
 pixivpy-async==1.2.14; python_full_version >= "3.5.3"
 pycares==4.1.2; python_full_version >= "3.8.0"
@@ -47,13 +48,13 @@ pycparser==2.21
 pycryptodomex==3.14.1; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" and python_version >= "3.6"
 pymediawiki==0.7.1
 pynacl==1.5.0; python_full_version >= "3.8.0" and python_version >= "3.6"
-pyparsing==3.0.8; python_full_version >= "3.6.8" and python_version >= "3.7"
+pyparsing==3.0.9; python_full_version >= "3.6.8" and python_version >= "3.7"
 python-levenshtein==0.12.2
 pytz==2022.1
 pywavelets==1.3.0; python_version >= "3.7"
 requests-file==1.5.1; python_version >= "3.7"
 requests-oauthlib==1.3.1; python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.7"
-requests==2.27.1; python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version >= "3.7"
+requests==2.28.0; python_version >= "3.7" and python_version < "4" and (python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.7")
 scipy==1.6.1; python_version >= "3.7"
 simplejson==3.17.6; python_version >= "2.5" and python_full_version < "3.0.0" or python_full_version >= "3.3.0"
 single-source==0.3.0; python_version >= "3.6" and python_version < "4.0"
@@ -62,12 +63,12 @@ soupsieve==2.3.2.post1; python_version >= "3.6" and python_full_version >= "3.6.
 thefuzz==0.19.0
 tldextract==3.3.0; python_version >= "3.7"
 tqdm==4.64.0; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.4.0")
-tweepy==4.9.0; python_version >= "3.7"
+tweepy==4.10.0; python_version >= "3.7"
 typing-extensions==4.2.0; python_version >= "3.7"
 update-checker==0.18.0; python_version >= "3.6"
-urllib3==1.26.9; python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version < "4" and python_version >= "3.7"
+urllib3==1.26.9; python_version >= "3.7" and python_full_version < "3.0.0" and python_version < "4" or python_full_version >= "3.5.0" and python_version < "4" and python_version >= "3.7"
 uvloop==0.16.0; sys_platform == "linux"
 websockets==10.3; python_version >= "3.7"
 wrapt==1.13.3; python_full_version >= "3.5.3"
-yarl==1.7.2; python_version >= "3.6" and python_full_version >= "3.8.0"
-yt-dlp==2022.4.8; python_version >= "3.6"
+yarl==1.7.2; python_version >= "3.7" and python_full_version >= "3.8.0"
+yt-dlp==2022.5.18; python_version >= "3.6"

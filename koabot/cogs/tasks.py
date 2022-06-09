@@ -1,9 +1,9 @@
 """Routine tasks"""
 import asyncio
-from datetime import datetime
+import datetime
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import koabot.core.net as net_core
 from koabot.cogs.botstatus import BotStatus
@@ -17,6 +17,9 @@ class Tasks(commands.Cog):
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
+        self.loops: list[tasks.Loop] = []
+
+        self.online_streamers = []
 
     @property
     def board(self) -> Board:
@@ -33,30 +36,52 @@ class Tasks(commands.Cog):
     async def cog_load(self):
         self.bot.loop.create_task(self.run_once_when_ready())
 
+    async def cog_unload(self) -> None:
+        for loop in self.loops:
+            task_name = loop.get_task().get_name()
+            print(f"Ending task \"{task_name}\"")
+            loop.stop()
+
     async def run_once_when_ready(self):
         await self.bot.wait_until_ready()
-        
-        self.bot.loop.create_task(self.check_live_streamers())
-        self.bot.loop.create_task(self.change_presence_periodically())
 
+        loops: list[tasks.Loop] = [
+            self.change_presence_periodically,
+            self.check_live_streamers,
+        ]
+
+        for loop in loops:
+            loop.start()
+            self.loops.append(loop)
+
+    @tasks.loop(hours=24)
     async def change_presence_periodically(self) -> None:
         """Changes presence at X time, once per day"""
+        status = self.botstatus.get_quote('playing_status')
+        await self.bot.change_presence(activity=discord.Game(name=status))
 
-        day: int = datetime.utcnow().day
+    @change_presence_periodically.before_loop
+    async def synchronize_at_midnight(self) -> None:
+        # `.now().astimezone()` uses the local timezone
+        # for a specific timezone use `.now(timezone)` without `.astimezone()`
+        # timezones can be acquired using any of
+        # datetime.timezone.utc
+        # datetime.timezone(datetime.timedelta(...))
+        # zoneinfo.ZoneInfo('TZDB/Name')
+        now = datetime.datetime.now().astimezone()
+        next_run = now.replace(hour=0, minute=0, second=0)
 
-        while not self.bot.is_closed():
-            time = datetime.utcnow()
+        if next_run < now:
+            next_run += datetime.timedelta(days=1)
 
-            # if it's time and it's not the same day
-            if time.hour == self.bot.tasks['presence_change']['utc_hour'] and time.day != day:
-                day = time.day
-                await self.bot.change_presence(activity=discord.Game(name=self.botstatus.get_quote('playing_status')))
+        # sets the status once before looping
+        await self.change_presence_periodically()
 
-            # check twice an hour
-            await asyncio.sleep(60 * 30)
+        await discord.utils.sleep_until(next_run)
 
+    @tasks.loop(minutes=5)
     async def lookup_pending_posts(self) -> None:
-        """Every 5 minutes search for danbooru posts"""
+        """Search for booru posts periodically"""
         guide = self.bot.guides['gallery']['danbooru-default']
         pending_posts = []
         channel_categories = {}
@@ -93,95 +118,87 @@ class Tasks(commands.Cog):
                 for channel in channel_categories['nsfw_channels']:
                     await channel.send(botstatus_cog.get_quote('posts_to_approve') + '\n' + nsfw_posts)
 
-            # check every 5 minutes
-            await asyncio.sleep(60 * 5)
-
+    @tasks.loop(minutes=5)
     async def check_live_streamers(self) -> None:
         """Checks every so often for streamers that have gone online"""
-        online_streamers = []
+        streamservice_cog = self.streamservice
 
-        while not self.bot.is_closed():
-            streamservice_cog = self.streamservice
+        temp_online = []
+        for streamer in self.online_streamers:
+            if streamer['preserve']:
+                streamer['preserve'] = False
+                temp_online.append(streamer)
 
-            temp_online = []
-            for streamer in online_streamers:
-                if streamer['preserve']:
-                    streamer['preserve'] = False
-                    temp_online.append(streamer)
+        self.online_streamers = temp_online
 
-            online_streamers = temp_online
+        twitch_search = 'https://api.twitch.tv/helix/streams?'
 
-            twitch_search = 'https://api.twitch.tv/helix/streams?'
+        for streamer in self.bot.tasks['streamer_activity']['streamers']:
+            match streamer['platform']:
+                case 'twitch':
+                    twitch_search += f"user_id={streamer['user_id']}&"
 
-            for streamer in self.bot.tasks['streamer_activity']['streamers']:
-                match streamer['platform']:
-                    case 'twitch':
-                        twitch_search += f"user_id={streamer['user_id']}&"
+        twitch_query = await net_core.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
-            twitch_query = await net_core.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
+        match twitch_query.status:
+            case 401:
+                # Token is invalid/expired, acquire a new token
+                await streamservice_cog.fetch_twitch_access_token(force=True)
 
-            match twitch_query.status:
-                case 401:
-                    # Token is invalid/expired, acquire a new token
-                    await streamservice_cog.fetch_twitch_access_token(force=True)
+                twitch_query = await net_core.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
-                    twitch_query = await net_core.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
+        for streamer in twitch_query.json['data']:
+            already_online = False
 
-            for streamer in twitch_query.json['data']:
-                already_online = False
+            for online_streamer in self.online_streamers:
+                if streamer['id'] == online_streamer['streamer']['id']:
+                    # streamer is already online, and it was already reported
+                    online_streamer['preserve'] = True
+                    online_streamer['announced'] = True
+                    already_online = True
+                    break
 
-                for online_streamer in online_streamers:
-                    if streamer['id'] == online_streamer['streamer']['id']:
-                        # streamer is already online, and it was already reported
-                        online_streamer['preserve'] = True
-                        online_streamer['announced'] = True
-                        already_online = True
-                        break
+            if already_online:
+                continue
 
-                if already_online:
-                    continue
+            for config_streamer in self.bot.tasks['streamer_activity']['streamers']:
+                if streamer['user_id'] == str(config_streamer['user_id']):
+                    natural_name: str = config_streamer.get('casual_name', streamer['user_name'])
+                    break
 
-                for config_streamer in self.bot.tasks['streamer_activity']['streamers']:
-                    if streamer['user_id'] == str(config_streamer['user_id']):
-                        natural_name: str = config_streamer.get('casual_name', streamer['user_name'])
-                        break
+            self.online_streamers.append({'platform': 'twitch', 'streamer': streamer,
+                                          'name': natural_name, 'preserve': True, 'announced': False})
 
-                online_streamers.append({'platform': 'twitch', 'streamer': streamer,
-                                        'name': natural_name, 'preserve': True, 'announced': False})
+        stream_announcements: list[StreamAnnouncement] = []
+        for streamer in self.online_streamers:
+            if streamer['announced']:
+                continue
 
-            stream_announcements: list[StreamAnnouncement] = []
-            for streamer in online_streamers:
-                if streamer['announced']:
-                    continue
+            embed = discord.Embed()
+            embed.set_author(
+                name=streamer['streamer']['user_name'],
+                url=f"https://www.twitch.tv/{streamer['streamer']['user_name']}")
+            embed.set_footer(
+                text=self.bot.assets['twitch']['name'],
+                icon_url=self.bot.assets['twitch']['favicon'])
 
-                embed = discord.Embed()
-                embed.set_author(
-                    name=streamer['streamer']['user_name'],
-                    url=f"https://www.twitch.tv/{streamer['streamer']['user_name']}")
-                embed.set_footer(
-                    text=self.bot.assets['twitch']['name'],
-                    icon_url=self.bot.assets['twitch']['favicon'])
+            # setting thumbnail size
+            thumbnail_url: str = streamer['streamer']['thumbnail_url']
+            thumbnail_url = thumbnail_url.replace("{width}", "600").replace("{height}", "350")
+            thumbnail_filename = net_core.get_url_filename(thumbnail_url)
+            image = await net_core.fetch_image(thumbnail_url)
+            embed.set_image(url=f"attachment://{thumbnail_filename}")
 
-                # setting thumbnail size
-                thumbnail_url: str = streamer['streamer']['thumbnail_url']
-                thumbnail_url = thumbnail_url.replace("{width}", "600").replace("{height}", "350")
-                thumbnail_filename = net_core.get_url_filename(thumbnail_url)
-                image = await net_core.fetch_image(thumbnail_url)
-                embed.set_image(url=f"attachment://{thumbnail_filename}")
+            stream_announcements.append(
+                StreamAnnouncement(streamer_name=streamer['name'],
+                                   filename=thumbnail_filename,
+                                   image=image,
+                                   embed=embed))
 
-                stream_announcements.append(
-                    StreamAnnouncement(streamer_name=streamer['name'],
-                                       filename=thumbnail_filename,
-                                       image=image,
-                                       embed=embed))
-
-            for channel_id in self.bot.tasks['streamer_activity']['channels_to_announce_on']:
-                channel: discord.TextChannel = self.bot.get_channel(channel_id)
-                for batch in stream_announcements:
-                    await batch.send_announcement(channel)
-
-            # check every 5 minutes
-            await asyncio.sleep(60 * 5)
+        for channel_id in self.bot.tasks['streamer_activity']['channels_to_announce_on']:
+            channel: discord.TextChannel = self.bot.get_channel(channel_id)
+            for batch in stream_announcements:
+                await batch.send_announcement(channel)
 
 
 async def setup(bot: KBot):

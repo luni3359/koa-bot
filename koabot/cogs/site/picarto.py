@@ -12,20 +12,20 @@ class MultistreamUser():
 
 
 @dataclass
-class PicartoChatSettings():
+class ChatSettings():
     guest_chat: bool
     links: bool
     level: bool
 
 
 @dataclass
-class PicartoLanguage():
+class Language():
     id: int
     name: str
 
 
 @dataclass
-class PicartoThumbnails():
+class Thumbnails():
     web: str
     web_large: str
     mobile: str
@@ -40,7 +40,7 @@ class PicartoChannel():
     online: bool
     viewers: int
     viewers_total: int
-    thumbnails: PicartoThumbnails
+    thumbnails: Thumbnails
     followers: int
     subscribers: int
     adult: bool
@@ -53,9 +53,9 @@ class PicartoChannel():
     private: bool
     private_message: Any
     gaming: bool
-    chat_settings: PicartoChatSettings
+    chat_settings: ChatSettings
     last_live: str
     tags: list[str]
     multistream: list[MultistreamUser]
-    languages: list[PicartoLanguage]
+    languages: list[Language]
     following: bool

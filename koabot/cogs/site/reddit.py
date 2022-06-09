@@ -4,7 +4,7 @@ from asyncpraw.reddit import Submission, Subreddit
 
 import koabot.core.posts as post_core
 from koabot.core.site import Site
-from koabot.core.utils import trim_within_length
+from koabot.core.utils import smart_truncate
 from koabot.kbot import KBot
 
 
@@ -97,7 +97,7 @@ class SiteReddit(Site):
             if len(submission.selftext) > max_post_length:
                 # TODO: Disjointed markdown is not cleaned up
                 # i.e. the closing ** is cut off
-                description = trim_within_length(submission.selftext, max_post_length, True)
+                description = smart_truncate(submission.selftext, max_post_length, True)
                 header_embed.description = description + "…"
             else:
                 header_embed.description = submission.selftext

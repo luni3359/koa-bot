@@ -1,14 +1,11 @@
-import re
-
 import discord
 from thefuzz import fuzz
 
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
 from koabot.core.site import Site
-from koabot.core.utils import trim_within_length
+from koabot.core.utils import smart_truncate, strip_html_markup
 from koabot.kbot import KBot
-from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
 
 class SiteDeviantArt(Site):
@@ -21,9 +18,9 @@ class SiteDeviantArt(Site):
         return post_core.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')
 
     def get_description_from_html(self, html_description: str, max_length: int = 200) -> str:
-        description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, ' ', html_description).strip()
+        description = strip_html_markup(html_description).strip()
         if len(description) > max_length:
-            description = trim_within_length(description, max_length, True) + "..."
+            description = smart_truncate(description, max_length, True) + "..."
         return description
 
     async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:

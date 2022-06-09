@@ -9,8 +9,8 @@ import pixivpy_async
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
 from koabot.core.site import Site
+from koabot.core.utils import strip_html_markup
 from koabot.kbot import KBot
-from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
 
 
 class PixivHelper():
@@ -152,7 +152,7 @@ class SitePixiv(Site):
 
                     embed.url = url
                     description = re.sub(r'<br \/>', '\n', illust.caption)
-                    description = re.sub(HTML_TAG_OR_ENTITY_PATTERN, '', description)
+                    description = strip_html_markup(description)
                     description = self.restore_site_shortcuts(description)
                     embed.description = description.strip()
 

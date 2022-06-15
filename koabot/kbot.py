@@ -145,6 +145,33 @@ class KBot(commands.Bot):
                         # print("This user-guild pair already exists")
                         ...
 
+    async def add_member_to_db(self, member: discord.Member) -> None:
+        conn = self.database_conn
+        srv_query = "INSERT INTO discordServer (serverDId, serverName, dateFirstSeen) VALUES (?, ?, ?)"
+        usr_query = "INSERT INTO discordUser (userDid, userName, dateFirstSeen) VALUES (?, ? ,?)"
+        srv_usr_query = "INSERT INTO discordServerUser (userId, serverId, userNickname) VALUES (?, ?, ?)"
+        async with conn.cursor() as cursor:
+            guild = member.guild
+            try:
+                await cursor.execute(srv_query, (guild.id, guild.name, datetime.now()))
+                await conn.commit()
+            except aiosqlite.IntegrityError:
+                # print(f"Guild '{guild.name}' is already in the database")
+                ...
+
+            try:
+                await cursor.execute(usr_query, (member.id, member.name, datetime.now()))
+            except aiosqlite.IntegrityError:
+                # print(f"Member '{member.name}' is already in the database")
+                ...
+
+            try:
+                await cursor.execute(srv_usr_query, (member.id, guild.id, member.nick))
+                await conn.commit()
+            except aiosqlite.IntegrityError:
+                # print("This user-guild pair already exists")
+                ...
+
 
 async def debug_check(ctx: commands.Context) -> bool:
     """Disable live instance for specific users if a beta instance is running"""

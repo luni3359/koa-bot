@@ -395,6 +395,11 @@ class BotEvents(commands.Cog):
             print(f'Disconnected from server [{datetime.utcnow().replace(microsecond=0)} (UTC+0)]')
             self.bot.isconnected = False
 
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        print("Member has joined!")
+        self.bot.add_member_to_db(member)
+
 
 async def setup(bot: KBot):
     """Initiate cog"""

@@ -5,8 +5,6 @@ import urllib
 
 import discord
 from discord.ext import commands
-from mediawiki import MediaWiki
-from mediawiki import exceptions as MediaExceptions
 
 import koabot.core.net as net_core
 from koabot.cogs.botstatus import BotStatus
@@ -55,7 +53,6 @@ class InfoLookup(commands.Cog):
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-        self._wikipedia: MediaWiki = None
         self._merriam_find_pattern: re.Pattern = None
 
     @property
@@ -66,66 +63,11 @@ class InfoLookup(commands.Cog):
     def botstatus(self) -> BotStatus:
         return self.bot.get_cog('BotStatus')
 
-    @property
-    def wikipedia(self) -> MediaWiki:
-        if not self._wikipedia:
-            self._wikipedia = MediaWiki()
-
-        return self._wikipedia
-
     @commands.hybrid_command(name='wikipedia', aliases=['wk', 'wp'])
     async def search_wikipedia(self, ctx: commands.Context, *, search_term: str):
         """Search for articles in Wikipedia"""
-        MAX_SUMMARY_LENGTH = 2000
-        guide = self.bot.guides['explanation']['wikipedia-default']
-
-        page_results = self.wikipedia.search(search_term)
-        page_title = []
-
-        try:
-            page_title = page_results[0]
-        except IndexError:
-            await ctx.send("I can't find anything relevant. Sorry...")
-            return
-
-        # TODO: Check out that new wikimedia feature!
-        try:
-            page = self.wikipedia.page(page_title, auto_suggest=False)
-            summary = page.summary
-            embed = discord.Embed()
-            embed.title = page.title
-            embed.url = page.url
-            if len(summary) > MAX_SUMMARY_LENGTH:
-                summary = summary[:MAX_SUMMARY_LENGTH]
-                for i in range(MAX_SUMMARY_LENGTH):
-                    if summary[len(summary) - i - 1] != ' ':
-                        continue
-
-                    summary = summary[:len(summary) - i - 1] + '…'
-                    break
-
-            js = (await net_core.http_request(f"https://en.wikipedia.org/api/rest_v1/page/summary/{page_title}", json=True)).json
-            if 'thumbnail' in js:
-                embed.set_image(url=js['thumbnail']['source'])
-
-            embed.description = summary
-            embed.set_footer(text=guide['embed']['footer_text'], icon_url=guide['embed']['favicon']['size16'])
-            await ctx.send(embed=embed)
-        except MediaExceptions.DisambiguationError as e:
-            bot_msg = 'There are many definitions for that... do you see anything that matches?\n'
-
-            for suggestion in e.options[:3]:
-                bot_msg += f'* {suggestion}\n'
-
-            await ctx.send(bot_msg)
-        except MediaExceptions.PageError:
-            bot_msg = "Oh, I can't find anything like that... how about these?\n"
-            suggestions = self.wikipedia.search(search_term, results=3)
-
-            for suggestion in suggestions:
-                bot_msg += f'* {suggestion}\n'
-
-            await ctx.send(bot_msg)
+        wikipedia_cog: Dictionary = self.bot.get_cog("SiteWikipedia")
+        await wikipedia_cog.search(ctx, search_term)
 
     @commands.hybrid_command(name='jisho', aliases=['j'])
     async def search_jisho(self, ctx: commands.Context, *, search_term: str):

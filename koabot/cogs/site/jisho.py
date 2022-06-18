@@ -8,6 +8,7 @@ from discord.ext import commands
 
 import koabot.core.net as net_core
 from koabot.cogs.infolookup import Dictionary
+from koabot.core import utils
 from koabot.kbot import KBot
 
 
@@ -54,22 +55,11 @@ class JishoResponse():
 
 
 class SiteJisho(Dictionary):
-    """UrbanDictionary operations handler"""
+    """Jisho operations handler"""
 
     def __init__(self, bot: KBot) -> None:
         super().__init__(bot)
         self.max_definition_length = 2048
-
-    def strip_markup(self, text: str):
-        """Trim weird markup from results"""
-        text = text.replace('*', '\\*')
-
-        matches = re.findall(r'(\[([\w\ ’\']+)\])', text, re.IGNORECASE)
-        for match in matches:
-            text = text.replace(
-                match[0], f"[{match[1]}]({self.bot.assets['urban_dictionary']['dictionary_url']}{urllib.parse.quote(match[1])})")
-
-        return text
 
     async def search(self, ctx: commands.Context, search_term: str):
         guide = self.bot.assets['jisho']
@@ -90,7 +80,7 @@ class SiteJisho(Dictionary):
         embed = discord.Embed()
         embed.title = search_term
         embed.url = guide['dictionary_url'] + urllib.parse.quote(search_term)
-        dictionary_definitions = ""
+        dictionary_definitions: str = ""
 
         for word in js.data[:4]:
             japanese_info = word.japanese[0]
@@ -101,11 +91,11 @@ class SiteJisho(Dictionary):
             en_definitions = '; '.join(senses_info.english_definitions)
             what_it_is = '; '.join(senses_info.parts_of_speech)
 
-            dictionary_definitions += f'►{kanji}'
+            dictionary_definitions += f'**{kanji}**'
 
             # The primary kana reading for this word
             if (primary_reading := japanese_info.reading if japanese_info.reading else None) and primary_reading != kanji:
-                dictionary_definitions += f'【{primary_reading}】'
+                dictionary_definitions += f' ({primary_reading})'
 
             # The tags attached to the word i.e. Computing, Medicine, Biology
             if (tags := '; '.join(senses_info.tags)):
@@ -117,17 +107,15 @@ class SiteJisho(Dictionary):
             #     jlpt_level = jlpt_level.replace('jlpt-n', 'N')
             #     definition += f' [{jlpt_level}]'
 
-            dictionary_definitions += f': {en_definitions}'
+            dictionary_definitions += f':\n{en_definitions}'
 
             if senses_info.info and (definition_clarification := ', '.join(senses_info.info)):
                 dictionary_definitions += f'\n*{definition_clarification}*'
 
             dictionary_definitions += '\n\n'
 
-        if len(dictionary_definitions) > self.max_definition_length:
-            dictionary_definitions = dictionary_definitions[:self.max_definition_length]
-
-        embed.description = dictionary_definitions
+        embed.color = 0x56d926
+        embed.description = utils.smart_truncate(dictionary_definitions, self.max_definition_length)
         embed.set_footer(text=guide['name'], icon_url=guide['favicon']['size16'])
 
         await ctx.send(embed=embed)

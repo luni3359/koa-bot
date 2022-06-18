@@ -3,8 +3,8 @@ from thefuzz import fuzz
 
 import koabot.core.net as net_core
 import koabot.core.posts as post_core
+from koabot.core import utils
 from koabot.core.site import Site
-from koabot.core.utils import smart_truncate, strip_html_markup
 from koabot.kbot import KBot
 
 
@@ -18,9 +18,10 @@ class SiteDeviantArt(Site):
         return post_core.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')
 
     def get_description_from_html(self, html_description: str, max_length: int = 200) -> str:
-        description = strip_html_markup(html_description).strip()
-        if len(description) > max_length:
-            description = smart_truncate(description, max_length, True) + "..."
+        description = utils.strip_html_markup(html_description).strip()
+        description = utils.convert_code_points(html_description)
+        if max_length and len(description) > max_length:
+            description = utils.smart_truncate(description, max_length, inclusive=True) + "..."
         return description
 
     async def get_deviantart_post(self, msg: discord.Message, url: str, /) -> None:
@@ -193,11 +194,14 @@ class SiteDeviantArt(Site):
 
                 embed.set_image(url=image_url)
             case 'literature':
-                embed.description = deviation['textContent']['excerpt'] + "..."
+                # DA's excerpts should be a maximum of ~650 characters by default, hence None
+                # TODO: Check what happens with literature <650 long
+                html_description = deviation['textContent']['excerpt']
+                embed.description = self.get_description_from_html(html_description, max_length=None) + "..."
             case 'pdf':
                 if 'descriptionText' in deviation['extended']:
                     html_description = deviation['extended']['descriptionText']['html']['markup']
-                    embed.description = self.get_description_from_html(html_description, 650)
+                    embed.description = self.get_description_from_html(html_description, max_length=650)
             case _:
                 raise ValueError("Unknown DeviantArt embed type!")
 

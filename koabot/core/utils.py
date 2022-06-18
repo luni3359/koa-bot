@@ -1,5 +1,6 @@
 """Various functions that are unique enough to not go into their own cog"""
 import hashlib
+import html
 import os
 from pathlib import Path
 
@@ -50,3 +51,9 @@ def smart_truncate(text: str, length: int, inclusive: bool = False) -> str:
 def strip_html_markup(text: str) -> str:
     """Strips off all HTML from the given string"""
     return HTML_TAG_OR_ENTITY_PATTERN.sub('', text)
+
+
+def convert_code_points(text: str) -> str:
+    """Converts code points, entities, or whatever the things that look like &#128521; 
+    are called like into their respective characters (i.e. 😉)"""
+    return html.unescape(text)

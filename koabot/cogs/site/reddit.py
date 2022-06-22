@@ -112,11 +112,11 @@ class SiteReddit(Site):
         if hasattr(submission, 'gallery_data'):
             media_count = len(submission.gallery_data['items'])
             ordered_media_data = sorted(submission.gallery_data['items'], key=lambda x: x['id'])
-            media_type = 'p'        # TODO: p = stands for preview?
+            media_type = 'p'        # p = stands for preview
             total_to_preview = 4
 
             if obfuscated_preview:
-                media_type = 'o'    # TODO: o = stands for obfuscated?
+                media_type = 'o'    # o = stands for obfuscated
                 total_to_preview = 1
 
             for i, item_data in enumerate(ordered_media_data[:total_to_preview]):

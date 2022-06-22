@@ -35,18 +35,34 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def from_url(cls, url, *, loop=None, timestamp=0):
         """Retrieve audio stream from an url"""
         loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+        data: dict = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
 
         ffmpeg_opts = {
             'options': f"-vn -ss {timestamp}"
         }
 
-        if 'entries' in data:
-            # take first item from a playlist
-            data = data['entries'][0]
+        yt_url: re.Match = re.search(r'watch\?v=([a-zA-Z0-9_-]{10,12})', url)
 
-        filename = data['url']
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_opts), data=data)
+        if not yt_url:
+            return None
+
+        yt_id: str = yt_url.group(1)
+        video_data: dict
+
+        if 'entries' not in data:
+            video_data = data
+        else:
+            # in case the video in url is not in the playlist
+            video_data = data['entries'][0]
+
+            # take video from url instead of an element from the playlist
+            for entry in data['entries']:
+                if entry['id'] == yt_id:
+                    video_data = entry
+                    break
+
+        filename: str = video_data['url']
+        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_opts), data=video_data)
 
 
 class Music(commands.Cog):

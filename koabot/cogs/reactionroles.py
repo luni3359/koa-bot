@@ -105,14 +105,21 @@ class ReactionRoles(commands.Cog):
             # turn top level keys to ints
             for message_id in list(data.keys()):
                 watch = data[message_id]
-                watch['channel_id'] = int(watch['channel_id'])
+
+                try:
+                    channel_id = int(watch['channel_id'])
+                except KeyError:
+                    channel_id = int(watch['channelId'])
+                finally:
+                    watch['channel_id'] = channel_id
 
                 if not isinstance(message_id, int):
                     data[int(message_id)] = watch
                     data.pop(message_id)
 
+            serialized_data = json.dumps(data, indent=4)
             json_file.seek(0)
-            json_file.write(json.dumps(data, indent=4))
+            json_file.write(serialized_data)
             json_file.truncate()
 
     async def migrate_json_data(self):

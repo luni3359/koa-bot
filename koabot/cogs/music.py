@@ -56,37 +56,43 @@ class Music(commands.Cog):
         self.bot = bot
 
     def get_timestamp(self, url: str) -> int:
+        """Fetches the timestamp in seconds from the provided url"""
         timestamp = re.search(r'\?t=([0-9]+)', url)
         if not timestamp:
             return 0
         return int(timestamp.group(1))
 
-    @commands.hybrid_command()
-    async def join(self, ctx: commands.Context):
-        """Joins a voice channel"""
-        voice_client: discord.VoiceClient = ctx.voice_client
-        author_voicestate: discord.VoiceState = ctx.author.voice
+    def now_playing_str(self, string) -> str:
+        """Formats the given string to include 'Now playing'"""
+        return f"Now playing **{string}**"
 
+    async def join_channel(self, ctx: commands.Context, voice_client: discord.VoiceClient, voice_state: discord.VoiceState):
+        """Joins a channel based on the situation"""
         if not voice_client:
-            if author_voicestate:
-                voice_client: discord.VoiceChannel = await author_voicestate.channel.connect()
-                await ctx.send(f"Connected to **\"{author_voicestate.channel.name}\"** (your voice channel)!")
+            if voice_state:
+                voice_client: discord.VoiceChannel = await voice_state.channel.connect()
+                await ctx.reply(f"Connected to **\"{voice_state.channel.name}\"** (your voice channel)!", mention_author=False)
             else:
                 if not ctx.guild.voice_channels:
-                    await ctx.send("There's no voice channels in this server...")
+                    await ctx.reply("There's no voice channels in this server...", mention_author=False)
                     return
 
                 for voice_channel in ctx.guild.voice_channels:
                     voice_client: discord.VoiceClient = await voice_channel.connect()
-                    await ctx.send(f"Connected to **\"{voice_channel.name}\"** (the nearest voice channel)!")
+                    await ctx.reply(f"Connected to **\"{voice_channel.name}\"** (the nearest voice channel)!", mention_author=False)
                     break
         else:
-            if author_voicestate:
-                if voice_client.channel != author_voicestate.channel:
-                    await voice_client.move_to(author_voicestate.channel)
-                    await ctx.send(f"Moved to **\"{author_voicestate.channel.name}\"** (your voice channel)!")
+            if voice_state:
+                if voice_client.channel != voice_state.channel:
+                    await voice_client.move_to(voice_state.channel)
+                    await ctx.reply(f"Moved to **\"{voice_state.channel.name}\"** (your voice channel)!", mention_author=False)
                 else:
-                    await ctx.send(f"I'm already in **\"{author_voicestate.channel.name}\"** (your voice channel)!")
+                    await ctx.reply(f"I'm already in **\"{voice_state.channel.name}\"** (your voice channel)!", mention_author=False)
+
+    @commands.hybrid_command()
+    async def join(self, ctx: commands.Context):
+        """Joins a voice channel"""
+        await self.join_channel(ctx, ctx.voice_client, ctx.author.voice)
 
     @commands.hybrid_command()
     async def leave(self, ctx: commands.Context):
@@ -107,7 +113,7 @@ class Music(commands.Cog):
         voice_client: discord.VoiceClient = ctx.voice_client
 
         if not voice_client:
-            return await ctx.send("I'm not in a voice channel!")
+            return await ctx.reply("I'm not in a voice channel!", mention_author=False)
 
         if len(search_or_url) == 0:
             # test a random url while in development
@@ -116,16 +122,13 @@ class Music(commands.Cog):
             # assuming it's always an url for now
             url = URL_PATTERN.findall(search_or_url)[0]
 
-        timestamp = self.get_timestamp(url)
-        stream = await YTDLSource.from_url(url, loop=self.bot.loop, timestamp=timestamp)
-
-        try:
+        async with ctx.typing():
+            timestamp = self.get_timestamp(url)
+            stream: YTDLSource = await YTDLSource.from_url(url, loop=self.bot.loop, timestamp=timestamp)
             voice_client.play(stream, after=lambda e: print("Stream error.") if e else None)
-        except discord.ClientException as e:
-            print(e)
-            await ctx.send("Can't play!")
 
         if voice_client.is_playing:
+            await ctx.reply(self.now_playing_str(stream.title), mention_author=False)
             await ctx.message.edit(suppress=True)
 
     @commands.hybrid_command()
@@ -146,12 +149,13 @@ class Music(commands.Cog):
     @commands.hybrid_command()
     async def test(self, ctx: commands.Context):
         """Music test"""
+        voice_client: discord.VoiceClient = ctx.voice_client
+
         # join a voice channel
-        await ctx.invoke(self.bot.get_command('join'))
+        await self.join_channel(ctx, voice_client, ctx.author.voice)
 
         music_file = Path(self.bot.PROJECT_DIR, "assets", self.bot.testing['vc']['music-file'])
         source = discord.FFmpegPCMAudio(music_file)
-        voice_client: discord.VoiceClient = ctx.voice_client
 
         print("playing music now!")
         if voice_client.is_playing():

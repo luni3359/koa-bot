@@ -14,7 +14,8 @@ from koabot.patterns import URL_PATTERN
 ydl_opts = {
     'format': "bestaudio/best",
     'restrictfilenames': True,
-    'source_address': "0.0.0.0"
+    'source_address': "0.0.0.0",
+    'noplaylist': True,
 }
 ytdl = youtube_dl.YoutubeDL(ydl_opts)
 
@@ -41,7 +42,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             'options': f"-vn -ss {timestamp}"
         }
 
-        yt_url: re.Match = re.search(r'watch\?v=([a-zA-Z0-9_-]{10,12})', url)
+        yt_url: re.Match = re.search(r'(?:youtube.com/watch\?v=|youtu.be/)?([a-zA-Z0-9_-]{10,12})', url)
 
         if not yt_url:
             return None
@@ -70,6 +71,7 @@ class Music(commands.Cog):
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
+        # self.playlist: list = []
 
     def get_timestamp(self, url: str) -> int:
         """Fetches the timestamp in seconds from the provided url"""

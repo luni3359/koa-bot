@@ -97,12 +97,37 @@ function poetry_dependencies_to_requirements() {
 
     if command_exists poetry; then
         echo "Exporting dependencies to requirements.txt..."
-        poetry export --without-hashes --extras "speed" --output "requirements.txt"
+
+        if [ -n "$1" ] && [ "$1" = "dalle" ]; then
+            poetry export --without-hashes --extras "speed" --extras "dalle" --output "requirements.txt"
+        else
+            poetry export --without-hashes --extras "speed" --output "requirements.txt"
+        fi
     else
         echo "Poetry was not detected."
     fi
 
     cd "${CURRENT_DIR}"
+}
+
+function update_project_file() {
+    # Updates remotely ONLY the pyproject.toml file
+    if [ -n "$1" ]; then
+        # passes all arguments to the function "poetry_dependencies_to_requirements"
+        poetry_dependencies_to_requirements "$@"
+    else
+        poetry_dependencies_to_requirements
+    fi
+
+    test_conectivity
+
+    TARGET_KOAHOME="${KOAKUMA_CONNSTR}:${REMOTE_HOME}"
+
+    echo "Transferring pyproject.toml file from ${KOAKUMA_HOME} to ${TARGET_KOAHOME}"
+    rsync -aAXv --progress "${KOAKUMA_HOME}/pyproject.toml" "${TARGET_KOAHOME}/"
+
+    echo "pyproject.toml update complete!"
+    exit 0
 }
 
 function update() {
@@ -241,6 +266,8 @@ if [ -n "$1" ]; then
             ;;
             -u|--update) update;;
             -U|--update-dependencies) update_dependencies;;
+            -uf|--update-project-file) update_project_file;;
+            -ufd|--update-project-file-dalle) update_project_file "dalle";;
             -r|--restart) restart;;
         esac
 

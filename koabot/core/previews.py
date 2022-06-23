@@ -7,6 +7,12 @@ from koabot.kbot import KBot
 from koabot.patterns import CHANNEL_URL_PATTERN
 
 
+def is_guild_owner():
+    def predicate(ctx):
+        return ctx.guild and ctx.author == ctx.guild.owner
+    return commands.check(predicate)
+
+
 class PreviewHandler(commands.Cog):
 
     def __init__(self, bot: KBot) -> None:
@@ -31,7 +37,7 @@ class PreviewHandler(commands.Cog):
     #     pass
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @commands.check_any(commands.is_owner(), is_guild_owner())
     async def preview(self, ctx: commands.Context, *, message_url: str):
         """Manually creates a preview from a given message url.
         It doesn't check for previously existing previews and is intended to be used

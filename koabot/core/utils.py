@@ -4,7 +4,10 @@ import html
 import os
 from pathlib import Path
 
-from koabot.patterns import HTML_TAG_OR_ENTITY_PATTERN
+import bs4
+
+from koabot.patterns import (HTML_BR_TAG, HTML_TAG_OR_ENTITY_PATTERN,
+                             LINEBREAK_PATTERN)
 
 
 def list_contains(lst: list, items_to_be_matched: list) -> bool:
@@ -48,12 +51,71 @@ def smart_truncate(text: str, length: int, inclusive: bool = False) -> str:
     return text[:i]
 
 
-def strip_html_markup(text: str) -> str:
-    """Strips off all HTML from the given string"""
+def trim_linebreaks(text: str, *, keep: int = 0) -> str:
+    """Trims linebreaks from a string
+
+    Arguments:
+        text::str
+            The text to trim linebreaks from
+    Keywords
+        keep::int
+            The number of linebreaks to keep consecutively
+            ie. with keep=1 only every second consecutive linebreak onwards will be removed
+            (seems to be done by default on DA and pixiv...)
+    """
+    if keep is None:
+        # Unable to tell how many to keep. Skipping process
+        return text
+
+    i = 0
+    consecutive_count = 0
+    while i < len(text):
+        if (lb_match := LINEBREAK_PATTERN.match(text, i)):
+            lb_match_end = lb_match.end()
+
+            consecutive_count += 1
+            if consecutive_count > keep:
+                text = text[:i] + LINEBREAK_PATTERN.sub('', text[i:], 1)
+                continue
+
+            i = lb_match_end
+            continue
+        elif text[i] != ' ':
+            consecutive_count = 0
+
+        i += 1
+    return text
+
+
+def strip_html_markup(text: str, *, keep_br: int = None) -> str:
+    """Strips off all HTML from the given string
+    Arguments:
+        text::str
+            The string to strip from
+
+    Keywords:
+        keep_br::int (optional)
+            The number of consecutive br tags to keep. They will remain as \n instead
+            Doesn't try to remove br any tags by default
+    """
+    text = HTML_BR_TAG.sub('\n', text)  # Converts all br tags into \n
+    text = trim_linebreaks(text, keep=keep_br)
     return HTML_TAG_OR_ENTITY_PATTERN.sub('', text)
 
 
 def convert_code_points(text: str) -> str:
     """Converts code points, entities, or whatever the things that look like &#128521; 
-    are called like into their respective characters (i.e. 😉)"""
-    return html.unescape(text)
+    are called like into their respective characters (i.e. 😉). Transforms <a> tags into 
+    markdown links
+
+    Returns:
+        str - Converted html markup (sadly. would be best with just the replacements)
+    """
+    # Turns all a tags into proper markdown urls
+    parsed_html = bs4.BeautifulSoup(text, "lxml")
+    for a in parsed_html.find_all("a", href=True):
+        a: bs4.element.Tag
+        a.replace_with(f"[{a.text}]({a['href']})")
+
+    # unescape does the converting magic
+    return str(html.unescape(parsed_html))

@@ -1,3 +1,5 @@
+import re
+
 import discord
 from thefuzz import fuzz
 
@@ -18,8 +20,12 @@ class SiteDeviantArt(Site):
         return post_core.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')
 
     def get_description_from_html(self, html_description: str, max_length: int = 200) -> str:
-        description = utils.strip_html_markup(html_description).strip()
         description = utils.convert_code_points(html_description)
+        description = utils.strip_html_markup(description).strip()
+
+        # remove outgoing DA redirect
+        description = re.sub(r'https?:\/\/(?:www\.)?deviantart\.com\/users\/outgoing\?', '', description)
+
         if max_length and len(description) > max_length:
             description = utils.smart_truncate(description, max_length, inclusive=True) + "..."
         return description

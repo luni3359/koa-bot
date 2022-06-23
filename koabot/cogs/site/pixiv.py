@@ -71,6 +71,7 @@ class SitePixiv(Site):
         """Converts pixiv-specific shortcuts into valid urls"""
         text = re.sub(r'(user/([0-9]+))', r'[\1](https://www.pixiv.net/users/\2)', text)
         text = re.sub(r'(illust/([0-9]+))', r'[\1](https://www.pixiv.net/artworks/\2)', text)
+        text = re.sub(r'(twitter/([a-zA-Z0-9_]+))', r'[\1](https://www.twitter.com/\2)', text)
         return text
 
     async def cache_image(self, url: str, filename: str, pixiv_helper: PixivHelper) -> None:
@@ -144,6 +145,7 @@ class SitePixiv(Site):
                 filename = net_core.get_url_filename(img_url)
 
                 embed = discord.Embed()
+                embed.color = 0x0097fa
                 embed.set_image(url=f'attachment://{filename}')
 
                 if i == 0:

@@ -189,8 +189,25 @@ class Game(commands.Cog):
                 if j == match.quantity - 1:
                     if match.quantity == 1:
                         message += f'{die_roll}.'
+
+                        if match.pips != 1 and (die_roll == match.pips or die_roll == 1):
+                            message += f" **Nat {die_roll}!**"
                     else:
                         message += f'and a {die_roll}.'
+
+                        if match.pips != 1:
+                            max_nats = roll_list.count(match.pips)
+                            min_nats = roll_list.count(1)
+
+                            if len(roll_list) in [max_nats, min_nats]:
+                                message += f" **FULL NAT {die_roll}!**"
+                            elif max_nats or min_nats:
+                                message += " **"
+                                if max_nats:
+                                    message += f"Nat {match.pips} x{max_nats}! "
+                                if min_nats:
+                                    message += f"Nat 1 x{min_nats}!"
+                                message += "**"
 
                     if match.keep:
                         message += f'\nKeep the {match.keep_type_full} '

@@ -127,7 +127,7 @@ class ReactionRoles(commands.Cog):
 
     async def manage_roles(self, user: discord.Member, reaction: str,  message_id: int, channel_id: int):
         """Updates the roles of the given user
-        Parameters:
+        Arguments:
             user::discord.Member
             reaction::str
             message_id::int
@@ -263,6 +263,9 @@ class ReactionRoles(commands.Cog):
         message_id: int = int(url_components[-1])
         channel_id: int = int(url_components[-2])
         server_id: int = int(url_components[-3])
+
+        if server_id != ctx.guild.id:
+            return await ctx.reply("I can't preview messages from other servers!", mention_author=False)
 
         if channel_id != ctx.channel.id:
             target_channel = self.bot.get_channel(channel_id)

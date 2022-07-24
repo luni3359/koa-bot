@@ -30,31 +30,21 @@ def get_name_or_id(url: str, /, *, start: str | list = None, end: str | list = N
         else:
             raise ValueError("`start` keyword argument needs to be either str or list")
 
-    starting_match = None
-    for v in start:
-        if v in url:
-            starting_match = v
-
-    if not starting_match:
-        return None
-
-    # Index 1, because index 0 is everything before the character that matched
-    url = url.split(starting_match)[1]
-
     if not isinstance(end, list):
         if isinstance(end, str):
             end = [end]
         else:
             raise ValueError("`end` keyword argument needs to be either str or list")
 
-    ending_match = None
+    for v in start:
+        if v in url:
+            # Index 1, because index 0 is everything before the character that matched
+            url = url.split(v)[1]
+
     for v in end:
         if v in url:
-            ending_match = v
-
-    if ending_match:
-        # Index 0, because index 1 is everything after the character that matched
-        url = url.split(ending_match)[0]
+            # Index 0, because index 1 is everything after the character that matched
+            url = url.split(v)[0]
 
     if pattern:
         return re.findall(pattern, url)[0]

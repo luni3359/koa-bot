@@ -397,7 +397,7 @@ class BotEvents(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
-        print("Member has joined!")
+        print(f"Member {member.name} has joined!")
         await self.bot.add_member_to_db(member)
 
 

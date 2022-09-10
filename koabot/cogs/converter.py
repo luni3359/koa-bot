@@ -59,7 +59,7 @@ class Converter(commands.Cog):
         src_sym, dst_sym = map(forex_api.get_symbol, [src_code, dst_code])
         try:
             converted_amount = self.rates.convert(src_code, dst_code, amount)
-            output = f"```{src_sym}{amount} {src_code} → {dst_sym}{converted_amount:0.2f} {dst_code}```"
+            output = f"```{src_sym}{amount:0,} {src_code} → {dst_sym}{converted_amount:0,.2f} {dst_code}```"
         except forex_api.RatesNotAvailableError as e:
             output = f"There was a problem retrieving this data:\n{e}"
         await ctx.reply(output, mention_author=False)

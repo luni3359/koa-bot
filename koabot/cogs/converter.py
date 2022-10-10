@@ -1,6 +1,7 @@
 """Unit manager for any dimension and type"""
 import itertools
 
+from discord import app_commands
 from discord.ext import commands
 from forex_python import converter as forex_api
 from pint import UnitRegistry
@@ -52,6 +53,10 @@ class Converter(commands.Cog):
             await self.convert_units(ctx, unit_matches)
 
     @commands.hybrid_command(name='exchange', aliases=['currency', 'xc'])
+    @app_commands.rename(src_code='from', dst_code='to')
+    @app_commands.describe(amount="The amount of money to convert",
+                           src_code="Currency code to convert from (ie. USD)",
+                           dst_code="Currency code to convert to (ie. JPY)")
     async def convert_currency(self, ctx: commands.Context, amount: float, src_code: str, _, dst_code: str):
         """Convert an amount from one currency to another"""
         src_code = src_code.upper()

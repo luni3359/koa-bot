@@ -17,39 +17,42 @@ def get_name_or_id(url: str, /, *, start: str | list = None, end: str | list = N
             If set to a pattern, it will be used after <start> and <end>
             have done their job.
     """
+    new_str: str = url
 
-    if start is None:
-        start = []
+    if start:
+        if not isinstance(start, list):
+            if isinstance(start, str):
+                start = [start]
+            else:
+                raise ValueError("`start` keyword argument needs to be either str or list")
+
+        for v in start:
+            if v in new_str:
+                # Index 1, because index 0 is everything before the character that matched
+                new_str = new_str.split(v)[1]
+
+        if new_str == url:
+            return None
+
+    if end:
+        if not isinstance(end, list):
+            if isinstance(end, str):
+                end = [end]
+            else:
+                raise ValueError("`end` keyword argument needs to be either str or list")
 
     if end is None:
         end = ['?']
 
-    if not isinstance(start, list):
-        if isinstance(start, str):
-            start = [start]
-        else:
-            raise ValueError("`start` keyword argument needs to be either str or list")
-
-    if not isinstance(end, list):
-        if isinstance(end, str):
-            end = [end]
-        else:
-            raise ValueError("`end` keyword argument needs to be either str or list")
-
-    for v in start:
-        if v in url:
-            # Index 1, because index 0 is everything before the character that matched
-            url = url.split(v)[1]
-
     for v in end:
-        if v in url:
+        if v in new_str:
             # Index 0, because index 1 is everything after the character that matched
-            url = url.split(v)[0]
+            new_str = new_str.split(v)[0]
 
     if pattern:
-        return re.findall(pattern, url)[0]
+        return re.findall(pattern, new_str)[0]
 
-    return url
+    return new_str
 
 
 def combine_tags(tags: str | list, /,  *, maximum: int = 5) -> str:

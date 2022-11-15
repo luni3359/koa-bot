@@ -30,6 +30,8 @@ async def http_request(url: str, **kwargs) -> NetResponse:
     Keywords:
         auth::aiohttp.BasicAuth
             Authentication object to make the connection with
+        cookies::
+            cookies
         headers::json object
             object containing headers
         params::json dump str
@@ -42,6 +44,7 @@ async def http_request(url: str, **kwargs) -> NetResponse:
             a dict containing the json data to be sent
     """
     auth: aiohttp.BasicAuth = kwargs.get('auth')
+    cookies = kwargs.get('cookies', None)
     headers: dict = kwargs.get('headers')
     params: dict = kwargs.get('params', None)
     data: dict = kwargs.get('data', None)
@@ -50,10 +53,10 @@ async def http_request(url: str, **kwargs) -> NetResponse:
 
     async with aiohttp.ClientSession(auth=auth) as session:
         if post:
-            async with session.post(url, headers=headers, params=params, data=data, json=jdata) as response:
+            async with session.post(url, cookies=cookies, headers=headers, params=params, data=data, json=jdata) as response:
                 return await handle_request(response, **kwargs)
         else:
-            async with session.get(url, headers=headers, params=params, data=data, json=jdata) as response:
+            async with session.get(url, cookies=cookies, headers=headers, params=params, data=data, json=jdata) as response:
                 return await handle_request(response, **kwargs)
 
 

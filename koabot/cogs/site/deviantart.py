@@ -1,3 +1,4 @@
+from http.cookies import SimpleCookie
 import re
 
 import discord
@@ -8,6 +9,7 @@ import koabot.core.posts as post_core
 from koabot.core import utils
 from koabot.core.site import Site
 from koabot.kbot import KBot
+import aiohttp
 
 
 class SiteDeviantArt(Site):
@@ -15,6 +17,24 @@ class SiteDeviantArt(Site):
 
     def __init__(self, bot: KBot) -> None:
         super().__init__(bot)
+        self.csrf_token: str = None
+        self.cookies: SimpleCookie = None
+
+    async def get_csrf_token(self) -> str:
+        if not self.csrf_token:
+            async with aiohttp.ClientSession() as session:
+                async with session.get("https://www.deviantart.com") as response:
+                    content = await response.text()
+                    csrf_token = re.findall(r"window\.__CSRF_TOKEN__\ ?=\ ?'(\S+)';", content)
+                    self.cookies = response.cookies
+
+                    if not csrf_token:
+                        raise Exception("Skipping preview: Unable to retrieve DA csrf token")
+
+                    self.csrf_token = csrf_token[0]
+                    print(f"DA success:\ncsrf token:{self.csrf_token}\ncookies:{self.cookies}")
+
+        return self.csrf_token
 
     def get_id(self, url: str) -> str:
         return post_core.get_name_or_id(url, start='/art/', pattern=r'[0-9]+$')
@@ -39,8 +59,17 @@ class SiteDeviantArt(Site):
         # TODO: Implement oEmbed if it looks possible! json responses are extremely shorter!
         # search_url = f"https://backend.deviantart.com/oembed?url={post_id}"
 
-        search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
-        api_result = (await net_core.http_request(search_url, json=True, err_msg=f'error fetching post #{post_id}')).json
+        # TODO: formerly
+        # "search_url": "https://www.deviantart.com/_napi/da-deviation/shared_api/deviation/fetch?deviationid={}&type=art",
+        # "search_url_extended": "https://www.deviantart.com/_napi/da-deviation/shared_api/deviation/extended_fetch?deviationid={}&type=art"
+
+        search_url = self.bot.assets['deviantart']['search_url_extended']
+        params = {
+            "type": "art",
+            "deviationid": post_id,
+            "csrf_token": await self.get_csrf_token()
+        }
+        api_result = (await net_core.http_request(search_url, cookies=self.cookies, params=params, json=True, err_msg=f'error fetching post #{post_id}')).json
 
         deviation = api_result['deviation']
 

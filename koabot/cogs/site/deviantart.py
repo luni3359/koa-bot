@@ -69,7 +69,8 @@ class SiteDeviantArt(Site):
             "deviationid": post_id,
             "csrf_token": await self.get_csrf_token()
         }
-        api_result = (await net_core.http_request(search_url, cookies=self.cookies, params=params, json=True, err_msg=f'error fetching post #{post_id}')).json
+        err_msg = f"Error fetching DA post #{post_id}"
+        api_result = (await net_core.http_request(search_url, cookies=self.cookies, params=params, json=True, err_msg=err_msg)).json
 
         deviation = api_result['deviation']
 
@@ -117,9 +118,14 @@ class SiteDeviantArt(Site):
             if not (post_id := self.get_id(url)):
                 return
 
-            search_url = self.bot.assets['deviantart']['search_url_extended'].format(post_id)
+            search_url = self.bot.assets['deviantart']['search_url_extended']
+            params = {
+                "type": "art",
+                "deviationid": post_id,
+                "csrf_token": await self.get_csrf_token()
+            }
             err_msg = f"Error fetching DA post #{post_id}"
-            api_result = (await net_core.http_request(search_url, json=True, err_msg=err_msg)).json
+            api_result = (await net_core.http_request(search_url, cookies=self.cookies, params=params, json=True, err_msg=err_msg)).json
 
             deviation = api_result['deviation']
             deviation_type = deviation['type']

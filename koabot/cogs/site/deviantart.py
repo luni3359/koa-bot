@@ -1,6 +1,7 @@
-from http.cookies import SimpleCookie
 import re
+from pathlib import Path
 
+import aiohttp
 import discord
 from thefuzz import fuzz
 
@@ -9,7 +10,6 @@ import koabot.core.posts as post_core
 from koabot.core import utils
 from koabot.core.site import Site
 from koabot.kbot import KBot
-import aiohttp
 
 
 class SiteDeviantArt(Site):
@@ -18,21 +18,41 @@ class SiteDeviantArt(Site):
     def __init__(self, bot: KBot) -> None:
         super().__init__(bot)
         self.csrf_token: str = None
-        self.cookies: SimpleCookie = None
+        self.cookies: aiohttp.CookieJar = None
+        self.cache_dir = Path(self.bot.CACHE_DIR, "deviantart")
 
     async def get_csrf_token(self) -> str:
         if not self.csrf_token:
-            async with aiohttp.ClientSession() as session:
-                async with session.get("https://www.deviantart.com") as response:
-                    content = await response.text()
-                    csrf_token = re.findall(r"window\.__CSRF_TOKEN__\ ?=\ ?'(\S+)';", content)
-                    self.cookies = response.cookies
+            token_path = Path(self.cache_dir, "csrf_token")
+            cookies_path = Path(self.cache_dir, "cookies")
+            cookies = aiohttp.CookieJar()
 
-                    if not csrf_token:
-                        raise Exception("Skipping preview: Unable to retrieve DA csrf token")
+            if token_path.exists():
+                with open(token_path, encoding="UTF-8") as token_file:
+                    self.csrf_token = token_file.readline()
 
-                    self.csrf_token = csrf_token[0]
-                    print(f"DA success:\ncsrf token:{self.csrf_token}\ncookies:{self.cookies}")
+            if cookies_path.exists():
+                cookies.load(cookies_path)
+                self.cookies = cookies
+
+            if not self.csrf_token or not self.cookies:
+                self.cache_dir.mkdir(exist_ok=True)
+
+                async with aiohttp.ClientSession(cookie_jar=cookies) as session:
+                    async with session.get("https://www.deviantart.com") as response:
+                        content = await response.text()
+
+                        if not (csrf_token := re.findall(r"window\.__CSRF_TOKEN__\ ?=\ ?'(\S+)';", content)):
+                            raise Exception("Skipping preview: Unable to retrieve DA csrf token")
+
+                        self.csrf_token = csrf_token[0]
+                        with open(token_path, 'w', encoding="UTF-8") as token_file:
+                            token_file.write(self.csrf_token)
+
+                        self.cookies = cookies
+                        cookies.save(cookies_path)
+
+                        print(f"DA auth success:\ncsrf token:{self.csrf_token}\ncookies:{self.cookies}")
 
         return self.csrf_token
 
@@ -56,6 +76,8 @@ class SiteDeviantArt(Site):
         if not (post_id := self.get_id(url)):
             return
 
+        print(f"Sending DA post #{post_id}...")
+
         # TODO: Implement oEmbed if it looks possible! json responses are extremely shorter!
         # search_url = f"https://backend.deviantart.com/oembed?url={post_id}"
 
@@ -69,8 +91,13 @@ class SiteDeviantArt(Site):
             "deviationid": post_id,
             "csrf_token": await self.get_csrf_token()
         }
-        err_msg = f"Error fetching DA post #{post_id}"
-        api_result = (await net_core.http_request(search_url, cookies=self.cookies, params=params, json=True, err_msg=err_msg)).json
+        api_result = None
+        async with aiohttp.ClientSession(cookie_jar=self.cookies) as session:
+            async with session.get(search_url, params=params) as response:
+                api_result = await response.json()
+
+        if not api_result:
+            print(f"Failed to retrieve DA post #{post_id}")
 
         deviation = api_result['deviation']
 
@@ -110,34 +137,39 @@ class SiteDeviantArt(Site):
             print("Urls seem unrelated from each other. Sending each embed individually.")
             display_as_singles = True
 
+        # Get the csrf token first, otherwise ClientSession will fail to create
+        csrf_token = await self.get_csrf_token()
+
         # Check what type the first post is and if subsequent posts are of different types,
         # send them in one batch, but using different embed groups
         base_type: str = None
         api_results = []
-        for url in urls:
-            if not (post_id := self.get_id(url)):
-                return
+        async with aiohttp.ClientSession(cookie_jar=self.cookies) as session:
+            for url in urls:
+                if not (post_id := self.get_id(url)):
+                    return
 
-            search_url = self.bot.assets['deviantart']['search_url_extended']
-            params = {
-                "type": "art",
-                "deviationid": post_id,
-                "csrf_token": await self.get_csrf_token()
-            }
-            err_msg = f"Error fetching DA post #{post_id}"
-            api_result = (await net_core.http_request(search_url, cookies=self.cookies, params=params, json=True, err_msg=err_msg)).json
+                api_result = None
+                search_url = self.bot.assets['deviantart']['search_url_extended']
+                params = {
+                    "type": "art",
+                    "deviationid": post_id,
+                    "csrf_token": csrf_token
+                }
+                async with session.get(search_url, params=params) as response:
+                    api_result = await response.json()
 
-            deviation = api_result['deviation']
-            deviation_type = deviation['type']
+                deviation = api_result['deviation']
+                deviation_type = deviation['type']
 
-            if base_type is None:
-                base_type = deviation_type
+                if base_type is None:
+                    base_type = deviation_type
 
-            if deviation_type != base_type:
-                print("Deviation types differ. Sending each embed individually.")
-                display_as_singles = True
+                if deviation_type != base_type:
+                    print("Deviation types differ. Sending each embed individually.")
+                    display_as_singles = True
 
-            api_results.append(api_result)
+                api_results.append(api_result)
 
         embeds: list[discord.Embed] = []
         total_da_count = len(api_results)

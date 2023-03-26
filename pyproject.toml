@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "koa-bot"
-version = "0.34.8"
+version = "0.35.0"
 description = ""
 authors = []
 readme = "README.md"
@@ -47,7 +47,7 @@ tqdm = "^4.64.0"
 dataclass-wizard = "^0.22.0"
 aiosqlite = "^0.17.0"
 dalle-mini = {git = "https://github.com/borisdayma/dalle-mini", rev="90537ec", optional = true}
-vqgan-jax = {git = "https://github.com/patil-suraj/vqgan-jax", rev="1be20ee", optional = true}
+vqgan-jax = {git = "https://github.com/patil-suraj/vqgan-jax", rev="10ef240", optional = true}
 beautifulsoup4 = "^4.11.1"
 lxml = "^4.9.0"
 

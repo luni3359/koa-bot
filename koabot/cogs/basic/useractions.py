@@ -47,6 +47,21 @@ class UserActions(commands.Cog):
         quote = fromlist(Quote, api_response)[0]
         await ctx.reply(f">>> \"{quote.quote}\"\nー *{quote.author}*", mention_author=False)
 
+    @commands.hybrid_command()
+    async def status(self, ctx: commands.Context):
+        """Show an user's status"""
+        if ctx.message.mentions:
+            requested_users = ctx.message.mentions
+        else:
+            requested_users = [ctx.message.author]
+
+        embed = discord.Embed()
+        embed.description = ""
+        for user in requested_users:
+            embed.description += f"{user.mention} is *{str(user.status)}*\n"
+
+        await ctx.send(embed=embed)
+
 
 @dataclass
 class Quote():

@@ -50,7 +50,7 @@ class PreviewHandler(commands.Cog):
         channel_id: int = int(url_components[-2])
         server_id: int = int(url_components[-3])
 
-        if server_id != ctx.guild.id:
+        if server_id != ctx.guild.id and ctx.author.id not in ctx.bot.testing['debug_users']:
             return await ctx.reply("I can't preview messages from other servers!", mention_author=False)
 
         if channel_id != ctx.channel.id:

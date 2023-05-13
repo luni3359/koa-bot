@@ -1,0 +1,31 @@
+version: '3.4'
+
+name: koabot
+
+x-app: &app
+  image: koabot
+  build:
+    context: .
+    dockerfile: ./Dockerfile
+  # environment:                      # sadly array merge doesn't work
+  #   - PYTHONDONTWRITEBYTECODE=1     # it probably does in multiple yml files but we don't want to do that right now
+
+services:
+  live:
+    <<: *app
+    profiles: ["live"]
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+
+  dev:
+    <<: *app
+    profiles: ["dev"]
+    environment:
+      - KOABOT_DEBUG=1
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    # command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 -m koabot "]
+    command: ["sh", "-c", "poetry add debugpy && poetry run debugpy --wait-for-client --listen 0.0.0.0:5678 -m koabot "]
+    ports:
+      - 5678:5678
+      # "poetry", "run", "python", "-m", "koabot" ]

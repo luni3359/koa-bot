@@ -7,24 +7,19 @@ RUN apt-get update && apt-get install -y \
     # gcc \
     g++ \
     --no-install-recommends && \
-    # apt-get upgrade -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Create user account and install the bot system-wide
-RUN useradd --create-home little-devil
+RUN useradd -u 1500  --create-home little-devil
 USER little-devil
 
 WORKDIR /app
 
 # Install Poetry
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/1.4/install-poetry.py | \
-    # POETRY_HOME=/opt/poetry/ \
     python -
 ENV PATH="/home/little-devil/.local/bin:${PATH}"
-
-#RUN chown -R little-devil:little-devil /usr/local/src/koa-bot && \
-#    chmod 755 /usr/local/src/koa-bot
 
 # Install only production dependencies
 COPY pyproject.toml ./
@@ -32,4 +27,21 @@ RUN poetry install -E speed --no-ansi --no-root --only main
 
 # Copy code and run bot
 COPY ./ ./
+
+# FROM --platform=$BUILDPLATFORM base AS builder
+# ARG TARGETARCH
+# RUN --mount=type=cache,target=/root/.cache/pip \
+#     --mount=type=cache,target=/root/.cache/pypoetry \
+#     pip wheel --no-deps --wheel-dir=/wheels .
+
+# USER 1
+
+# FROM base AS final
+# ARG TARGETARCH
+# COPY --from=builder /wheels /wheels
+# RUN --mount=type=cache,target=/root/.cache/pip \
+#     --mount=type=cache,target=/root/.cache/pypoetry \
+#     pip install --no-deps /wheels/*.whl && \
+#     rm -rf /wheels
+
 CMD [ "poetry", "run", "python", "-m", "koabot" ]

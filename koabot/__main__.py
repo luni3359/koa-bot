@@ -25,7 +25,7 @@ CACHE_DIR = Path(appdirs.user_cache_dir(PROJECT_NAME))
 def set_base_directories(bot: KBot) -> None:
     # Create base directories if they're missing
     for base_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
-        base_dir.mkdir(exist_ok=True)
+        base_dir.mkdir(parents=True, exist_ok=True)
 
     bot.set_base_directory(BaseDirectory.PROJECT_NAME, PROJECT_NAME)
     bot.set_base_directory(BaseDirectory.PROJECT_DIR, PROJECT_DIR)
@@ -63,7 +63,7 @@ def db_migration_setup(db_name: str) -> None:
 async def main():
     print(f"Starting {PROJECT_NAME}...")
     bot.launch_time = datetime.utcnow()
-    bot.debug_mode = '--debug' in argv
+    bot.debug_mode = ('--debug' in argv) or os.environ.get("KOABOT_DEBUG", False)
     set_base_directories(bot)
 
     bot_data = {}

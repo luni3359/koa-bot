@@ -139,32 +139,33 @@ def dice_roll(roll_string: str) -> str:
         raise RollEmptyThrow()
 
     total_sum = 0
-    logic_string = ""
-    # die_or_dice = roll_count > 1 and 'dice' or 'die'
-    # message = f">>> {ctx.author.mention} rolled the {die_or_dice}.\n"
-    message = ">>> "
+    logic_line: list[str] = []
+    # die_or_dice = roll_count > 1 and "dice" or "die"
+    # message: list[str] = [f">>> {ctx.author.mention} rolled the {die_or_dice}.\n"]
+    message: list[str] = [">>> "]
 
     for i, match in enumerate(matches_found):
         if match.type == "points":
             if match.sign == '+':
-                message += "Add "
+                message.append("Add ")
             else:
-                message += "Subtract "
+                message.append("Subtract ")
 
             s_or_no_s = 's' if (abs(match.raw_points) > 1 or match.raw_points == 0) else ''
 
-            message += f"{abs(match.raw_points)} point{s_or_no_s}.\n"
-            logic_string += f"{match.sign} __{abs(match.raw_points)}__ "
+            message.append(f"{abs(match.raw_points)} point{s_or_no_s}.\n")
+            logic_line.append(f"{match.sign} __{abs(match.raw_points)}__ ")
             total_sum += match.raw_points
             continue
 
-        dice_or_die = 'dice' if match.quantity != 1 else 'die'
+        dice_or_die = "dice" if match.quantity != 1 else "die"
 
         if match.limited_quantity:
-            message += '\\*'
+            message.append('\\*')
 
         if match.quantity == 0 or match.pips == 0:
-            message += f"{num2words(match.quantity).capitalize()} {match.pips}-sided {dice_or_die}. Nothing to roll.  **0.**\n"
+            message.append(
+                f"{num2words(match.quantity).capitalize()} {match.pips}-sided {dice_or_die}. Nothing to roll.  **0.**\n")
             continue
 
         roll_list: list[int] = []
@@ -179,11 +180,11 @@ def dice_roll(roll_string: str) -> str:
                 match.keep = ''
 
         if match.sign == '+':
-            message += f"{num2words(match.quantity).capitalize()}"
+            message.append(f"{num2words(match.quantity).capitalize()}")
         else:
-            message += f"Minus {num2words(match.quantity)}"
+            message.append(f"Minus {num2words(match.quantity)}")
 
-        message += f" {match.pips}-sided {dice_or_die} for a "
+        message.append(f" {match.pips}-sided {dice_or_die} for a ")
 
         for j in range(0, match.quantity):
             die_roll = random.randint(1, match.pips)
@@ -201,54 +202,58 @@ def dice_roll(roll_string: str) -> str:
             # Final die in group throw
             if j == match.quantity - 1:
                 if match.quantity == 1:
-                    message += f'{die_roll}.'
+                    message.append(f"{die_roll}.")
 
                     if match.pips != 1 and (die_roll == match.pips or die_roll == 1):
-                        message += f" **Nat {die_roll}!**"
+                        message.append(f" **Nat {die_roll}!**")
                 else:
-                    message += f'and a {die_roll}.'
+                    message.append(f"and a {die_roll}.")
 
                     if match.pips != 1:
                         max_nats = roll_list.count(match.pips)
                         min_nats = roll_list.count(1)
 
                         if len(roll_list) in [max_nats, min_nats]:
-                            message += f" **FULL NAT {die_roll}!**"
+                            message.append(f" **FULL NAT {die_roll}!**")
                         elif max_nats or min_nats:
-                            message += " **"
+                            message.append(" **")
                             if max_nats:
-                                message += f"Nat {match.pips} x{max_nats}! "
+                                message.append(f"Nat {match.pips} x{max_nats}! ")
                             if min_nats:
-                                message += f"Nat 1 x{min_nats}!"
-                            message += "**"
+                                message.append(f"Nat 1 x{min_nats}!")
+                            message.append("**")
 
                 if match.keep:
-                    message += f'\nKeep the {match.keep_type_full} '
+                    message.append(f"\nKeep the {match.keep_type_full} ")
 
                     if match.keep_quantity > 1:
-                        message += f'{num2words(match.keep_quantity)}' + (overkeep and '*' or '') + ': ' + ', '.join(
-                            map(str, keep_list[:match.keep_quantity-1])) + f' and a {keep_list[match.keep_quantity-1]}.'
+                        number = num2words(match.keep_quantity)
+                        overkeep_notice = '*' if overkeep else ''
+                        kept_items = ", ".join(map(str, keep_list[:match.keep_quantity-1]))
+                        last_kept_item = keep_list[match.keep_quantity-1]
+                        message.append(f"{number}{overkeep_notice}: {kept_items} and a {last_kept_item}.")
                     else:
-                        message += f'number: {keep_list[0]}.'
+                        message.append(f"number: {keep_list[0]}.")
 
                     if i != 0 or match.sign != '+':
-                        logic_string += f"{match.sign} "
+                        logic_line.append(f"{match.sign} ")
 
+                    kept_values = " + ".join(map(str, keep_list))
                     if len(keep_list) > 1 and (len(matches_found) > 1 or match.sign != "+"):
-                        logic_string += f"__({' + '.join(map(str, keep_list))})__ "
+                        logic_line.append(f"__({kept_values})__ ")
                     else:
-                        logic_string += f"__{' + '.join(map(str, keep_list))}__ "
+                        logic_line.append(f"__{kept_values}__ ")
 
                     if match.sign == '+':
                         total_sum += sum(keep_list)
                     else:
                         total_sum -= sum(keep_list)
 
-                message += '\n'
+                message.append("\n")
             elif j == match.quantity - 2:
-                message += f'{die_roll} '
+                message.append(f"{die_roll} ")
             else:
-                message += f'{die_roll}, '
+                message.append(f"{die_roll}, ")
 
             if not match.keep:
                 if match.sign == '+':
@@ -258,19 +263,21 @@ def dice_roll(roll_string: str) -> str:
 
         if not match.keep:
             if i != 0 or match.sign != '+':
-                logic_string += f"{match.sign} "
+                logic_line.append(f"{match.sign} ")
 
-            if len(roll_list) > 1 and (len(matches_found) > 1 or match.sign != "+"):
-                logic_string += f"__({' + '.join(map(str, roll_list))})__ "
+            values = " + ".join(map(str, roll_list))
+            if len(roll_list) > 1 and (len(matches_found) > 1 or match.sign != '+'):
+                logic_line.append(f"__({values})__ ")
             else:
-                logic_string += f"__{' + '.join(map(str, roll_list))}__ "
+                logic_line.append(f"__{values}__ ")
 
-    if logic_string:
-        message += f"{logic_string}\n"
+    if logic_line:
+        logic_line.append("\n")
+        message.extend(logic_line)
 
-    message += f"For a total of **{total_sum}.**"
+    message.append(f"For a total of **{total_sum}.**")
 
-    return message[0:2000]
+    return "".join(message)[0:2000]
 
 
 def test_one_roll():
@@ -295,10 +302,48 @@ def test_pips(input: str, expected: str):
     assert roll_log == expected
 
 
+sum_data = [
+    ("d0 + 1", ">>> One 0-sided die. Nothing to roll.  **0.**\nAdd 1 point.\n+ __1__ \nFor a total of **1.**"),
+    ("d1 - 5", ">>> One 1-sided die for a 1.\nSubtract 5 points.\n__1__ - __5__ \nFor a total of **-4.**"),
+    ("d6 + d2", ">>> One 6-sided die for a 1. **Nat 1!**\nOne 2-sided die for a 2. **Nat 2!**\n__1__ + __2__ \nFor a total of **3.**"),
+    ("d8 - d4", ">>> One 8-sided die for a 1. **Nat 1!**\nMinus one 4-sided die for a 3.\n__1__ - __3__ \nFor a total of **-2.**"),
+]
+
+
+@pytest.mark.parametrize("input,expected", sum_data)
+def test_sum(input: str, expected: str):
+    random.seed(123)
+    roll_log = dice_roll(input)
+    print(roll_log)
+    assert roll_log == expected
+
+
+keep_data = [
+    ("d0 kh0", ">>> One 0-sided die. Nothing to roll.  **0.**\nFor a total of **0.**"),
+    ("d0 kh1", ">>> One 0-sided die. Nothing to roll.  **0.**\nFor a total of **0.**"),
+    ("d0 kl0", ">>> One 0-sided die. Nothing to roll.  **0.**\nFor a total of **0.**"),
+    ("d0 kl1", ">>> One 0-sided die. Nothing to roll.  **0.**\nFor a total of **0.**"),
+    ("d6 kh1", ">>> One 6-sided die for a 1. **Nat 1!**\nKeep the highest number: 1.\n__1__ \nFor a total of **1.**"),
+    ("d6 kh2", ">>> One 6-sided die for a 1. **Nat 1!**\nKeep the highest number: 1.\n__1__ \nFor a total of **1.**"),
+    ("2d4 kh2", ">>> Two 4-sided dice for a 1 and a 3. **Nat 1 x1!**\nKeep the highest two: 3 and a 1.\n__3 + 1__ \nFor a total of **4.**"),
+    ("4d4 kh2", ">>> Four 4-sided dice for a 1, 3, 1 and a 4. **Nat 4 x1! Nat 1 x2!**\nKeep the highest two: 4 and a 3.\n__4 + 3__ \nFor a total of **7.**"),
+    ("4d4 kh2 + 2d6", ">>> Four 4-sided dice for a 1, 3, 1 and a 4. **Nat 4 x1! Nat 1 x2!**\nKeep the highest two: 4 and a 3.\nTwo 6-sided dice for a 3 and a 1. **Nat 1 x1!**\n__(4 + 3)__ + __(3 + 1)__ \nFor a total of **11.**"),
+]
+
+
+@pytest.mark.parametrize("input,expected", keep_data)
+def test_keep(input: str, expected: str):
+    random.seed(123)
+    roll_log = dice_roll(input)
+    print(roll_log)
+    assert roll_log == expected
+
+
 exception_data = [
     ("abcde", RollInvalidSyntax),
     ("one d6", RollInvalidSyntax),
     ("6 + 3", RollEmptyThrow),
+    ("6 - 3", RollEmptyThrow),
     ("0", RollEmptyThrow),
 ]
 

@@ -127,7 +127,7 @@ class Game(commands.Cog):
         """Flip a coin"""
         await ctx.reply(random.getrandbits(1) and "Heads!" or "Tails!", mention_author=False)
 
-    def dice_roll(self, roll_string) -> str:
+    def dice_roll(self, roll_string: str) -> str:
         matches_found: list[RollMatch] = []
         roll_count = 0
         i = 0
@@ -157,32 +157,33 @@ class Game(commands.Cog):
             raise RollEmptyThrow()
 
         total_sum = 0
-        logic_string = ""
-        # die_or_dice = roll_count > 1 and 'dice' or 'die'
-        # message = f">>> {ctx.author.mention} rolled the {die_or_dice}.\n"
-        message = ">>> "
+        logic_line: list[str] = []
+        # die_or_dice = roll_count > 1 and "dice" or "die"
+        # message: list[str] = [f">>> {ctx.author.mention} rolled the {die_or_dice}.\n"]
+        message: list[str] = [">>> "]
 
         for i, match in enumerate(matches_found):
             if match.type == "points":
                 if match.sign == '+':
-                    message += "Add "
+                    message.append("Add ")
                 else:
-                    message += "Subtract "
+                    message.append("Subtract ")
 
                 s_or_no_s = 's' if (abs(match.raw_points) > 1 or match.raw_points == 0) else ''
 
-                message += f"{abs(match.raw_points)} point{s_or_no_s}.\n"
-                logic_string += f"{match.sign} __{abs(match.raw_points)}__ "
+                message.append(f"{abs(match.raw_points)} point{s_or_no_s}.\n")
+                logic_line.append(f"{match.sign} __{abs(match.raw_points)}__ ")
                 total_sum += match.raw_points
                 continue
 
-            dice_or_die = 'dice' if match.quantity != 1 else 'die'
+            dice_or_die = "dice" if match.quantity != 1 else "die"
 
             if match.limited_quantity:
-                message += '\\*'
+                message.append('\\*')
 
             if match.quantity == 0 or match.pips == 0:
-                message += f"{num2words(match.quantity).capitalize()} {match.pips}-sided {dice_or_die}. Nothing to roll.  **0.**\n"
+                message.append(
+                    f"{num2words(match.quantity).capitalize()} {match.pips}-sided {dice_or_die}. Nothing to roll.  **0.**\n")
                 continue
 
             roll_list: list[int] = []
@@ -197,11 +198,11 @@ class Game(commands.Cog):
                     match.keep = ''
 
             if match.sign == '+':
-                message += f"{num2words(match.quantity).capitalize()}"
+                message.append(f"{num2words(match.quantity).capitalize()}")
             else:
-                message += f"Minus {num2words(match.quantity)}"
+                message.append(f"Minus {num2words(match.quantity)}")
 
-            message += f" {match.pips}-sided {dice_or_die} for a "
+            message.append(f" {match.pips}-sided {dice_or_die} for a ")
 
             for j in range(0, match.quantity):
                 die_roll = random.randint(1, match.pips)
@@ -219,54 +220,58 @@ class Game(commands.Cog):
                 # Final die in group throw
                 if j == match.quantity - 1:
                     if match.quantity == 1:
-                        message += f'{die_roll}.'
+                        message.append(f"{die_roll}.")
 
                         if match.pips != 1 and (die_roll == match.pips or die_roll == 1):
-                            message += f" **Nat {die_roll}!**"
+                            message.append(f" **Nat {die_roll}!**")
                     else:
-                        message += f'and a {die_roll}.'
+                        message.append(f"and a {die_roll}.")
 
                         if match.pips != 1:
                             max_nats = roll_list.count(match.pips)
                             min_nats = roll_list.count(1)
 
                             if len(roll_list) in [max_nats, min_nats]:
-                                message += f" **FULL NAT {die_roll}!**"
+                                message.append(f" **FULL NAT {die_roll}!**")
                             elif max_nats or min_nats:
-                                message += " **"
+                                message.append(" **")
                                 if max_nats:
-                                    message += f"Nat {match.pips} x{max_nats}! "
+                                    message.append(f"Nat {match.pips} x{max_nats}! ")
                                 if min_nats:
-                                    message += f"Nat 1 x{min_nats}!"
-                                message += "**"
+                                    message.append(f"Nat 1 x{min_nats}!")
+                                message.append("**")
 
                     if match.keep:
-                        message += f'\nKeep the {match.keep_type_full} '
+                        message.append(f"\nKeep the {match.keep_type_full} ")
 
                         if match.keep_quantity > 1:
-                            message += f'{num2words(match.keep_quantity)}' + (overkeep and '*' or '') + ': ' + ', '.join(
-                                map(str, keep_list[:match.keep_quantity-1])) + f' and a {keep_list[match.keep_quantity-1]}.'
+                            number = num2words(match.keep_quantity)
+                            overkeep_notice = '*' if overkeep else ''
+                            kept_items = ", ".join(map(str, keep_list[:match.keep_quantity-1]))
+                            last_kept_item = keep_list[match.keep_quantity-1]
+                            message.append(f"{number}{overkeep_notice}: {kept_items} and a {last_kept_item}.")
                         else:
-                            message += f'number: {keep_list[0]}.'
+                            message.append(f"number: {keep_list[0]}.")
 
                         if i != 0 or match.sign != '+':
-                            logic_string += f"{match.sign} "
+                            logic_line.append(f"{match.sign} ")
 
+                        kept_values = " + ".join(map(str, keep_list))
                         if len(keep_list) > 1 and (len(matches_found) > 1 or match.sign != "+"):
-                            logic_string += f"__({' + '.join(map(str, keep_list))})__ "
+                            logic_line.append(f"__({kept_values})__ ")
                         else:
-                            logic_string += f"__{' + '.join(map(str, keep_list))}__ "
+                            logic_line.append(f"__{kept_values}__ ")
 
                         if match.sign == '+':
                             total_sum += sum(keep_list)
                         else:
                             total_sum -= sum(keep_list)
 
-                    message += '\n'
+                    message.append("\n")
                 elif j == match.quantity - 2:
-                    message += f'{die_roll} '
+                    message.append(f"{die_roll} ")
                 else:
-                    message += f'{die_roll}, '
+                    message.append(f"{die_roll}, ")
 
                 if not match.keep:
                     if match.sign == '+':
@@ -276,19 +281,21 @@ class Game(commands.Cog):
 
             if not match.keep:
                 if i != 0 or match.sign != '+':
-                    logic_string += f"{match.sign} "
+                    logic_line.append(f"{match.sign} ")
 
-                if len(roll_list) > 1 and (len(matches_found) > 1 or match.sign != "+"):
-                    logic_string += f"__({' + '.join(map(str, roll_list))})__ "
+                values = " + ".join(map(str, roll_list))
+                if len(roll_list) > 1 and (len(matches_found) > 1 or match.sign != '+'):
+                    logic_line.append(f"__({values})__ ")
                 else:
-                    logic_string += f"__{' + '.join(map(str, roll_list))}__ "
+                    logic_line.append(f"__{values}__ ")
 
-        if logic_string:
-            message += f"{logic_string}\n"
+        if logic_line:
+            logic_line.append("\n")
+            message.extend(logic_line)
 
-        message += f"For a total of **{total_sum}.**"
+        message.append(f"For a total of **{total_sum}.**")
 
-        return message[0:2000]
+        return "".join(message)[0:2000]
 
 
 async def setup(bot: KBot):

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "koa-bot"
-version = "0.35.1"
+version = "0.36.0"
 description = ""
 authors = []
 readme = "README.md"
@@ -51,15 +51,18 @@ aiosqlite = "^0.17.0"
 beautifulsoup4 = "^4.11.1"
 lxml = "^4.9.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.extras]
+speed = ["uvloop","aiodns","cchardet","Brotli"]
+# dalle = ["dalle-mini", "vqgan-jax"]
+
+[tool.poetry.group.dev.dependencies]
 autopep8 = "^1.6.0"
 pylint = "2.12.1"
 rope = "^0.23.0"
 wheel = "^0.37.1"
 
-[tool.poetry.extras]
-speed = ["uvloop","aiodns","cchardet","Brotli"]
-# dalle = ["dalle-mini", "vqgan-jax"]
+[tool.poetry.group.test.dependencies]
+pytest = "^7.3.1"
 
 [tool.autopep8]
 max-line-length = 120

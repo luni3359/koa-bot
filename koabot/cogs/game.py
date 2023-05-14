@@ -88,15 +88,46 @@ class RollMatch:
         self._keep_quantity = value
 
 
+class RollInvalidSyntax(Exception):
+    def __init__(self, message="Unable to parse roll string"):
+        super(RollInvalidSyntax, self).__init__(message)
+
+
+class RollEmptyThrow(Exception):
+    def __init__(self, message="The roll has no dice or has zero-pip dice"):
+        super(RollEmptyThrow, self).__init__(message)
+
+
 class Game(commands.Cog):
     """Commands to play with"""
 
     def __init__(self, bot: KBot) -> None:
         self.bot = bot
 
-    @commands.hybrid_command(aliases=['r'])
-    async def roll(self, ctx: commands.Context, *, roll_string: str):
+    @commands.hybrid_command(name="roll", aliases=["r"])
+    async def cmd_roll(self, ctx: commands.Context, *, roll_string: str):
         """Rolls one or many dice"""
+        try:
+            roll_log = self.dice_roll(roll_string)
+        except RollInvalidSyntax:
+            await ctx.reply("Invalid syntax!", mention_author=False)
+        except RollEmptyThrow:
+            await ctx.reply("Please roll something!", mention_author=False)
+
+        await ctx.reply(roll_log, mention_author=False)
+
+    @cmd_roll.error
+    async def roll_error(self, ctx: commands.Context, exception: commands.CommandError):
+        """Roll exception handler"""
+        if isinstance(exception, commands.MissingRequiredArgument):
+            return await ctx.reply("Please specify what you want to roll.", mention_author=False)
+
+    @commands.hybrid_command(name="flip")
+    async def cmd_flip(self, ctx: commands.Context):
+        """Flip a coin"""
+        await ctx.reply(random.getrandbits(1) and "Heads!" or "Tails!", mention_author=False)
+
+    def dice_roll(self, roll_string) -> str:
         matches_found: list[RollMatch] = []
         roll_count = 0
         i = 0
@@ -119,11 +150,11 @@ class Game(commands.Cog):
                 i = pattern_match.end()
                 continue
 
-            return await ctx.reply("Invalid syntax!", mention_author=False)
+            raise RollInvalidSyntax()
 
         # there should always be at least one roll - never do raw math
         if roll_count == 0:
-            return await ctx.reply("Please roll something!", mention_author=False)
+            raise RollEmptyThrow()
 
         total_sum = 0
         logic_string = ""
@@ -257,18 +288,7 @@ class Game(commands.Cog):
 
         message += f"For a total of **{total_sum}.**"
 
-        await ctx.reply(message[0:2000], mention_author=False)
-
-    @roll.error
-    async def roll_error(self, ctx: commands.Context, exception: commands.CommandError):
-        """Roll exception handler"""
-        if isinstance(exception, commands.MissingRequiredArgument):
-            return await ctx.reply("Please specify what you want to roll.", mention_author=False)
-
-    @commands.hybrid_command()
-    async def flip(self, ctx: commands.Context):
-        """Flip a coin"""
-        await ctx.reply(random.getrandbits(1) and "Heads!" or "Tails!", mention_author=False)
+        return message[0:2000]
 
 
 async def setup(bot: KBot):

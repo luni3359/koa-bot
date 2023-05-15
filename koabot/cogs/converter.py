@@ -23,34 +23,10 @@ class Converter(commands.Cog):
 
     @commands.hybrid_command(name='convert', aliases=['conv', 'cv'])
     async def unit_convert(self, ctx: commands.Context, *, units: str = ""):
-        """Convert units"""
-
-        unit_matches = []
-        i = 0
-        while i < len(units):
-            ftin_match = SPECIAL_UNIT_PATTERN_TUPLE[1].match(units, i)
-            if ftin_match:
-                unit_matches.append((SPECIAL_UNIT_PATTERN_TUPLE[0], float(
-                    ftin_match.group(1)), float(ftin_match.group(2))))
-                # unit_matches.append((unit_name, value in feet, value in inches))
-                i = ftin_match.end()
-                continue
-
-            num_match = NUMBER_PATTERN.match(units, i)
-            if num_match:
-                i = num_match.end()
-                def match(u): return (u[0], u[1].match(units, i))
-                def falsey(x): return not x[1]
-                unit = next(itertools.dropwhile(falsey, map(match, iter(UNIT_PATTERN_TUPLE))), None)
-                if unit:
-                    (unit, unit_match) = unit
-                    unit_matches.append((unit, float(num_match.group(1))))
-                    i = unit_match.end()
-
-            i += 1
-
-        if unit_matches:
-            await self.convert_units(ctx, unit_matches)
+        """Convert in the system of units"""
+        if (unit_matches := self.gather_unit_matches(units)):
+            conversion_str = self.convert_units(unit_matches)
+            await ctx.reply("".join(conversion_str), mention_author=False)
 
     @commands.hybrid_command(name='exchange', aliases=['currency', 'xc'])
     @app_commands.rename(src_code='from', dst_code='to')
@@ -69,35 +45,36 @@ class Converter(commands.Cog):
             output = f"There was a problem retrieving this data:\n{e}"
         await ctx.reply(output, mention_author=False)
 
-    async def convert_units(self, ctx: commands.Context, units: list):
+    def convert_units(self, units: list) -> str:
         """Convert units found to their opposite (SI <-> imp)
         Arguments:
             units::list
                 List of units of measurement that have been parsed by unit_convert
         """
-        conversion_str = '```'
+        conversion_str: list[str] = ["```"]
 
         for unit_str, value, *extra_value in units:
             if unit_str == 'footinches':
                 extra_value = extra_value[0]
                 converted_value = (value * self.ureg.foot + extra_value * self.ureg.inch).to_base_units()
-                calculation_str = f'{value * self.ureg.foot} {extra_value * self.ureg.inch} → {converted_value}'
 
+                calculation_str = f"{value * self.ureg.foot} {extra_value * self.ureg.inch} → {converted_value}"
                 print(calculation_str)
-                conversion_str += f'\n{calculation_str}'
+                conversion_str.append(f"\n{calculation_str}")
                 continue
 
             unit = self.ureg[unit_str]
             value = self.quantity(value, unit)
+            dimensionality = str(unit.dimensionality)
 
             if unit.u in dir(self.ureg.sys.imperial) or unit in (self.ureg['fahrenheit'], self.ureg['gallon']):
-                if str(unit.dimensionality) == '[temperature]':
+                if dimensionality == '[temperature]':
                     converted_value = value.to(self.ureg.celsius)
                 else:
                     converted_value = value.to_base_units()
                     converted_value = converted_value.to_compact()
             # elif unit.u in dir(self.ureg.sys.mks):
-            elif str(unit.dimensionality) == '[length]':
+            elif dimensionality == '[length]':
                 if unit == self.ureg['kilometer']:
                     converted_value = value.to(self.ureg.miles)
                 elif value.magnitude >= 300:
@@ -107,23 +84,47 @@ class Converter(commands.Cog):
                     inches = value.to(self.ureg.inch)
                     feet = int(inches.magnitude / 12)
                     remainder_inches = round(inches.magnitude % 12)
-                    converted_value = f'{feet} ft {remainder_inches} in ({raw_feet})'
+                    converted_value = f"{feet} ft {remainder_inches} in ({raw_feet})"
 
-            elif str(unit.dimensionality) == '[length] ** 3':
+            elif dimensionality == '[length] ** 3':
                 converted_value = value.to(self.ureg.gallon)
 
-            elif str(unit.dimensionality) == '[mass]':
+            elif dimensionality == '[mass]':
                 converted_value = value.to(self.ureg.pounds)
 
-            elif str(unit.dimensionality) == '[temperature]':
+            elif dimensionality == '[temperature]':
                 converted_value = value.to(self.ureg.fahrenheit)
 
-            calculation_str = f'{value} → {converted_value}'
+            calculation_str = f"{value} → {converted_value}"
             print(calculation_str)
-            conversion_str += f'\n{calculation_str}'
+            conversion_str.append(f"\n{calculation_str}")
 
-        conversion_str += '```'
-        await ctx.reply(conversion_str, mention_author=False)
+        conversion_str.append("```")
+        return "".join(conversion_str)
+
+    def gather_unit_matches(self, units) -> list[tuple[str, float] | tuple[str, float, float]]:
+        unit_matches: list[tuple[str, float] | tuple[str, float, float]] = []
+        i = 0
+        while i < len(units):
+            if (ftin_match := SPECIAL_UNIT_PATTERN_TUPLE[1].match(units, i)):
+                unit_name = SPECIAL_UNIT_PATTERN_TUPLE[0]
+                value_in_feet = float(ftin_match.group(1))
+                value_in_inches = float(ftin_match.group(2))
+                unit_matches.append((unit_name, value_in_feet, value_in_inches))
+                i = ftin_match.end()
+                continue
+
+            if (num_match := NUMBER_PATTERN.match(units, i)):
+                i = num_match.end()
+                def match(u): return (u[0], u[1].match(units, i))
+                def falsey(x): return not x[1]
+                if (unit := next(itertools.dropwhile(falsey, map(match, iter(UNIT_PATTERN_TUPLE))), None)):
+                    (unit, unit_match) = unit
+                    unit_matches.append((unit, float(num_match.group(1))))
+                    i = unit_match.end()
+
+            i += 1
+        return unit_matches
 
 
 async def setup(bot: KBot):

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "koa-bot"
-version = "0.36.2"
+version = "0.36.3"
 description = ""
 authors = []
 readme = "README.md"
@@ -50,6 +50,7 @@ aiosqlite = "^0.17.0"
 # vqgan-jax = {git = "https://github.com/patil-suraj/vqgan-jax", rev="10ef240", optional = true}
 beautifulsoup4 = "^4.11.1"
 lxml = "^4.9.0"
+aiohttp = "3.7.4"
 
 [tool.poetry.extras]
 speed = ["uvloop","aiodns","cchardet","Brotli"]

@@ -5,7 +5,6 @@ import aiohttp
 import discord
 from thefuzz import fuzz
 
-import koabot.core.net as net_core
 import koabot.core.posts as post_core
 from koabot.core import utils
 from koabot.core.site import Site
@@ -20,39 +19,43 @@ class SiteDeviantArt(Site):
         self.csrf_token: str = None
         self.cookies: aiohttp.CookieJar = None
         self.cache_dir = Path(self.bot.CACHE_DIR, "deviantart")
+        self.max_embeds = 5
 
     async def get_csrf_token(self) -> str:
-        if not self.csrf_token:
-            token_path = Path(self.cache_dir, "csrf_token")
-            cookies_path = Path(self.cache_dir, "cookies")
-            cookies = aiohttp.CookieJar()
+        """Generates a new csrf token or retrieves a cached one"""
+        if self.csrf_token:
+            return self.csrf_token
 
-            if token_path.exists():
-                with open(token_path, encoding="UTF-8") as token_file:
-                    self.csrf_token = token_file.readline()
+        token_path = Path(self.cache_dir, "csrf_token")
+        cookies_path = Path(self.cache_dir, "cookies")
+        cookies = aiohttp.CookieJar()
 
-            if cookies_path.exists():
-                cookies.load(cookies_path)
-                self.cookies = cookies
+        if token_path.exists():
+            with open(token_path, encoding="UTF-8") as token_file:
+                self.csrf_token = token_file.readline()
 
-            if not self.csrf_token or not self.cookies:
-                self.cache_dir.mkdir(exist_ok=True)
+        if cookies_path.exists():
+            cookies.load(cookies_path)
+            self.cookies = cookies
 
-                async with aiohttp.ClientSession(cookie_jar=cookies) as session:
-                    async with session.get("https://www.deviantart.com") as response:
-                        content = await response.text()
+        if not self.csrf_token or not self.cookies:
+            self.cache_dir.mkdir(exist_ok=True)
 
-                        if not (csrf_token := re.findall(r"window\.__CSRF_TOKEN__\ ?=\ ?'(\S+)';", content)):
-                            raise Exception("Skipping preview: Unable to retrieve DA csrf token")
+            async with aiohttp.ClientSession(cookie_jar=cookies) as session:
+                async with session.get("https://www.deviantart.com") as response:
+                    content = await response.text()
 
-                        self.csrf_token = csrf_token[0]
-                        with open(token_path, 'w', encoding="UTF-8") as token_file:
-                            token_file.write(self.csrf_token)
+                    if not (csrf_token := re.findall(r"window\.__CSRF_TOKEN__\ ?=\ ?'(\S+)';", content)):
+                        raise Exception("Skipping preview: Unable to retrieve DA csrf token")
 
-                        self.cookies = cookies
-                        cookies.save(cookies_path)
+                    self.csrf_token = csrf_token[0]
+                    with open(token_path, 'w', encoding="UTF-8") as token_file:
+                        token_file.write(self.csrf_token)
 
-                        print(f"DA auth success:\ncsrf token:{self.csrf_token}\ncookies:{self.cookies}")
+                    self.cookies = cookies
+                    cookies.save(cookies_path)
+
+                    print(f"DA auth success:\ncsrf token:{self.csrf_token}\ncookies:{self.cookies}")
 
         return self.csrf_token
 
@@ -85,19 +88,25 @@ class SiteDeviantArt(Site):
         # "search_url": "https://www.deviantart.com/_napi/da-deviation/shared_api/deviation/fetch?deviationid={}&type=art",
         # "search_url_extended": "https://www.deviantart.com/_napi/da-deviation/shared_api/deviation/extended_fetch?deviationid={}&type=art"
 
+        # Get the csrf token first, otherwise the first request will fail (always)
+        csrf_token = await self.get_csrf_token()
+
         search_url = self.bot.assets['deviantart']['search_url_extended']
-        params = {
-            "type": "art",
-            "deviationid": post_id,
-            "csrf_token": await self.get_csrf_token()
-        }
         api_result = None
         async with aiohttp.ClientSession(cookie_jar=self.cookies) as session:
+            params = {
+                "type": "art",
+                "deviationid": post_id,
+                "csrf_token": csrf_token
+            }
             async with session.get(search_url, params=params) as response:
                 api_result = await response.json()
 
         if not api_result:
             print(f"Failed to retrieve DA post #{post_id}")
+        elif 'error' in api_result:
+            # {'error': 'invalid_request', 'errorDescription': 'Invalid or expired form submission', 'errorDetails': {'csrf': 'invalid'}, 'status': 'error'}
+            print(f"{api_result['error']}: {api_result['errorDescription']}\n{api_result['errorDetails']}")
 
         deviation = api_result['deviation']
 
@@ -108,32 +117,30 @@ class SiteDeviantArt(Site):
                 print(f"Incapable of handling DeviantArt url (type: {deviation_type}):\n{url}")
                 return
 
-        await msg.reply(embed=embed, mention_author=False)
+        await self.send_deviantart(msg, [embed])
 
-        try:
-            await msg.edit(suppress=True)
-        except discord.errors.Forbidden as e:
-            # Missing Permissions
-            match e.code:
-                case 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                case _:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
+    def get_title_from_url(self, url: str) -> str:
+        """Returns the title present in a given DA url"""
+        # TODO: This is not a reliable method because an url is not guaranteed to valid title in it
+        return url.split('/')[-1].rsplit('-', maxsplit=1)[0]
 
-    async def get_deviantart_posts(self, msg: discord.Message, urls: list[str]):
-        """Automatically fetch multiple posts from deviantart"""
-        MAX_EMBEDS = 5
-        title_to_test_against = urls[0].split('/')[-1].rsplit('-', maxsplit=1)[0]
+    def url_similarity_ratio(self, urls: list[str]) -> float:
+        """Calculate how similar a group of urls are from each other"""
+        title_to_test_against = self.get_title_from_url(urls[0])
         similarity_ratio = 0
         for url in urls[1:]:
-            title = url.split('/')[-1].rsplit('-', maxsplit=1)[0]
+            title = self.get_title_from_url(url)
             similarity_ratio += fuzz.ratio(title, title_to_test_against)
             print(f"{title}: {title_to_test_against} ({fuzz.ratio(title, title_to_test_against)})")
 
-        display_as_singles = False
         similarity_ratio /= len(urls) - 1
         print(f"Url similarity ratio: {similarity_ratio}")
-        if similarity_ratio < 90:
+        return similarity_ratio
+
+    async def get_deviantart_posts(self, msg: discord.Message, urls: list[str]):
+        """Automatically fetch multiple posts from deviantart"""
+        display_as_singles = False
+        if self.url_similarity_ratio(urls) < 90:
             print("Urls seem unrelated from each other. Sending each embed individually.")
             display_as_singles = True
 
@@ -143,6 +150,7 @@ class SiteDeviantArt(Site):
         # Check what type the first post is and if subsequent posts are of different types,
         # send them in one batch, but using different embed groups
         base_type: str = None
+        search_url = self.bot.assets['deviantart']['search_url_extended']
         api_results = []
         async with aiohttp.ClientSession(cookie_jar=self.cookies) as session:
             for url in urls:
@@ -150,7 +158,6 @@ class SiteDeviantArt(Site):
                     return
 
                 api_result = None
-                search_url = self.bot.assets['deviantart']['search_url_extended']
                 params = {
                     "type": "art",
                     "deviationid": post_id,
@@ -173,39 +180,45 @@ class SiteDeviantArt(Site):
 
         embeds: list[discord.Embed] = []
         total_da_count = len(api_results)
-        last_embed_index = min(MAX_EMBEDS - 1, total_da_count - 1)
-        for i, deviation in enumerate([d['deviation'] for d in api_results[:MAX_EMBEDS]]):
-            if display_as_singles:
-                embed = self.build_deviantart_embed(urls[i], deviation)
-                embeds.append(embed)
-                continue
-            if i != last_embed_index:
-                if i == 0:
-                    embed = self.build_deviantart_embed(urls[i], deviation)
-                    embed.remove_footer()
+        last_embed_index = min(self.max_embeds, total_da_count) - 1
+        deviations = [d['deviation'] for d in api_results[:self.max_embeds]]
+
+        if display_as_singles:
+            for i, deviation in enumerate(deviations):
+                embeds.append(self.build_deviantart_embed(urls[i], deviation))
+        else:
+            for i, deviation in enumerate(deviations):
+                url = urls[i]
+                if i != last_embed_index:
+                    if i == 0:
+                        embed = self.build_deviantart_embed(url, deviation)
+                        embed.remove_footer()
+                    else:
+                        embed = self.build_deviantart_embed(url, deviation, image_only=True)
                 else:
-                    embed = self.build_deviantart_embed(urls[i], deviation, image_only=True)
-            if i == last_embed_index:
-                embed = self.build_deviantart_embed(urls[i], deviation)
-                embed.description = ""
-                embed.remove_author()
-                embed.clear_fields()
-                if total_da_count > MAX_EMBEDS:
-                    embed.set_footer(text=f"{total_da_count - MAX_EMBEDS}+ remaining", icon_url=embed.footer.icon_url)
+                    # i == last_embed_index
+                    embed = self.build_deviantart_embed(url, deviation)
+                    embed.description = ""
+                    embed.remove_author()
+                    embed.clear_fields()
+                    if total_da_count > self.max_embeds:
+                        footer_text = f"{total_da_count - self.max_embeds}+ remaining"
+                        embed.set_footer(text=footer_text, icon_url=embed.footer.icon_url)
+                embeds.append(embed)
 
-            embeds.append(embed)
+        await self.send_deviantart(msg, embeds)
 
-        await msg.reply(embeds=embeds, mention_author=False)
+    async def send_deviantart(self, msg: discord.Message, embeds: list[discord.Embed]):
+        if len(embeds) > 1:
+            await msg.reply(embeds=embeds, mention_author=False)
+        else:
+            await msg.reply(embed=embeds[0], mention_author=False)
 
         try:
             await msg.edit(suppress=True)
-        except discord.errors.Forbidden as e:
+        except discord.errors.Forbidden:
             # Missing Permissions
-            match e.code:
-                case 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                case _:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
+            print("Missing Permissions: Cannot suppress embed from sender's message")
 
     def build_deviantart_embed(self, url: str, deviation: dict, *, image_only=False) -> discord.Embed:
         """DeviantArt embed builder"""
@@ -239,8 +252,8 @@ class SiteDeviantArt(Site):
                             image_url = media_type['b']
                         case "preview" if "preview" in valid_types:
                             valid_types = valid_types[:valid_types.index("preview")]
-                            preview_url = media_type['c'].replace('<prettyName>', pretty_name)
-                            preview_url = preview_url.replace(',q_80', ',q_100')
+                            preview_url = media_type['c'].replace("<prettyName>", pretty_name)
+                            preview_url = preview_url.replace(",q_80", ",q_100")
                             image_url = f"{base_uri}{preview_url}"
 
                 image_url = f"{image_url}?token={token}"
@@ -270,7 +283,8 @@ class SiteDeviantArt(Site):
                 # DA's excerpts should be a maximum of ~650 characters by default, hence None
                 # TODO: Check what happens with literature <650 long
                 html_description = deviation['textContent']['excerpt']
-                embed.description = self.get_description_from_html(html_description, max_length=None) + "..."
+                description = self.get_description_from_html(html_description, max_length=None)
+                embed.description = f"{description}..."
             case 'pdf':
                 if 'descriptionText' in deviation['extended']:
                     html_description = deviation['extended']['descriptionText']['html']['markup']

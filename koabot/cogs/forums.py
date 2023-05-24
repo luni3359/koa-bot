@@ -39,13 +39,13 @@ class Forums(commands.Cog):
                     if thread.topic.subject:
                         embed.title = html.unescape(thread.topic.subject)
                     else:
-                        embed.title = f'/{user_board}/ thread'
+                        embed.title = f"/{user_board}/ thread"
                     embed.url = thread.topic.url
 
                 embed.set_author(
-                    name=f'{post.name} @ {post.datetime}',
+                    name=f"{post.name} @ {post.datetime}",
                     url=post.semantic_url)
-                embed.add_field(name=f'No.{post.post_id}', value='\u200b')
+                embed.add_field(name=f"No.{post.post_id}", value='\u200b')
                 embed.description = post.text_comment
 
                 if post.has_file:
@@ -65,10 +65,10 @@ class Forums(commands.Cog):
                 await ctx.send(embed=post)
         else:
             threads: list[basc_py4chan.Thread] = board.get_threads()
+            threads_ready = []
             max_threads = 2
             max_posts_per_thread = 2
 
-            threads_ready = []
             for thread in threads:
                 if thread.sticky:
                     continue

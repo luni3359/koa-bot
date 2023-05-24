@@ -18,7 +18,8 @@ def list_contains(lst: list, items_to_be_matched: list) -> bool:
 
 def path_from_extension(extension: str) -> Path:
     """Retrieves the absolute path from an extension"""
-    return Path(extension.replace('.', os.sep)+'.py')
+    slashed_path = extension.replace(".", os.sep)
+    return Path(f"{slashed_path}.py")
 
 
 def calculate_sha1(file: str | Path) -> str:

@@ -98,7 +98,7 @@ class SiteReddit(Site):
                 # TODO: Disjointed markdown is not cleaned up
                 # i.e. the closing ** is cut off
                 description = smart_truncate(submission.selftext, max_post_length, True)
-                header_embed.description = description + "…"
+                header_embed.description = f"{description}..."
             else:
                 header_embed.description = submission.selftext
 
@@ -154,17 +154,7 @@ class SiteReddit(Site):
 
         embeds[-1].set_footer(text=footer_text, icon_url=guide['embed']['favicon']['size192'])
 
-        await msg.reply(embeds=embeds, mention_author=False)
-
-        try:
-            await msg.edit(suppress=True)
-        except discord.errors.Forbidden as e:
-            # Missing Permissions
-            match e.code:
-                case 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                case _:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
+        await self.send_reddit(msg, embeds)
 
     async def preview_subreddit(self, msg: discord.Message, subreddit: Subreddit, guide: dict):
         await subreddit.load()
@@ -181,17 +171,19 @@ class SiteReddit(Site):
         embed.add_field(name='Online', value=f"{subreddit.active_user_count:,}")
         embed.set_footer(text=guide['embed']['footer_text'], icon_url=guide['embed']['favicon']['size192'])
 
-        await msg.reply(embed=embed, mention_author=False)
+        await self.send_reddit(msg, [embed])
+
+    async def send_reddit(self, msg: discord.Message, embeds: list[discord.Embed]):
+        if len(embeds) > 1:
+            await msg.reply(embeds=embeds, mention_author=False)
+        else:
+            await msg.reply(embed=embeds[0], mention_author=False)
 
         try:
             await msg.edit(suppress=True)
-        except discord.errors.Forbidden as e:
+        except discord.errors.Forbidden:
             # Missing Permissions
-            match e.code:
-                case 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                case _:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
+            print("Missing Permissions: Cannot suppress embed from sender's message")
 
 
 async def setup(bot: KBot):

@@ -79,7 +79,7 @@ class KBot(commands.Bot):
                         continue
 
                     relative_path = child.relative_to(self.PROJECT_DIR)
-                    path_as_import = str(relative_path.with_suffix('')).replace(os.sep, '.')
+                    path_as_import = str(relative_path.with_suffix("")).replace(os.sep, '.')
                     module_list.append(path_as_import)
 
         skipped_cogs: int = 0

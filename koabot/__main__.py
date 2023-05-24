@@ -24,7 +24,7 @@ CACHE_DIR = Path(appdirs.user_cache_dir(PROJECT_NAME))
 
 def set_base_directories(bot: KBot) -> None:
     # Create base directories if they're missing
-    for base_dir in [DATA_DIR, CONFIG_DIR, CACHE_DIR]:
+    for base_dir in (DATA_DIR, CONFIG_DIR, CACHE_DIR):
         base_dir.mkdir(parents=True, exist_ok=True)
 
     bot.set_base_directory(BaseDirectory.PROJECT_NAME, PROJECT_NAME)
@@ -53,8 +53,9 @@ def db_migration_setup(db_name: str) -> None:
 
     if source.is_file():
         if destination.is_file():
-            return print("ERROR: Unable to move database. A database already exists at destination."
-                         f"\nSource: {source}\nDestination:{destination}\n")
+            print("ERROR: Unable to move database. A database already exists at destination."
+                  f"\nSource: {source}\nDestination:{destination}\n")
+            return
 
         print(f"The database has been moved from \"{CACHE_DIR}\" to \"{destination}\"")
         shutil.move(source, destination)

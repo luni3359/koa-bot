@@ -58,9 +58,9 @@ class BotStatus(commands.Cog):
         async with ctx.typing():
             if rnd_duration:
                 time_to_wait = max(min_duration, random.randint(rnd_duration[0], rnd_duration[1]))
-                await asyncio.sleep(time_to_wait)
             else:
-                await asyncio.sleep(min_duration)
+                time_to_wait = min_duration
+            await asyncio.sleep(time_to_wait)
 
             if embed is not None:
                 if content:

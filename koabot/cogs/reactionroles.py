@@ -191,7 +191,7 @@ class ReactionRoles(commands.Cog):
     async def reassign_roles(self, user: discord.Member,  remove_roles: bool, roles: list[discord.Role]):
         """Given a list of roles, remove or grant them to a user"""
         if len(roles) > 1:
-            role_string = ', '.join(f"**@{r.name}**" for r in roles)
+            role_string = ", ".join(f"**@{r.name}**" for r in roles)
             singular_or_plural_roles = "roles"
         else:
             role_string = f"**@{roles[0].name}**"
@@ -247,9 +247,11 @@ class ReactionRoles(commands.Cog):
                         continue
                     role_mentions.append(link_role.mention)
 
+                joined_reactions = " ".join(link.reactions)
+                joined_roles = " ".join(role_mentions)
                 embed.description += (f"__Link #{j + 1}__\n"
-                                      f"   Reactions: {' '.join(link.reactions)}\n"
-                                      f"   Roles: {' '.join(role_mentions)}\n")
+                                      f"   Reactions: {joined_reactions}\n"
+                                      f"   Roles: {joined_roles}\n")
 
         await ctx.reply(embed=embed, mention_author=False)
 

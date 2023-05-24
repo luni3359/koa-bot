@@ -68,11 +68,11 @@ async def handle_request(response: aiohttp.ClientResponse, **kwargs) -> NetRespo
     Keywords:
         json::bool
             True = must return json
-            False/unset = returns plain text
+            False = returns plain text
         err_msg::str
             message to display on failure
     """
-    json: bool = kwargs.get('json')
+    json: bool = kwargs.get('json', False)
     err_msg: str = kwargs.get('err_msg')
 
     if response.status != 200:

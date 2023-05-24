@@ -106,6 +106,8 @@ class ImageBoard(commands.Cog):
         match board:
             case 'deviantart':
                 await self.deviantart.get_deviantart_posts(msg, urls)
+            case _:
+                raise ValueError(f'Board "{board}" has no combined gallery entry.')
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         if isinstance(error, commands.MissingRequiredArgument):

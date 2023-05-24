@@ -75,12 +75,12 @@ def combine_tags(tags: str | list, /,  *, maximum: int = 5) -> str:
         tag_list = tag_list[:maximum]
 
         if tag_count > maximum:
-            joint_tags = ', '.join(tag_list)
-            joint_tags += f' and {tag_count - maximum} more'
+            joint_tags = ", ".join(tag_list)
+            joint_tags += f" and {tag_count - maximum} more"
         else:
-            joint_tags = ', '.join(tag_list[:-1])
-            joint_tags += ' and ' + tag_list[-1]
+            joint_tags = ", ".join(tag_list[:-1])
+            joint_tags += f" and {tag_list[-1]}"
 
-        return joint_tags.strip().replace('_', ' ')
+        return joint_tags.strip().replace("_", " ")
 
-    return ''.join(tag_list).strip().replace('_', ' ')
+    return "".join(tag_list).strip().replace("_", " ")

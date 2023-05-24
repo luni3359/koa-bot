@@ -157,13 +157,9 @@ class Board(commands.Cog):
             await msg.reply(embed=embed, mention_author=False)
             try:
                 await msg.edit(suppress=True)
-            except discord.errors.Forbidden as e:
+            except discord.errors.Forbidden:
                 # Missing Permissions
-                match e.code:
-                    case 50013:
-                        print("Missing Permissions: Cannot suppress embed from sender's message")
-                    case _:
-                        print(f"Forbidden: Status {e.status} (code {e.code}")
+                print("Missing Permissions: Cannot suppress embed from sender's message")
             return
 
         total_posts = len(posts)
@@ -242,31 +238,33 @@ class Board(commands.Cog):
                 post_char = re.sub(r' \(.*?\)', '', post_core.combine_tags(post['tag_string_character']))
                 post_copy = post_core.combine_tags(post['tag_string_copyright'], maximum=1)
                 post_artist = post_core.combine_tags(post['tag_string_artist'])
-                embed_post_title = ""
+                post_title: list[str] = []
 
                 if post_char:
-                    embed_post_title += post_char
+                    post_title.append(post_char)
 
                 if post_copy:
                     if not post_char:
-                        embed_post_title += post_copy
+                        post_title.append(post_copy)
                     else:
-                        embed_post_title += f' ({post_copy})'
+                        post_title.append(f" ({post_copy})")
 
                 if post_artist:
-                    embed_post_title += f' drawn by {post_artist}'
+                    post_title.append(f" drawn by {post_artist}")
 
                 if not post_char and not post_copy and not post_artist:
-                    embed_post_title += f"#{post_id}"
+                    post_title.append(f"#{post_id}")
 
-                embed_post_title += ' | Danbooru'
-                if len(embed_post_title) >= self.bot.assets['danbooru']['max_embed_title_length']:
-                    embed_post_title = embed_post_title[:self.bot.assets['danbooru']
-                                                        ['max_embed_title_length'] - 3] + '...'
+                post_title.append(' | Danbooru')
+                post_title = "".join(post_title)
+                if len(post_title) >= self.bot.assets['danbooru']['max_embed_title_length']:
+                    max_length = self.bot.assets['danbooru']['max_embed_title_length'] - 3
+                    post_title = f"{post_title[:max_length]}..."
 
-                embed.title = embed_post_title
+                embed.title = post_title
             case 'e621':
-                embed.title = f"#{post_id}: {post_core.combine_tags(post['tags']['artist'])} - e621"
+                artist_tags = post_core.combine_tags(post['tags']['artist'])
+                embed.title = f"#{post_id}: {artist_tags} - e621"
             case _:
                 raise ValueError('Board embed title not configured.')
 

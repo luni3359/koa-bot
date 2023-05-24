@@ -103,16 +103,16 @@ class Gallery(commands.Cog):
             case 'e621':
                 has_children = post['relationships']['has_active_children']
                 parent_id = post['relationships']['parent_id']
-                c_search = f'parent:{post_id} order:id'
+                c_search = f"parent:{post_id} order:id"
                 p_search = [
-                    f'id:{parent_id}',
-                    f'parent:{parent_id} order:id -id:{post_id}'
+                    f"id:{parent_id}",
+                    f"parent:{parent_id} order:id -id:{post_id}",
                 ]
             case _:
                 has_children = post['has_children']
                 parent_id = post['parent_id']
-                c_search = f'parent:{post_id} order:id -id:{post_id}'
-                p_search = f'parent:{parent_id} order:id -id:{post_id}'
+                c_search = f"parent:{post_id} order:id -id:{post_id}"
+                p_search = f"parent:{parent_id} order:id -id:{post_id}"
 
         if only_if_missing:
             if first_post_missing_preview and (post['rating'] in safe_rating or on_nsfw_channel):
@@ -165,10 +165,9 @@ class Gallery(commands.Cog):
                 for res_key in self.bot.assets[board]['post_quality']:
                     if res_key in test_post:
                         url_candidate = test_post[res_key]
-                        file_ext = net_core.get_url_fileext(url_candidate)
-                        if file_ext in ['png', 'jpg', 'webp']:
+                        if (file_ext := net_core.get_url_fileext(url_candidate)) in ['png', 'jpg', 'webp']:
                             file_url = url_candidate
-                            file_name = str(test_post['id']) + '.' + file_ext
+                            file_name = f"{test_post['id']}.{file_ext}"
                             file_path = Path(file_cache_dir, file_name)
 
                             # TODO Add a hash check to verify if they should be redownloaded?

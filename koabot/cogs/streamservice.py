@@ -186,13 +186,9 @@ class StreamService(commands.Cog):
         else:
             try:
                 await msg.edit(suppress=True)
-            except discord.errors.Forbidden as e:
+            except discord.errors.Forbidden:
                 # Missing Permissions
-                match e.code:
-                    case 50013:
-                        print("Missing Permissions: Cannot suppress embed from sender's message")
-                    case _:
-                        print(f"Forbidden: Status {e.status} (code {e.code}")
+                print("Missing Permissions: Cannot suppress embed from sender's message")
             await msg.reply(file=discord.File(fp=image, filename=filename), embed=embed, mention_author=False)
 
         return True

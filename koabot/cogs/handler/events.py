@@ -163,16 +163,16 @@ class BotEvents(commands.Cog):
             traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
     @commands.Cog.listener()
-    async def on_message_edit(self, before: discord.Message, after: discord.Message):
+    async def on_message_edit(self, prev_msg: discord.Message, cur_msg: discord.Message):
         """Make the embeds created by the bot unsuppressable"""
-        if not before.author.bot:
+        if not prev_msg.author.bot:
             return
 
-        if before.author != before.guild.me:
+        if prev_msg.author != prev_msg.guild.me:
             return
 
-        if len(before.embeds) > 0 and len(after.embeds) == 0:
-            await after.edit(suppress=False)
+        if len(prev_msg.embeds) > 0 and len(cur_msg.embeds) == 0:
+            await cur_msg.edit(suppress=False)
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
@@ -191,16 +191,13 @@ class BotEvents(commands.Cog):
         if self.beta_bot_override(author.id not in self.bot.testing['debug_users'], msg.guild):
             return
 
-        botstatus_cog = self.botstatus
-        empty_message = not bool(msg.content)
-
-        if empty_message:
+        if len(msg.content) == 0:
             return
 
-        prefix_start = msg.content[0] == '!'
+        botstatus_cog = self.botstatus
 
         # only create references if asked for
-        if prefix_start and msg.channel_mentions:
+        if (prefix_start := msg.content[0] == '!') and msg.channel_mentions:
             await self.create_channel_references(msg, msg.guild, author, botstatus_cog)
 
         url_matches_found = self.find_urls(msg.content)
@@ -214,7 +211,7 @@ class BotEvents(commands.Cog):
         else:
             command_issued = False
 
-        await self.check_quiet_channels(msg, botstatus_cog, command_issued or url_matches_found)
+        await self.check_quiet_channels(msg, botstatus_cog, command_issued or len(url_matches_found) != 0)
 
     async def create_channel_references(self, msg: discord.Message, guild, author, botstatus_cog: BotStatus):
         """Reference channels together"""
@@ -322,24 +319,22 @@ class BotEvents(commands.Cog):
 
         return parsed_galleries
 
-    async def send_previews(self, msg: discord.Message, parsed_galleries: list[MatchGroup], only_if_missing: bool) -> None:
+    async def send_previews(self, msg: discord.Message, galleries: list[MatchGroup], only_if_missing: bool) -> None:
         # post gallery only if there's one to show...
-        if len(parsed_galleries) == 1:
-            gallery = parsed_galleries[0]
+        if len(galleries) == 1:
+            gallery = galleries[0]
             await self.imageboard.show_preview(msg, gallery.url, board=gallery.group, guide=gallery.guide, only_if_missing=only_if_missing)
 
-        elif len(parsed_galleries) > 1:
-            common_domain = parsed_galleries[0].group
-            for parsed_gallery in parsed_galleries:
+        elif len(galleries) > 1:
+            common_domain = galleries[0].group
+            for parsed_gallery in galleries:
                 if parsed_gallery.group != common_domain:
-                    common_domain = ""
                     print("Skipping previews. The links sent do not belong to the same domain.")
-                    break
+                    return
 
-            if common_domain:
-                guide = parsed_galleries[0].guide
-                gallery_urls: list[str] = [e.url for e in parsed_galleries]
-                await self.imageboard.show_combined_preview(msg, gallery_urls, board=common_domain, guide=guide, only_if_missing=only_if_missing)
+            guide = galleries[0].guide
+            gallery_urls: list[str] = [m.url for m in galleries]
+            await self.imageboard.show_combined_preview(msg, gallery_urls, board=common_domain, guide=guide, only_if_missing=only_if_missing)
 
     def command_was_issued(self, msg: discord.Message) -> bool:
         if (command_name_regex := COMMAND_PATTERN.search(msg.content)):

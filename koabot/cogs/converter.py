@@ -10,6 +10,8 @@ from koabot.kbot import KBot
 from koabot.patterns import (NUMBER_PATTERN, SPECIAL_UNIT_PATTERN_TUPLE,
                              UNIT_PATTERN_TUPLE)
 
+Unit = tuple[str, float] | tuple[str, float, float]
+
 
 class Converter(commands.Cog):
     """Converter class"""
@@ -25,7 +27,13 @@ class Converter(commands.Cog):
     async def unit_convert(self, ctx: commands.Context, *, units: str = ""):
         """Convert in the system of units"""
         if (unit_matches := self.gather_unit_matches(units)):
-            conversion_str = self.convert_units(unit_matches)
+            converted_units = self.convert_units(unit_matches)
+            conversion_str: list[str] = ["```"]
+
+            for value, converted_value in zip(unit_matches, converted_units):
+                conversion_str.append(f"{value} → {converted_value}")
+
+            conversion_str.append("```")
             await ctx.reply("".join(conversion_str), mention_author=False)
 
     @commands.hybrid_command(name='exchange', aliases=['currency', 'xc'])
@@ -45,10 +53,10 @@ class Converter(commands.Cog):
             output = f"There was a problem retrieving this data:\n{e}"
         await ctx.reply(output, mention_author=False)
 
-    def convert_units(self, units: list) -> str:
+    def convert_units(self, units: list[Unit]) -> list[Unit]:
         """Convert units found to their opposite (SI <-> imp)
         Arguments:
-            units::list
+            units::list[Units]
                 List of units of measurement that have been parsed by unit_convert
         """
         conversion_str: list[str] = ["```"]
@@ -102,8 +110,8 @@ class Converter(commands.Cog):
         conversion_str.append("```")
         return "".join(conversion_str)
 
-    def gather_unit_matches(self, units) -> list[tuple[str, float] | tuple[str, float, float]]:
-        unit_matches: list[tuple[str, float] | tuple[str, float, float]] = []
+    def gather_unit_matches(self, units) -> list[Unit]:
+        unit_matches: list[Unit] = []
         i = 0
         while i < len(units):
             if (ftin_match := SPECIAL_UNIT_PATTERN_TUPLE[1].match(units, i)):

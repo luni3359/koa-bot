@@ -107,16 +107,18 @@ class Tasks(commands.Cog):
                     else:
                         nsfw_posts.append(post_url)
 
-            safe_posts = '\n'.join(safe_posts)
-            nsfw_posts = '\n'.join(nsfw_posts)
+            safe_posts = "\n".join(safe_posts)
+            nsfw_posts = "\n".join(nsfw_posts)
 
             if safe_posts or nsfw_posts:
                 for channel in channel_categories['safe_channels']:
-                    await channel.send(botstatus_cog.get_quote('posts_to_approve') + '\n' + safe_posts)
+                    quote = botstatus_cog.get_quote('posts_to_approve')
+                    await channel.send(f"{quote}\n{safe_posts}")
 
             if nsfw_posts:
                 for channel in channel_categories['nsfw_channels']:
-                    await channel.send(botstatus_cog.get_quote('posts_to_approve') + '\n' + nsfw_posts)
+                    quote = botstatus_cog.get_quote('posts_to_approve')
+                    await channel.send(f"{quote}\n{nsfw_posts}")
 
     @tasks.loop(minutes=5)
     async def check_live_streamers(self) -> None:
@@ -131,13 +133,15 @@ class Tasks(commands.Cog):
 
         self.online_streamers = temp_online
 
-        twitch_search = 'https://api.twitch.tv/helix/streams?'
+        twitch_search: list[str] = ["https://api.twitch.tv/helix/streams?"]
 
         for streamer in self.bot.tasks['streamer_activity']['streamers']:
+            streamer_id = streamer['user_id']
             match streamer['platform']:
                 case 'twitch':
-                    twitch_search += f"user_id={streamer['user_id']}&"
+                    twitch_search.append(f"user_id={streamer_id}&")
 
+        twitch_search = "".join(twitch_search)
         twitch_query = await net_core.http_request(twitch_search, headers=await streamservice_cog.twitch_headers, json=True)
 
         match twitch_query.status:
@@ -166,8 +170,11 @@ class Tasks(commands.Cog):
                     natural_name: str = config_streamer.get('casual_name', streamer['user_name'])
                     break
 
-            self.online_streamers.append({'platform': 'twitch', 'streamer': streamer,
-                                          'name': natural_name, 'preserve': True, 'announced': False})
+            self.online_streamers.append({'platform': 'twitch',
+                                          'streamer': streamer,
+                                          'name': natural_name,
+                                          'preserve': True,
+                                          'announced': False})
 
         stream_announcements: list[StreamAnnouncement] = []
         for streamer in self.online_streamers:

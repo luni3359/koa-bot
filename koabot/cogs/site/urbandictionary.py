@@ -41,7 +41,7 @@ class SiteUrbanDictionary(Dictionary):
 
     def strip_markup(self, text: str):
         """Trim weird markup from results"""
-        text = text.replace('*', '\\*')
+        text = text.replace("*", "\\*")
 
         matches = re.findall(r'(\[([\w\ ’\']+)\])', text, re.IGNORECASE)
         for match in matches:

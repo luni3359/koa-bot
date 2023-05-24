@@ -97,7 +97,7 @@ class InfoLookup(commands.Cog):
         # If word has no direct definitions, they're word suggestions
         # (if there's no dicts, it's safe to assume they're strings)
         if not isinstance(js[0], dict):
-            suggestion_list = '\n\n'.join([f"• {suggestion}" for suggestion in js[:5]])
+            suggestion_list = "\n\n".join([f"• {suggestion}" for suggestion in js[:5]])
 
             embed = discord.Embed()
             embed.description = f"*{suggestion_list}*"
@@ -106,7 +106,7 @@ class InfoLookup(commands.Cog):
         # If there's suggestions to a different grammatical tense
         elif 'def' not in js[0]:
             tense_group = js[0]['cxs'][0]
-            tense_name = tense_group['cxl'].replace(' of', '')
+            tense_name = tense_group['cxl'].replace(" of", "")
             suggested_tense_word = tense_group['cxtis'][0]['cxt']
             await ctx.send(f"The word **\"{search_term}\"** is the *{tense_name}* of the verb **\"{suggested_tense_word}\"**. Here's its definition.")
             await ctx.invoke(self.bot.get_command('dictionary'), suggested_tense_word)
@@ -159,14 +159,16 @@ class InfoLookup(commands.Cog):
                         elif 'sense' in meaning_item:
                             definition = meaning_item['sense']['dt'][0][1]
                         elif 'sls' in meaning_item:
-                            definition = ', '.join(meaning_item['sls'])
+                            definition = ", ".join(meaning_item['sls'])
                         elif 'lbs' in meaning_item:
                             definition = meaning_item['lbs'][0]
                         elif 'ins' in meaning_item:
+                            # TODO: Figure out what `idk` is
+                            idk = meaning_item['ins'][0]['if']
                             if 'spl' in meaning_item['ins'][0]:
-                                definition = meaning_item['ins'][0]['spl'].upper() + ' ' + meaning_item['ins'][0]['if']
+                                definition = meaning_item['ins'][0]['spl'].upper() + ' ' + idk
                             else:
-                                definition = meaning_item['ins'][0]['il'] + ' ' + meaning_item['ins'][0]['if'].upper()
+                                definition = meaning_item['ins'][0]['il'] + ' ' + idk.upper()
                         else:
                             raise KeyError('Dictionary format could not be resolved.')
 
@@ -174,7 +176,7 @@ class InfoLookup(commands.Cog):
                             definition = definition[0][0][1]
 
                         # Format bullet point
-                        similar_meaning_string += f'{meaning_position}: {definition}\n'
+                        similar_meaning_string += f"{meaning_position}: {definition}\n"
 
                 subcategory_text = subcategory.get('vd', "definition")
                 embed.description += f"\n**{subcategory_text}**\n{dictionary_cog.strip_markup(similar_meaning_string, 'merriam')}"
@@ -186,31 +188,32 @@ class InfoLookup(commands.Cog):
             else:
                 embed.description += "\n\n"
 
-        # Embed descriptions longer than 4096 characters error out.
-        if len(embed.description) > MAX_DEFINITION_LENGTH:
-            print(f"Definition over {MAX_DEFINITION_LENGTH} characters")
-            embeds_to_send = math.ceil(len(embed.description) / MAX_DEFINITION_LENGTH) - 1
-            embeds_sent = 0
-
-            dictionary_definitions = embed.description
-            embed.description = dictionary_definitions[:MAX_DEFINITION_LENGTH]
-
-            await ctx.send(embed=embed)
-
-            # Print all the message across many embeds
-            while embeds_sent < embeds_to_send:
-                embeds_sent += 1
-
-                embed = discord.Embed()
-                embed.description = dictionary_definitions[MAX_DEFINITION_LENGTH *
-                                                           embeds_sent:MAX_DEFINITION_LENGTH * (embeds_sent + 1)]
-
-                if embeds_sent == embeds_to_send:
-                    embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
-
-                await ctx.send(embed=embed)
-        else:
+        if len(embed.description) <= MAX_DEFINITION_LENGTH:
             embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
+            return await ctx.send(embed=embed)
+
+        # Embed descriptions longer than 4096 characters error out.
+        print(f"Definition of \"{search_term}\" over {MAX_DEFINITION_LENGTH} characters")
+        embeds_to_send = math.ceil(len(embed.description) / MAX_DEFINITION_LENGTH) - 1
+        embeds_sent = 0
+
+        dictionary_definitions = embed.description
+        embed.description = dictionary_definitions[:MAX_DEFINITION_LENGTH]
+
+        await ctx.send(embed=embed)
+
+        # Print all the message across many embeds
+        while embeds_sent < embeds_to_send:
+            embeds_sent += 1
+            slice_start = MAX_DEFINITION_LENGTH * embeds_sent
+            slice_end = MAX_DEFINITION_LENGTH * (embeds_sent + 1)
+
+            embed = discord.Embed()
+            embed.description = dictionary_definitions[slice_start:slice_end]
+
+            if embeds_sent == embeds_to_send:
+                embed.set_footer(text=guide['name'], icon_url=guide['favicon'])
+
             await ctx.send(embed=embed)
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):

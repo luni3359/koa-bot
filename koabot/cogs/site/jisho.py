@@ -80,42 +80,42 @@ class SiteJisho(Dictionary):
         embed = discord.Embed()
         embed.title = search_term
         embed.url = guide['dictionary_url'] + urllib.parse.quote(search_term)
-        dictionary_definitions: str = ""
+        dictionary_definitions: list[str] = []
 
         for word in js.data[:4]:
             japanese_info = word.japanese[0]
             senses_info = word.senses[0]
 
             kanji = japanese_info.word if japanese_info.word else japanese_info.reading
-            # jlpt_level = ', '.join(word['jlpt'])
-            en_definitions = '; '.join(senses_info.english_definitions)
-            what_it_is = '; '.join(senses_info.parts_of_speech)
+            # jlpt_level = ", ".join(word['jlpt'])
+            en_definitions = "; ".join(senses_info.english_definitions)
+            what_it_is = "; ".join(senses_info.parts_of_speech)
 
-            dictionary_definitions += f'**{kanji}**'
+            dictionary_definitions.append(f"**{kanji}**")
 
             # The primary kana reading for this word
             if (primary_reading := japanese_info.reading if japanese_info.reading else None) and primary_reading != kanji:
-                dictionary_definitions += f' ({primary_reading})'
+                dictionary_definitions.append(f" ({primary_reading})")
 
             # The tags attached to the word i.e. Computing, Medicine, Biology
-            if (tags := '; '.join(senses_info.tags)):
-                dictionary_definitions += f'\n*{tags}*'
+            if (tags := "; ".join(senses_info.tags)):
+                dictionary_definitions.append(f"\n*{tags}*")
 
-            dictionary_definitions += f'\n{what_it_is}'
+            dictionary_definitions.append(f"\n{what_it_is}")
 
             # if jlpt_level:
-            #     jlpt_level = jlpt_level.replace('jlpt-n', 'N')
-            #     definition += f' [{jlpt_level}]'
+            #     jlpt_level = jlpt_level.replace("jlpt-n", "N")
+            #     dictionary_definitions.append(f" [{jlpt_level}]")
 
-            dictionary_definitions += f':\n{en_definitions}'
+            dictionary_definitions.append(f":\n{en_definitions}")
 
-            if senses_info.info and (definition_clarification := ', '.join(senses_info.info)):
-                dictionary_definitions += f'\n*{definition_clarification}*'
+            if senses_info.info and (definition_clarification := ", ".join(senses_info.info)):
+                dictionary_definitions.append(f"\n*{definition_clarification}*")
 
-            dictionary_definitions += '\n\n'
+            dictionary_definitions.append("\n\n")
 
         embed.color = 0x56d926
-        embed.description = utils.smart_truncate(dictionary_definitions, self.max_definition_length)
+        embed.description = utils.smart_truncate("".join(dictionary_definitions), self.max_definition_length)
         embed.set_footer(text=guide['name'], icon_url=guide['favicon']['size16'])
 
         await ctx.send(embed=embed)

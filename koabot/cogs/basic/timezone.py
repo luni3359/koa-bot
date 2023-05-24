@@ -27,14 +27,16 @@ class TimeZone(commands.Cog):
                 ['Mexico', 'America/Mexico_City']
             ]
 
-        tz_result = '```\n'
+        tz_result: list[str] = ["```\n"]
         for label, timezone in tzs:
             tz = pytz.timezone(timezone)
             tz_time = datetime.now(tz)
             # https://strftime.org
-            tz_result += (f"{label}: ").ljust(8) + tz_time.strftime('%a, %b %d %H:%M:%S\n')
+            tz_result.append((f"{label}: ").ljust(8) + tz_time.strftime("%a, %b %d %H:%M:%S\n"))
 
-        await ctx.reply(tz_result + '```', mention_author=False)
+        tz_result.append("```")
+
+        await ctx.reply("".join(tz_result), mention_author=False)
 
 
 async def setup(bot: KBot):

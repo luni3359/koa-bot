@@ -41,43 +41,47 @@ class SiteTwitter(Site):
         try:
             expansions = ["referenced_tweets.id", "attachments.media_keys", "author_id"]
             tweet_fields = ["possibly_sensitive", "public_metrics", "created_at", "entities"]
+            media_fields = ["url", "preview_image_url", "alt_text"]
+            user_fields = ["profile_image_url"]
             return await self.twitter_api.get_tweet(tweet_id,
                                                     expansions=expansions,
                                                     tweet_fields=tweet_fields,
-                                                    media_fields=["url", "preview_image_url", "alt_text"],
-                                                    user_fields=["profile_image_url"])
+                                                    media_fields=media_fields,
+                                                    user_fields=user_fields)
         except tweepy.HTTPException as e:
             # Error codes: https://developer.twitter.com/en/support/twitter-api/error-troubleshooting
             print(f"Failure on Tweet #{tweet_id}\n{e}")
         return None
 
     async def check_applicable_tweet(self, msg: discord.Message, guide: dict, url: str, tweet: tweepy.Response):
+        """Checks whether or not a tweet may be posted due to lack of a preview"""
         if not 'media' in tweet.includes:
             print("Twitter preview not applicable. (No media)")
             return False
 
-        if len((tweet_media := tweet.includes['media'])) == 1:
-            match tweet_media[0]['type']:
-                case 'photo':
-                    if not tweet.data.possibly_sensitive:
-                        print("Twitter preview not applicable. (Media is sfw)")
-                        return False
+        if len((tweet_media := tweet.includes['media'])) > 1:
+            return True
 
-                    # TODO: There's got to be a better way...
-                    if guide['embed']['footer_text'] == "vxTwitter":
-                        print("Twitter preview not applicable. (Handled by vxTwitter)")
-                        return False
-
-                case _:  # 'video' or 'animated_gif'
-                    if guide['embed']['footer_text'] == "vxTwitter":
-                        print("Twitter preview not applicable. (Handled by vxTwitter)")
-                        return False
-
-                    if tweet.data.possibly_sensitive:
-                        fixed_url = url.replace("twitter", "vxtwitter", 1)
-                        await msg.reply(content=fixed_url, mention_author=False)
+        match tweet_media[0]['type']:
+            case 'photo':
+                if not tweet.data.possibly_sensitive:
+                    print("Twitter preview not applicable. (Media is sfw)")
                     return False
-        return True
+
+                # TODO: There's got to be a better way...
+                if guide['embed']['footer_text'] == "vxTwitter":
+                    print("Twitter preview not applicable. (Handled by vxTwitter)")
+                    return False
+
+            case _:  # 'video' or 'animated_gif'
+                if guide['embed']['footer_text'] == "vxTwitter":
+                    print("Twitter preview not applicable. (Handled by vxTwitter)")
+                    return False
+
+                if tweet.data.possibly_sensitive:
+                    fixed_url = url.replace("twitter", "vxtwitter", 1)
+                    await msg.reply(content=fixed_url, mention_author=False)
+                return False
 
     async def get_twitter_gallery(self, msg: discord.Message, url: str, /, *, guide: dict = None) -> None:
         """Automatically fetch and post any image galleries from twitter
@@ -133,7 +137,7 @@ class SiteTwitter(Site):
 
         # If it's the last picture to show, add a brand footer
         embed_group.last.set_footer(
-            text=guide['embed']['footer_text'] + " • Mobile-friendly viewer",
+            text=f"{guide['embed']['footer_text']} • Mobile-friendly viewer",
             icon_url=self.bot.assets['twitter']['favicon'])
         embed_group.last.timestamp = tweet.data.created_at
 
@@ -145,13 +149,9 @@ class SiteTwitter(Site):
         # Supress original embed (sorry, desktop-only users)
         try:
             await msg.edit(suppress=True)
-        except discord.errors.Forbidden as e:
+        except discord.errors.Forbidden:
             # Missing Permissions
-            match e.code:
-                case 50013:
-                    print("Missing Permissions: Cannot suppress embed from sender's message")
-                case _:
-                    print(f"Forbidden: Status {e.status} (code {e.code}")
+            print("Missing Permissions: Cannot suppress embed from sender's message")
 
 
 async def setup(bot: KBot):
